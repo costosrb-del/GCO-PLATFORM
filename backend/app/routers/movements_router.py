@@ -6,6 +6,8 @@ from app.services.config import get_config
 from app.services.auth import get_auth_token
 from app.routers.auth_router import verify_token
 import pandas as pd
+import hashlib
+from app.services.cache import cache
 
 router = APIRouter(prefix="/movements", tags=["movements"])
 
@@ -14,7 +16,8 @@ def get_movements(
     token: str = Depends(verify_token),
     start_date: str = Query(..., description="YYYY-MM-DD"),
     end_date: str = Query(..., description="YYYY-MM-DD"),
-    companies: Optional[List[str]] = Query(None)
+    companies: Optional[List[str]] = Query(None),
+    force_refresh: bool = Query(False)
 ):
     try:
         # Load all companies config
@@ -28,6 +31,19 @@ def get_movements(
 
         if not target_companies:
             return {"count": 0, "data": []}
+
+        # Cache Logic
+        comp_names = sorted([c["name"] for c in target_companies])
+        comp_hash = hashlib.md5(",".join(comp_names).encode()).hexdigest()
+        cache_key = f"movs_{start_date}_{end_date}_{comp_hash}.json"
+
+        if not force_refresh:
+            cached = cache.load(cache_key)
+            if cached:
+                print(f"Cache HIT: {cache_key}")
+                return cached
+        
+        print(f"Cache MISS: {cache_key} (Force: {force_refresh})")
 
         all_results = []
         errors = []
@@ -82,7 +98,12 @@ def get_movements(
              
         # Convert NaN to None for JSON compliance
         data = df.where(pd.notnull(df), None).to_dict(orient="records")
-        return {"count": len(data), "data": data, "errors": errors}
+        result = {"count": len(data), "data": data, "errors": errors}
+        # Save to cache if successful (or partial success)
+        if all_results:
+             cache.save(cache_key, result)
+        
+        return result
         
     except Exception as e:
         import traceback

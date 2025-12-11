@@ -29,6 +29,7 @@ export default function MovementsPage() {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   // -- STATE: Filters --
   const [showFilters, setShowFilters] = useState(false);
@@ -58,7 +59,7 @@ export default function MovementsPage() {
       // Determine API URL (Hardcoded or Env Var)
       // For now, if running locally use localhost, else assuming relative path or env
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      let url = `${baseUrl}/movements/?start_date=${startDate}&end_date=${endDate}`;
+      let url = `${baseUrl}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
 
       if (selectedCompanies.length > 0) {
         selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
@@ -242,6 +243,15 @@ export default function MovementsPage() {
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               <span>Consultar</span>
             </button>
+            <div className="flex items-center space-x-2 ml-2">
+              <input
+                type="checkbox"
+                checked={forceRefresh}
+                onChange={e => setForceRefresh(e.target.checked)}
+                className="rounded border-gray-300 text-[#183C30] focus:ring-[#183C30]"
+              />
+              <span className="text-xs text-gray-500">Recargar Todo</span>
+            </div>
           </div>
 
           <div className="flex gap-2">

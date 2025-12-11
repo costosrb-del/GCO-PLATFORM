@@ -7,3 +7,4 @@ openpyxl
 fpdf
 
 firebase-admin
+google-cloud-storage
