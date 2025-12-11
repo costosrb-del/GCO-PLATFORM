@@ -47,8 +47,13 @@ export default function SaldosPage() {
         setData(response.data.data);
         setLastUpdated(new Date().toLocaleTimeString());
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating inventory:", error);
+      if (error.message === "Network Error" || !error.response) {
+        alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad.\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro en la barra de direcciones.");
+      } else {
+        alert("Error cargando inventario: " + (error.response?.data?.detail || error.message));
+      }
     } finally {
       setIsLoading(false);
     }
