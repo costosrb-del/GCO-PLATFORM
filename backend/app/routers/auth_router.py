@@ -14,23 +14,32 @@ class LoginRequest(BaseModel):
 # For now, we trust the token IS the username (simple master key logic)
 # Ideally, integrate JWT.
 
+# Simple In-Memory User DB (In prod, use a database)
+USERS_DB = {
+    "costos@origenbotanico.com": {"password": "admin123", "role": "admin", "token": "token-admin-secret"},
+    "visualizador@origenbotanico.com": {"password": "view123", "role": "viewer", "token": "token-viewer-secret"}
+}
+
 def verify_token(token: str = Depends(oauth2_scheme)):
-    # TEMPORARY FIX: Accept the Firebase JWT issued by the frontend.
-    # The frontend uses real Firebase Auth, but we haven't set up the Admin SDK backend-side yet.
-    # For now, we trust that if the frontend sends a token, the user is logged in.
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing token")
+    # Simple token lookup
+    for email, data in USERS_DB.items():
+        if data["token"] == token:
+            return {"email": email, "role": data["role"]}
     
-    # In production: verify_firebase_token(token)
-    return token
+    # Fallback for old tokens or direct firebase tokens (if any)
+    if token == "master-token-123":
+         return {"email": "costos@origenbotanico.com", "role": "admin"}
+
+    raise HTTPException(status_code=401, detail="Invalid token")
 
 @router.post("/login")
 def login(request: LoginRequest):
-    # Hardcoded Master User
-    if request.username == "costos@origenbotanico.com" and request.password == "admin123":
+    user = USERS_DB.get(request.username)
+    if user and user["password"] == request.password:
         return {
-            "access_token": "master-token-123", # Fixed token for dev
-            "token_type": "bearer"
+            "access_token": user["token"],
+            "token_type": "bearer",
+            "role": user["role"]
         }
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")

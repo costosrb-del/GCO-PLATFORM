@@ -40,10 +40,17 @@ export default function SaldosPage() {
 
   const fetchData = async () => {
     setIsLoading(true);
+    const token = localStorage.getItem("gco_token");
+    if (!token) {
+      alert("Sesión no válida. Por favor, reingresa.");
+      return;
+    }
+
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const response = await axios.get(`${baseUrl}/inventory/`, {
-        timeout: 10000 // 10s timeout
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 60000 // 60s timeout
       });
       if (response.data.errors && response.data.errors.length > 0) {
         alert("⚠️ Atencion:\n" + response.data.errors.join("\n"));
@@ -57,7 +64,7 @@ export default function SaldosPage() {
     } catch (error: any) {
       console.error("Error updating inventory:", error);
       if (error.code === 'ECONNABORTED') {
-        alert("⏱️ Tiempo agotado. El servidor local no respondió en 10s.");
+        alert("⏱️ Tiempo agotado. El servidor no respondió en 60s.");
       }
       else if (error.message === "Network Error" || !error.response) {
         alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad.\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro en la barra de direcciones.");
