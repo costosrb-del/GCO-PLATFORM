@@ -45,6 +45,11 @@ export default function SaldosPage() {
       const response = await axios.get(`${baseUrl}/inventory/`, {
         timeout: 10000 // 10s timeout
       });
+      if (response.data.errors && response.data.errors.length > 0) {
+        alert("⚠️ Atencion:\n" + response.data.errors.join("\n"));
+      }
+
+
       if (response.data.data) {
         setData(response.data.data);
         setLastUpdated(new Date().toLocaleTimeString());

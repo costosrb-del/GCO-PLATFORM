@@ -18,9 +18,13 @@ def get_consolidated_inventory():
     # 1. Fetch Siigo Data
     def process_company(company):
         try:
+            # Check for configuration validity first
+            if not company.get("valid", True):
+                return [], f"Empresa '{company['name']}' tiene configuración incompleta (falta Usuario o API Key)."
+
             token = get_auth_token(company["username"], company["access_key"])
             if not token:
-                return []
+                return [], f"No se pudo autenticar '{company['name']}'. Verifique credenciales."
             
             c_data = []
             products = get_all_products(token)
@@ -43,18 +47,21 @@ def get_consolidated_inventory():
                             c_data.append(item)
                     else:
                         c_data.append(p_base)
-            return c_data
+            return c_data, None
         except Exception as e:
             print(f"Error processing {company['name']}: {e}")
-            return []
+            return [], f"Error en '{company['name']}': {str(e)}"
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
         future_to_company = {executor.submit(process_company, c): c for c in companies}
         
         for future in concurrent.futures.as_completed(future_to_company):
-            res = future.result()
-            if res:
-                all_data.extend(res)
+            # Unpack tuple (data, error)
+            res_data, res_err = future.result()
+            if res_data:
+                all_data.extend(res_data)
+            if res_err:
+                errors.append(res_err)
 
     # 2. Fetch Google Sheets Data
     sheet_url = os.getenv("GOOGLE_SHEET_URL")
@@ -79,5 +86,6 @@ def get_consolidated_inventory():
 
     return {
         "count": len(all_data),
-        "data": all_data
+        "data": all_data,
+        "errors": errors
     }

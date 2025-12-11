@@ -68,6 +68,10 @@ export default function MovementsPage() {
         timeout: 10000 // 10 seconds timeout
       });
 
+      if (response.data.errors && response.data.errors.length > 0) {
+        alert("⚠️ Advertencias:\n" + response.data.errors.join("\n"));
+      }
+
       if (response.data.data) {
         setData(response.data.data);
       } else {

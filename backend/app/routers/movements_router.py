@@ -30,10 +30,18 @@ def get_movements(
             return {"count": 0, "data": []}
 
         all_results = []
+        errors = []
 
         # Iterate over each company to fetch its data
         for company in target_companies:
             try:
+                # Check config validity
+                if not company.get("valid", True):
+                    msg = f"Config Incompleta: {company['name']}"
+                    errors.append(msg)
+                    print(msg)
+                    continue
+
                 # Authenticate and get session token
                 company_username = company.get("username")
                 company_access_key = company.get("access_key")
@@ -43,7 +51,9 @@ def get_movements(
                 real_token = get_auth_token(company_username, company_access_key)
                 
                 if not real_token:
-                    print(f"Failed to authenticate {company_name}")
+                    msg = f"Auth Fallida: {company_name}"
+                    errors.append(msg)
+                    print(msg)
                     continue
                     
                 print(f"Fetching movements for {company_name}...")
@@ -59,18 +69,20 @@ def get_movements(
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                print(f"Error fetching for {company.get('name')}: {str(e)}")
+                msg = f"Error fetching for {company.get('name')}: {str(e)}"
+                errors.append(msg)
+                print(msg)
                 continue
         
         # Convert list to DataFrame for final processing
         if not all_results:
-             return {"count": 0, "data": []}
+             return {"count": 0, "data": [], "errors": errors}
              
         df = pd.DataFrame(all_results)
              
         # Convert NaN to None for JSON compliance
         data = df.where(pd.notnull(df), None).to_dict(orient="records")
-        return {"count": len(data), "data": data}
+        return {"count": len(data), "data": data, "errors": errors}
         
     except Exception as e:
         import traceback

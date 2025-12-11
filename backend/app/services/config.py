@@ -15,20 +15,24 @@ load_env_file()
 def get_config():
     companies = []
     # Support up to 20 companies
+    # Support up to 20 companies
     for i in range(1, 21):  
-        key_name = f"COMPANY_{i}_NAME"
-        key_user = f"COMPANY_{i}_USER"
-        key_access = f"COMPANY_{i}_KEY"
+        # Try multiple naming conventions
+        name = os.getenv(f"COMPANY_{i}_NAME")
         
-        name = os.getenv(key_name)
-        username = os.getenv(key_user)
-        access_key = os.getenv(key_access)
-            
-        if name and username and access_key:
+        # Check USER or USERNAME
+        username = os.getenv(f"COMPANY_{i}_USERNAME") or os.getenv(f"COMPANY_{i}_USER")
+        
+        # Check KEY or ACCESS_KEY
+        access_key = os.getenv(f"COMPANY_{i}_ACCESS_KEY") or os.getenv(f"COMPANY_{i}_KEY")
+        
+        if name:
+            is_valid = bool(username and access_key)
             companies.append({
                 "id": i,
                 "name": name.strip(),
-                "username": username.strip(),
-                "access_key": access_key.strip()
+                "username": (username or "").strip(),
+                "access_key": (access_key or "").strip(),
+                "valid": is_valid
             })
     return companies
