@@ -28,12 +28,38 @@ def get_movements(
         if not target_companies:
             return {"count": 0, "data": []}
 
-        # Fetch data using existing logic
-        # Note: fetch_movements returns a DataFrame, convert to dict
-        df = fetch_movements(target_companies, start_date, end_date)
+        all_results = []
+
+        # Iterate over each company to fetch its data
+        for company in target_companies:
+            try:
+                # Assuming access_key is the token needed for Siigo
+                company_token = company.get("access_key")
+                company_name = company.get("name")
+                
+                if not company_token:
+                    print(f"Skipping company {company_name}: No access key")
+                    continue
+                    
+                print(f"Fetching movements for {company_name}...")
+                # Fetch data (returns a list of dicts)
+                movs = fetch_movements(company_token, start_date, end_date)
+                
+                # Tag each record with the company name to distinguish them
+                for m in movs:
+                    m["company"] = company_name
+                    
+                all_results.extend(movs)
+            except Exception as e:
+                print(f"Error fetching for {company.get('name')}: {e}")
+                # Continue with other companies even if one fails
+                continue
         
-        if df.empty:
+        if not all_results:
              return {"count": 0, "data": []}
+             
+        # Convert list to DataFrame for final processing
+        df = pd.DataFrame(all_results)
              
         # Convert NaN to None for JSON compliance
         data = df.where(pd.notnull(df), None).to_dict(orient="records")
@@ -41,5 +67,7 @@ def get_movements(
         
     except Exception as e:
         print(f"Error fetching movements: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
