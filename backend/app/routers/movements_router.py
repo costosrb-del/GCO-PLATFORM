@@ -1,51 +1,45 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
-import concurrent.futures
-from app.services.movements import get_consolidated_movements
-from app.services.auth import get_auth_token
+from datetime import date
+from app.services.movements import get_consolidated_movements as fetch_movements
 from app.services.config import get_config
+from app.routers.auth_router import verify_token
+import pandas as pd
 
 router = APIRouter(prefix="/movements", tags=["movements"])
 
 @router.get("/")
 def get_movements(
-    start_date: str, 
-    end_date: str, 
-    types: Optional[List[str]] = Query(None)
+    token: str = Depends(verify_token),
+    start_date: str = Query(..., description="YYYY-MM-DD"),
+    end_date: str = Query(..., description="YYYY-MM-DD"),
+    companies: Optional[List[str]] = Query(None)
 ):
-    companies = get_config()
-    if not companies:
-        raise HTTPException(status_code=500, detail="No companies configured")
-
-    all_data = []
-    errors = []
-
-    def process_company(company):
-        try:
-            token = get_auth_token(company["username"], company["access_key"])
-            if not token:
-                return []
-            
-            # types passed as list of strings, e.g. ["FV", "FC"]
-            return get_consolidated_movements(token, start_date, end_date, selected_types=types)
-        except Exception as e:
-            print(f"Error processing {company["name"]}: {e}")
-            return []
-
-    # Parallel execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies)) as executor:
-        future_to_company = {executor.submit(process_company, c): c for c in companies}
+    try:
+        # Load all companies config
+        all_companies = get_config()
         
-        for future in concurrent.futures.as_completed(future_to_company):
-            res = future.result()
-            if res:
-                # Add company name to each record for context
-                company = future_to_company[future]
-                for r in res:
-                    r["company"] = company["name"]
-                all_data.extend(res)
+        # Filter if user selected specific companies
+        if companies:
+            target_companies = [c for c in all_companies if c["name"] in companies]
+        else:
+            target_companies = all_companies
 
-    return {
-        "count": len(all_data),
-        "data": all_data
-    }
+        if not target_companies:
+            return {"count": 0, "data": []}
+
+        # Fetch data using existing logic
+        # Note: fetch_movements returns a DataFrame, convert to dict
+        df = fetch_movements(target_companies, start_date, end_date)
+        
+        if df.empty:
+             return {"count": 0, "data": []}
+             
+        # Convert NaN to None for JSON compliance
+        data = df.where(pd.notnull(df), None).to_dict(orient="records")
+        return {"count": len(data), "data": data}
+        
+    except Exception as e:
+        print(f"Error fetching movements: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

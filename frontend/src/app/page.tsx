@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
-import axios from "axios";
 import { motion } from "framer-motion";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase"; // Using real Firebase SDK
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,19 +20,26 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:8000/auth/login", {
-        username: email,
-        password: password, 
-      });
+      // 1. Authenticate against Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // 2. Get ID Token
+      const token = await user.getIdToken();
 
-      if (response.data.access_token) {
-        // Save to localStorage
-        localStorage.setItem("gco_token", response.data.access_token);
-        localStorage.setItem("gco_user", email);
-        router.push("/dashboard");
+      // 3. Save session
+      localStorage.setItem("gco_token", token);
+      localStorage.setItem("gco_user", user.email || "");
+      
+      // 4. Redirect
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("Login failed", err);
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+         setError("Usuario o contrasena incorrectos.");
+      } else {
+         setError("Error al iniciar sesion. Intentalo de nuevo.");
       }
-    } catch (err) {
-      setError("Credenciales incorrectas o error de conexion.");
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +72,7 @@ export default function LoginPage() {
         <div className="max-w-md w-full">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900">Bienvenido</h2>
-            <p className="text-gray-500 mt-2">Inicia sesion para continuar</p>
+            <p className="text-gray-500 mt-2">Inicia sesion con tu cuenta GCO</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
@@ -119,6 +127,10 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          
+          <p className="mt-8 text-center text-sm text-gray-400">
+            Powered by GCO Technology
+          </p>
         </div>
       </div>
     </div>
