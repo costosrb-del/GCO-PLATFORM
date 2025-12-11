@@ -45,7 +45,7 @@ def get_consolidated_inventory():
                         c_data.append(p_base)
             return c_data
         except Exception as e:
-            print(f"Error processing {company["name"]}: {e}")
+            print(f"Error processing {company['name']}: {e}")
             return []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
