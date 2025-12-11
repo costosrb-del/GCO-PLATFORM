@@ -13,7 +13,7 @@ export default function UsersPage() {
     const [role, setRole] = useState("viewer");
     const [isCreating, setIsCreating] = useState(false);
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app";
 
     const fetchUsers = async () => {
         try {
