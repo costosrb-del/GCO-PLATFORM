@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase"; // Using real Firebase SDK
+import { auth } from "@/lib/firebase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,12 +31,39 @@ export default function LoginPage() {
       localStorage.setItem("gco_token", token);
       localStorage.setItem("gco_user", user.email || "");
 
+      // 3b. Fetch Role from Backend
+      // In Production, ensure NEXT_PUBLIC_API_URL is set!
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+      try {
+        // 15 Seconds timeout to allow Cloud Run Cold Start
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        console.log(`Fetching role from ${baseUrl}/auth/me...`);
+        const roleRes = await fetch(`${baseUrl}/auth/me`, {
+          headers: { "Authorization": `Bearer ${token}` },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (roleRes.ok) {
+          const roleData = await roleRes.json();
+          console.log("Role assigned:", roleData.role);
+          localStorage.setItem("gco_role", roleData.role);
+        } else {
+          console.warn("Role fetch failed status:", roleRes.status);
+          localStorage.setItem("gco_role", "viewer");
+        }
+      } catch (err) {
+        console.error("Backend unreachable or timeout, defaulting to Viewer", err);
+        localStorage.setItem("gco_role", "viewer");
+      }
+
       // 4. Redirect
-      // Force hard reload to ensure we get the dashboard.html file
       window.location.href = "/dashboard";
     } catch (err: any) {
       console.error("Login failed", err);
-      // alert("Debug Error: " + err.code + " - " + err.message);
       if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
         setError("Usuario o contrasena incorrectos.");
       } else {
@@ -138,4 +165,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

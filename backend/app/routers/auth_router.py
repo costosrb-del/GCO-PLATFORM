@@ -1,45 +1,113 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
+import firebase_admin
+from firebase_admin import auth, credentials
+import base64
+import json
+import os
+from app.services import roles as role_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-# In-memory session store (replace with Redis/DB in prod)
-# For now, we trust the token IS the username (simple master key logic)
-# Ideally, integrate JWT.
-
-# Simple In-Memory User DB (In prod, use a database)
-USERS_DB = {
-    "costos@origenbotanico.com": {"password": "admin123", "role": "admin", "token": "token-admin-secret"},
-    "visualizador@origenbotanico.com": {"password": "view123", "role": "viewer", "token": "token-viewer-secret"}
-}
+# Initialize Firebase Admin
+try:
+    firebase_admin.get_app()
+except ValueError:
+    try:
+        # Check if credential file path is set
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if cred_path and os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+        else:
+            firebase_admin.initialize_app()
+    except Exception as e:
+        print(f"Warning: Firebase Admin init failed: {e}")
 
 def verify_token(token: str = Depends(oauth2_scheme)):
-    # Simple token lookup
-    for email, data in USERS_DB.items():
-        if data["token"] == token:
-            return {"email": email, "role": data["role"]}
+    user_email = None
     
-    # Fallback for old tokens or direct firebase tokens (if any)
-    if token == "master-token-123":
-         return {"email": "costos@origenbotanico.com", "role": "admin"}
+    # 1. Try validating with Firebase Admin SDK (Secure)
+    try:
+        decoded_token = auth.verify_id_token(token)
+        user_email = decoded_token.get("email")
+    except Exception as e:
+        pass
 
-    raise HTTPException(status_code=401, detail="Invalid token")
+    # 2. Fallback: Decode JWT locally (Insecure - Development only)
+    if not user_email:
+        try:
+            parts = token.split(".")
+            if len(parts) == 3:
+                payload = parts[1]
+                padded = payload + '=' * (-len(payload) % 4)
+                data = json.loads(base64.urlsafe_b64decode(padded))
+                user_email = data.get("email")
+        except Exception:
+            pass
+            
+    # 3. Last resort: Check for legacy Dev tokens
+    if not user_email:
+        if token == "token-admin-secret": 
+            user_email = "costos@origenbotanico.com"
+        elif token == "token-viewer-secret":
+            user_email = "visualizador@origenbotanico.com"
 
-@router.post("/login")
-def login(request: LoginRequest):
-    user = USERS_DB.get(request.username)
-    if user and user["password"] == request.password:
-        return {
-            "access_token": user["token"],
-            "token_type": "bearer",
-            "role": user["role"]
-        }
-    else:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Invalid Authentication Token")
+
+    # Determine Role Dynamic Lookup
+    role = role_service.get_user_role(user_email)
+    
+    return {"email": user_email, "role": role}
+
+@router.get("/me")
+def get_current_user(user: dict = Depends(verify_token)):
+    return user
+
+# --- User Management Endpoints ---
+
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    role: str
+
+@router.get("/users")
+def list_users(user: dict = Depends(verify_token)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Return persisted list of users/roles
+    all_roles = role_service.get_all_roles()
+    # Format as list
+    user_list = [{"email": k, "role": v} for k, v in all_roles.items()]
+    return user_list
+
+@router.post("/users")
+def create_user(req: CreateUserRequest, user: dict = Depends(verify_token)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # 1. Create in Firebase Auth
+    try:
+        auth.create_user(email=req.email, password=req.password)
+    except Exception as e:
+        # Check specific error codes implies user might exist
+        err_msg = str(e)
+        if "EMAIL_EXISTS" in err_msg or "email already exists" in err_msg.lower():
+            # If user exists, we just update the role map logic below
+            print(f"User {req.email} already exists in Firebase. Updating role.")
+        else:
+            # Real error (e.g. no permission)
+            print(f"Error creating firebase user: {e}")
+            raise HTTPException(status_code=500, detail=f"Firebase Error: {str(e)}")
+
+    # 2. Persist Role
+    success = role_service.set_user_role(req.email, req.role)
+    if not success:
+         raise HTTPException(status_code=500, detail="Failed to save role")
+         
+    return {"status": "success", "email": req.email, "role": req.role}

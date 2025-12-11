@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, ArrowLeftRight, LogOut, User, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isInventoryOpen, setIsInventoryOpen] = useState(true);
+  const [role, setRole] = useState("");
+
+  useEffect(() => {
+    setRole(localStorage.getItem("gco_role") || "");
+  }, []);
 
   return (
     <div className="h-screen w-64 bg-[#183C30] text-white flex flex-col shadow-xl fixed left-0 top-0">
@@ -27,17 +32,29 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        <Link 
-          href="/dashboard" 
-          className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
-            pathname === "/dashboard" 
-              ? "bg-white/10 text-white font-medium" 
+        <Link
+          href="/dashboard"
+          className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${pathname === "/dashboard"
+              ? "bg-white/10 text-white font-medium"
               : "text-gray-300 hover:bg-white/5 hover:text-white"
-          }`}
+            }`}
         >
           <LayoutDashboard className="h-5 w-5" />
           <span>Inicio</span>
         </Link>
+
+        {role === "admin" && (
+          <Link
+            href="/dashboard/users"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${pathname === "/dashboard/users"
+                ? "bg-white/10 text-white font-medium"
+                : "text-gray-300 hover:bg-white/5 hover:text-white"
+              }`}
+          >
+            <User className="h-5 w-5" />
+            <span>Administrar Usuarios</span>
+          </Link>
+        )}
 
         {/* Inventory Group */}
         <div className="space-y-1">
@@ -46,11 +63,11 @@ export function Sidebar() {
             className="flex items-center justify-between w-full px-4 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition-all"
           >
             <div className="flex items-center space-x-3">
-               <Package className="h-5 w-5" />
-               <span>Inventarios</span>
+              <Package className="h-5 w-5" />
+              <span>Inventarios</span>
             </div>
-            <ChevronDown 
-              className={`h-4 w-4 transition-transform duration-200 ${isInventoryOpen ? "rotate-180" : ""}`} 
+            <ChevronDown
+              className={`h-4 w-4 transition-transform duration-200 ${isInventoryOpen ? "rotate-180" : ""}`}
             />
           </button>
 
@@ -65,21 +82,19 @@ export function Sidebar() {
                 <div className="ml-4 pl-4 border-l border-[#2A5E4D] space-y-1 pt-1">
                   <Link
                     href="/dashboard/saldos"
-                    className={`block px-4 py-2 rounded-lg text-sm transition-all ${
-                      pathname === "/dashboard/saldos"
+                    className={`block px-4 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/saldos"
                         ? "bg-white text-[#183C30] font-medium shadow-md"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }`}
+                      }`}
                   >
                     Saldos Consolidados
                   </Link>
                   <Link
                     href="/dashboard/movements"
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all ${
-                      pathname === "/dashboard/movements"
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/movements"
                         ? "bg-white text-[#183C30] font-medium shadow-md"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }`}
+                      }`}
                   >
                     <span>Auditoria Movimientos</span>
                   </Link>
@@ -95,7 +110,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="h-8 w-8 bg-green-800 rounded-full flex items-center justify-center">
-               <User className="h-4 w-4 text-green-200" />
+              <User className="h-4 w-4 text-green-200" />
             </div>
             <div className="text-sm">
               <p className="font-medium text-white">Admin User</p>
@@ -103,12 +118,12 @@ export function Sidebar() {
             </div>
           </div>
         </div>
-        
-        <Link 
-          href="/" 
+
+        <Link
+          href="/"
           onClick={() => {
-             localStorage.removeItem("gco_token"); 
-             localStorage.removeItem("gco_user");
+            localStorage.removeItem("gco_token");
+            localStorage.removeItem("gco_user");
           }}
           className="flex items-center justify-center space-x-2 w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 py-2 rounded-lg text-sm transition-all border border-red-500/20"
         >
