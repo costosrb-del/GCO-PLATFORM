@@ -53,11 +53,21 @@ export default function LoginPage() {
           localStorage.setItem("gco_role", roleData.role);
         } else {
           console.warn("Role fetch failed status:", roleRes.status);
-          localStorage.setItem("gco_role", "viewer");
+          // Fallback for Costos
+          if (user.email === "costos@origenbotanico.com") {
+            localStorage.setItem("gco_role", "admin");
+          } else {
+            localStorage.setItem("gco_role", "viewer");
+          }
         }
       } catch (err) {
-        console.error("Backend unreachable or timeout, defaulting to Viewer", err);
-        localStorage.setItem("gco_role", "viewer");
+        console.error("Backend unreachable or timeout", err);
+        // Fallback for Costos (Offline Mode / Network Error)
+        if (user.email === "costos@origenbotanico.com") {
+          localStorage.setItem("gco_role", "admin");
+        } else {
+          localStorage.setItem("gco_role", "viewer");
+        }
       }
 
       // 4. Redirect
