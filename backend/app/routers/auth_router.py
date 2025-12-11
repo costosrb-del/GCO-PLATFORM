@@ -15,10 +15,13 @@ class LoginRequest(BaseModel):
 # Ideally, integrate JWT.
 
 def verify_token(token: str = Depends(oauth2_scheme)):
-    # Simple validation: checks if token is valid (in our case, the token we issued)
-    # Since we issue "master-token-123", we check that.
-    if token != "master-token-123":
-        raise HTTPException(status_code=401, detail="Invalid token")
+    # TEMPORARY FIX: Accept the Firebase JWT issued by the frontend.
+    # The frontend uses real Firebase Auth, but we haven't set up the Admin SDK backend-side yet.
+    # For now, we trust that if the frontend sends a token, the user is logged in.
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+    
+    # In production: verify_firebase_token(token)
     return token
 
 @router.post("/login")
