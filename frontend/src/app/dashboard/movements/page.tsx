@@ -60,8 +60,9 @@ export default function MovementsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       let url = `${baseUrl}/movements/?start_date=${startDate}&end_date=${endDate}`;
 
-      // If we had company selection before fetch, we'd add it here:
-      // selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
+      if (selectedCompanies.length > 0) {
+        selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
+      }
 
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -113,7 +114,9 @@ export default function MovementsPage() {
           item.doc_number?.toLowerCase().includes(term) ||
           item.product_code?.toLowerCase().includes(term) ||
           item.client?.toLowerCase().includes(term) ||
-          item.nit?.toLowerCase().includes(term)
+          item.nit?.toLowerCase().includes(term) ||
+          item.observations?.toLowerCase().includes(term) ||
+          item.name?.toLowerCase().includes(term)
         );
         if (!matches) return false;
       }
