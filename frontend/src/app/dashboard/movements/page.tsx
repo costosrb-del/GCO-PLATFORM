@@ -65,7 +65,7 @@ export default function MovementsPage() {
 
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000 // 10 seconds timeout
+        timeout: 120000 // 120 seconds timeout
       });
 
       if (response.data.errors && response.data.errors.length > 0) {
@@ -80,7 +80,7 @@ export default function MovementsPage() {
     } catch (error: any) {
       console.error("Error fetching movements:", error);
       if (error.code === 'ECONNABORTED') {
-        alert("⏱️ Tiempo de espera agotado.\n\nEl backend no respondió en 10 segundos. Verifica que esté corriendo.");
+        alert("⏱️ Tiempo de espera agotado.\n\nEl backend no respondió en 120 segundos. Puede que la consulta sea muy pesada.");
       }
       else if (error.message === "Network Error" || !error.response) {
         alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad ('Mixed Content').\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro.");

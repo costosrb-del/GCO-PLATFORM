@@ -25,7 +25,7 @@ export default function SaldosPage() {
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState("Todos");
   const [searchTerm, setSearchTerm] = useState("");
-  const [stockRange, setStockRange] = useState<[number, number]>([0, 1000000]);
+
   const [filterSales, setFilterSales] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
@@ -101,7 +101,7 @@ export default function SaldosPage() {
     if (stockStatus === "Con Stock (>0)" && item.quantity <= 0) return false;
     if (stockStatus === "Sin Stock (0)" && item.quantity !== 0) return false;
 
-    if (item.quantity < stockRange[0] || item.quantity > stockRange[1]) return false;
+
 
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
@@ -282,15 +282,7 @@ export default function SaldosPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex items-center space-x-4 bg-gray-50/50 p-2 rounded-xl border border-gray-100">
-                <span className="text-xs font-medium text-gray-500 whitespace-nowrap px-2">Rango: {stockRange[0]} - {stockRange[1]}</span>
-                <input
-                  type="range" min="0" max="10000"
-                  value={stockRange[1]}
-                  onChange={(e) => setStockRange([stockRange[0], parseInt(e.target.value)])}
-                  className="w-full accent-[#183C30] cursor-pointer"
-                />
-              </div>
+
             </div>
           </div>
         )}
