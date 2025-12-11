@@ -23,22 +23,24 @@ export default function LoginPage() {
       // 1. Authenticate against Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       // 2. Get ID Token
       const token = await user.getIdToken();
 
       // 3. Save session
       localStorage.setItem("gco_token", token);
       localStorage.setItem("gco_user", user.email || "");
-      
+
       // 4. Redirect
-      router.push("/dashboard");
+      // Force hard reload to ensure we get the dashboard.html file
+      window.location.href = "/dashboard";
     } catch (err: any) {
       console.error("Login failed", err);
+      // alert("Debug Error: " + err.code + " - " + err.message);
       if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
-         setError("Usuario o contrasena incorrectos.");
+        setError("Usuario o contrasena incorrectos.");
       } else {
-         setError("Error al iniciar sesion. Intentalo de nuevo.");
+        setError("Error al iniciar sesion: " + err.message);
       }
     } finally {
       setIsLoading(false);
@@ -49,22 +51,22 @@ export default function LoginPage() {
     <div className="flex min-h-screen">
       <div className="hidden lg:flex w-1/2 bg-[#183C30] relative overflow-hidden items-center justify-center">
         <div className="relative z-10 text-white text-center p-12">
-           <motion.h1 
-             initial={{ opacity: 0, y: 20 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ delay: 0.2 }}
-             className="text-5xl font-bold mb-6"
-           >
-             GCO Platform
-           </motion.h1>
-           <motion.p 
-             initial={{ opacity: 0 }}
-             animate={{ opacity: 1 }}
-             transition={{ delay: 0.4 }}
-             className="text-xl text-gray-300 font-light"
-           >
-             Gestion inteligente de inventarios y auditoria en tiempo real.
-           </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-5xl font-bold mb-6"
+          >
+            GCO Platform
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-xl text-gray-300 font-light"
+          >
+            Gestion inteligente de inventarios y auditoria en tiempo real.
+          </motion.p>
         </div>
       </div>
 
@@ -98,18 +100,18 @@ export default function LoginPage() {
             </div>
 
             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-2">Contrasena</label>
-               <div className="relative">
-                 <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                 <input
-                   type="password"
-                   value={password}
-                   onChange={(e) => setPassword(e.target.value)}
-                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#183C30] focus:border-transparent transition-all"
-                   placeholder="Password"
-                   required
-                 />
-               </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Contrasena</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#183C30] focus:border-transparent transition-all"
+                  placeholder="Password"
+                  required
+                />
+              </div>
             </div>
 
             <button
@@ -127,7 +129,7 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-          
+
           <p className="mt-8 text-center text-sm text-gray-400">
             Powered by GCO Technology
           </p>
