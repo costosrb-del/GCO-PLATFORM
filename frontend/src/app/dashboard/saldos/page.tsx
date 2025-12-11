@@ -25,7 +25,7 @@ export default function SaldosPage() {
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState("Todos");
   const [searchTerm, setSearchTerm] = useState("");
-  const [stockRange, setStockRange] = useState<[number, number]>([0, 10000]);
+  const [stockRange, setStockRange] = useState<[number, number]>([0, 1000000]);
   const [filterSales, setFilterSales] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
