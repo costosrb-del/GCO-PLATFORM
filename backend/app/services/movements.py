@@ -1,6 +1,7 @@
 import requests
 import time
 from datetime import datetime
+import logging
 
 BASE_URL = "https://api.siigo.com/v1"
 
