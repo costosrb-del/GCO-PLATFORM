@@ -42,14 +42,19 @@ export default function SaldosPage() {
     setIsLoading(true);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await axios.get(`${baseUrl}/inventory/`);
+      const response = await axios.get(`${baseUrl}/inventory/`, {
+        timeout: 10000 // 10s timeout
+      });
       if (response.data.data) {
         setData(response.data.data);
         setLastUpdated(new Date().toLocaleTimeString());
       }
     } catch (error: any) {
       console.error("Error updating inventory:", error);
-      if (error.message === "Network Error" || !error.response) {
+      if (error.code === 'ECONNABORTED') {
+        alert("⏱️ Tiempo agotado. El servidor local no respondió en 10s.");
+      }
+      else if (error.message === "Network Error" || !error.response) {
         alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad.\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro en la barra de direcciones.");
       } else {
         alert("Error cargando inventario: " + (error.response?.data?.detail || error.message));

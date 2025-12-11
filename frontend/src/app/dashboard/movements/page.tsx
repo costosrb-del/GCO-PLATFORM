@@ -64,7 +64,8 @@ export default function MovementsPage() {
       // selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
 
       const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000 // 10 seconds timeout
       });
 
       if (response.data.data) {
@@ -74,7 +75,13 @@ export default function MovementsPage() {
       }
     } catch (error: any) {
       console.error("Error fetching movements:", error);
-      if (error.response && error.response.status === 401) {
+      if (error.code === 'ECONNABORTED') {
+        alert("⏱️ Tiempo de espera agotado.\n\nEl backend no respondió en 10 segundos. Verifica que esté corriendo.");
+      }
+      else if (error.message === "Network Error" || !error.response) {
+        alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad ('Mixed Content').\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro.");
+      }
+      else if (error.response && error.response.status === 401) {
         // router.push("/"); // Temporarily disabled to debug "me saca" issue
         alert("Session expired or invalid token. Please log in again.");
       } else {
