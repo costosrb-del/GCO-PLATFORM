@@ -30,17 +30,21 @@ def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, d
 
     for attempt in range(max_retries):
         try:
-            print(f"DEBUG: Fetching {endpoint} page {page} with params {params}")
+            # print(f"DEBUG: Fetching {endpoint} page {page} with params {params}")
+            logging.info(f"Fetching {endpoint} page {page}. Params: {params}")
             response = requests.get(url, headers=headers, params=params)
             
             if response.status_code == 429:
+                logging.warning(f"Rate limit 429 for {endpoint}")
                 print(f"Rate limit exceeded (429) fetching {endpoint} page {page}. Retrying...")
                 time.sleep(retry_delay)
                 retry_delay *= 2
                 continue
                 
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            logging.info(f"Page {page} {endpoint}: Got {len(data.get('results', []))} results. Total: {data.get('pagination', {}).get('total_results')}")
+            return data
             
         except requests.exceptions.RequestException as e:
             print(f"Error fetching {endpoint}: {e}")
@@ -100,8 +104,10 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
                     page_results = future.result()
                     all_docs.extend(page_results)
                 except Exception as e:
+                    logging.error(f"Error fetching page parallel: {e}")
                     print(f"Error fetching page parallel: {e}")
 
+    logging.info(f"Total docs fetched for {endpoint}: {len(all_docs)}")
     return all_docs
 
 def extract_movements_from_doc(doc, doc_type):
@@ -180,6 +186,7 @@ def extract_movements_from_doc(doc, doc_type):
         # Financial lines (services without SKU) usually lack a code in Siigo API responses.
         if not code:
             # print(f"DEBUG: Skipping non-product item: {item.get('description', 'N/A')}")
+            # logging.info(f"Skipping non-product item: {description} (No Code)")
             continue
             
         qty = float(item.get("quantity", 0))
@@ -211,7 +218,9 @@ def extract_movements_from_doc(doc, doc_type):
             "observations": observation
         })
         
-    print(f"DEBUG: Extracted {len(movements)} movements from document {doc_number}")
+    # print(f"DEBUG: Extracted {len(movements)} movements from document {doc_number}")
+    if len(movements) > 0:
+        logging.info(f"Extracted {len(movements)} movements from {friendly_type} {doc_number}")
     return movements
 
 def get_consolidated_movements(token, start_date, end_date, progress_callback=None, selected_types=None):

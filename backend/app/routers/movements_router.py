@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import date
 from app.services.movements import get_consolidated_movements as fetch_movements
 from app.services.config import get_config
+from app.services.auth import get_auth_token
 from app.routers.auth_router import verify_token
 import pandas as pd
 
@@ -33,17 +34,22 @@ def get_movements(
         # Iterate over each company to fetch its data
         for company in target_companies:
             try:
-                # Assuming access_key is the token needed for Siigo
-                company_token = company.get("access_key")
+                # Authenticate and get session token
+                company_username = company.get("username")
+                company_access_key = company.get("access_key")
                 company_name = company.get("name")
                 
-                if not company_token:
-                    print(f"Skipping company {company_name}: No access key")
+                print(f"Authenticating {company_name}...")
+                real_token = get_auth_token(company_username, company_access_key)
+                
+                if not real_token:
+                    print(f"Failed to authenticate {company_name}")
                     continue
                     
                 print(f"Fetching movements for {company_name}...")
-                # Fetch data (returns a list of dicts)
-                movs = fetch_movements(company_token, start_date, end_date)
+                
+                # Fetch data
+                movs = fetch_movements(real_token, start_date, end_date)
                 
                 # Tag each record with the company name to distinguish them
                 for m in movs:
@@ -51,14 +57,15 @@ def get_movements(
                     
                 all_results.extend(movs)
             except Exception as e:
-                print(f"Error fetching for {company.get('name')}: {e}")
-                # Continue with other companies even if one fails
+                import traceback
+                traceback.print_exc()
+                print(f"Error fetching for {company.get('name')}: {str(e)}")
                 continue
         
+        # Convert list to DataFrame for final processing
         if not all_results:
              return {"count": 0, "data": []}
              
-        # Convert list to DataFrame for final processing
         df = pd.DataFrame(all_results)
              
         # Convert NaN to None for JSON compliance
@@ -66,7 +73,6 @@ def get_movements(
         return {"count": len(data), "data": data}
         
     except Exception as e:
-        print(f"Error fetching movements: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
