@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-green: #183C30;
+  --color-brand-light: #F5F7F8;
+}
+
+/* Custom Base Styles */
+body {
+  background-color: var(--color-brand-light);
+  color: #1a1a1a;
+}
