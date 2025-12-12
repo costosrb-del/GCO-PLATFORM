@@ -44,7 +44,7 @@ def fetch_google_sheet_inventory(sheet_url):
                     "company_name": "Inventario Externo",
                     "code": code,
                     "name": name, 
-                    "warehouse_name": "Bodega Libre", # Updated Name
+                    "warehouse_name": "Sin Ingresar", # Updated Name
                     "quantity": qty
                 })
             except ValueError:
