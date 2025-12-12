@@ -114,7 +114,8 @@ export default function SaldosPage() {
 
   const filteredData = data.filter(item => {
     if (filterSales) {
-      if (!salesCodes.includes(item.code)) return false;
+      // Exempt 'Inventario Externo' from sales filter code check
+      if (item.company_name !== "Inventario Externo" && !salesCodes.includes(item.code)) return false;
     }
     if (selectedCompanies.length > 0 && !selectedCompanies.includes(item.company_name)) return false;
     if (selectedWarehouses.length > 0 && !selectedWarehouses.includes(item.warehouse_name)) return false;
