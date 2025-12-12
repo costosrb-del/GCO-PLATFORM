@@ -1,15 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 import concurrent.futures
+import json
+import time
+import os
+
 from app.services.inventory import get_all_products
 from app.services.auth import get_auth_token
 from app.services.config import get_config
 from app.services.utils import fetch_google_sheet_inventory
 from app.services.cache import cache
 from app.routers.auth_router import verify_token
-import os
-
-router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -28,7 +30,6 @@ def process_company(company):
         products = get_all_products(token)
         if products:
             for p in products:
-                # Flatten logic similar to Streamlit app
                 p_base = {
                     "code": p.get("code", "N/A"),
                     "name": p.get("name", "Sin Nombre"),
@@ -64,10 +65,7 @@ def filter_for_user(result_dict, role):
     filtered_data = []
     for item in data:
         wh_name = str(item.get("warehouse_name", "")).lower()
-        # Check if wh_name contains any allowed term? Or exact match?
-        # User said "Bodega Principal" - usually safer to use lowercase matching
         
-        # Heuristic: Check if allowed matches start of string or full match
         is_allowed = False
         if wh_name in allowed_warehouses:
              is_allowed = True
@@ -79,7 +77,6 @@ def filter_for_user(result_dict, role):
         if is_allowed:
             filtered_data.append(item)
             
-    # Return new dict
     return {
         "count": len(filtered_data),
         "data": filtered_data,
@@ -91,22 +88,7 @@ def get_consolidated_inventory(
     user: dict = Depends(verify_token),
     force_refresh: bool = False
 ):
-    # Only Admin can force refresh -> REMOVED restriction to allow real-time data for all
-    # if force_refresh and user.get("role") != "admin":
-    #    raise HTTPException(status_code=403, detail="Solo Administradores pueden actualizar el inventario.")
-
     cache_key = "inventory_snapshot.json"
-    
-    # Try Cache First -> DISABLED to always fetch fresh data
-    # if not force_refresh:
-    #     cached = cache.load(cache_key)
-    #     if cached:
-    #         # print("Serving Inventory Snapshot")
-    #         return filter_for_user(cached, user.get("role"))
-
-    # If we are here, we need to fetch.
-    # If Viewer hit a cache miss, we allow fetching to prevent broken UI, 
-    # but ideally Admin should trigger updates.
     
     companies = get_config()
     all_data = []
@@ -115,10 +97,8 @@ def get_consolidated_inventory(
     # 1. Fetch Siigo Data
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
         future_to_company = {executor.submit(process_company, c): c for c in companies}
-        future_to_company = {executor.submit(process_company, c): c for c in companies}
         
         for future in concurrent.futures.as_completed(future_to_company):
-            # Unpack tuple (data, error)
             res_data, res_err = future.result()
             if res_data:
                 all_data.extend(res_data)
@@ -126,7 +106,6 @@ def get_consolidated_inventory(
                 errors.append(res_err)
 
     # 2. Fetch Google Sheets Data
-    # Hardcoded or Env URL
     sheet_url = os.getenv("GSHEET_INVENTORY_URL")
     if sheet_url:
         try:
@@ -144,30 +123,25 @@ def get_consolidated_inventory(
         "errors": errors
     }
     
-    # Save Snapshot
+    # Save Snapshot (optional if we are disabling cache reading, but keeping writing is fine)
     if all_data:
         cache.save(cache_key, final_result)
 
     return filter_for_user(final_result, user.get("role"))
-from fastapi.responses import StreamingResponse
-import json
-import time
 
 @router.get("/stream")
 def stream_inventory_updates(user: dict = Depends(verify_token)):
     # Generator function for SSE
     def event_stream():
         companies = get_config()
-        all_data = []
+        # all_data = [] # Not needed if we just stream
+        all_data_accumulated = []
         errors = []
         total_steps = len(companies) + 1 # +1 for Google Sheets
         
         yield f"data: {json.dumps({'progress': 0, 'message': 'Iniciando carga de inventario...'})}\n\n"
 
-        # 1. Fetch Siigo Data (Sequential for progress tracking - simple approach)
-        # Ideally we keep parallel but use a callback queue, but let's do sequential for reliable SSE feedback first or use futures with manual tracking
-        
-        # Parallel approach with progress tracking
+        # 1. Fetch Siigo Data (Parallel with manual tracking)
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
             future_to_company = {executor.submit(process_company, c): c for c in companies}
             completed_count = 0
@@ -177,7 +151,7 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
                 res_data, res_err = future.result()
                 
                 if res_data:
-                    all_data.extend(res_data)
+                    all_data_accumulated.extend(res_data)
                 if res_err:
                     errors.append(res_err)
                 
@@ -192,14 +166,14 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
             try:
                 gs_data = fetch_google_sheet_inventory(sheet_url)
                 if gs_data:
-                    all_data.extend(gs_data)
+                    all_data_accumulated.extend(gs_data)
             except Exception as e:
                 errors.append(f"Error Sheet: {str(e)}")
         
         # Finalize
         final_result = {
-            "count": len(all_data),
-            "data": all_data,
+            "count": len(all_data_accumulated),
+            "data": all_data_accumulated,
             "errors": errors
         }
         
