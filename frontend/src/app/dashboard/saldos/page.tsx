@@ -115,7 +115,9 @@ export default function SaldosPage() {
   const filteredData = data.filter(item => {
     if (filterSales) {
       // Exempt 'Inventario Externo' from sales filter code check
-      if (item.company_name !== "Inventario Externo" && !salesCodes.includes(item.code)) return false;
+      // Robust check for company name
+      const isExternal = item.company_name && item.company_name.includes("Inventario Externo");
+      if (!isExternal && !salesCodes.includes(item.code)) return false;
     }
     if (selectedCompanies.length > 0 && !selectedCompanies.includes(item.company_name)) return false;
     if (selectedWarehouses.length > 0 && !selectedWarehouses.includes(item.warehouse_name)) return false;
@@ -173,7 +175,7 @@ export default function SaldosPage() {
           {lastUpdated && <span className="text-xs text-gray-400 mr-2">Act: {lastUpdated}</span>}
 
           {/* View Toggle */}
-          <div className="bg-gray-100 p-1 rounded-xl flex items-center mr-2">
+          <div className={`bg-gray-100 p-1 rounded-xl flex items-center mr-2 ${role === 'viewer' ? 'hidden' : ''}`}>
             <button
               onClick={() => setViewMode("detail")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${viewMode === "detail" ? "bg-white text-[#183C30] shadow-sm" : "text-gray-500 hover:text-gray-700"
@@ -189,6 +191,9 @@ export default function SaldosPage() {
               Consolidado
             </button>
           </div>
+          {role === 'viewer' && (
+            <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg mr-2">Vista Consolidada</span>
+          )}
 
           <button
             onClick={() => handleExport("excel")}
@@ -409,7 +414,7 @@ function ListBoxMulti({ options, selected, onChange, placeholder }: any) {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+            <Listbox.Options className="absolute mt-1 max-h-96 w-full overflow-auto rounded-xl bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
               {options.map((option: string, personIdx: number) => (
                 <Listbox.Option
                   key={personIdx}
