@@ -70,7 +70,7 @@ export default function SaldosPage() {
     }
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app";
       // Use EventSource for streaming updates
       // Note: Native EventSource doesn't support Headers (Authorization). 
       // We need a polyfill or bypass via query param, or use fetch with reader.
