@@ -80,6 +80,11 @@ export default function SaldosPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Server Error (${response.status}): ${errText}`);
+      }
+
       if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
