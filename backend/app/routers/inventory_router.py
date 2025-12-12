@@ -74,41 +74,45 @@ def get_consolidated_inventory(
     errors = []
 
     # 1. Fetch Siigo Data
-    def process_company(company):
-        try:
-            # Check for configuration validity first
-            if not company.get("valid", True):
-                return [], f"Empresa '{company['name']}' tiene configuración incompleta (falta Usuario o API Key)."
+# Helper function moved to module level for shared use
+def process_company(company):
+    try:
+        # Check for configuration validity first
+        if not company.get("valid", True):
+            return [], f"Empresa '{company['name']}' tiene configuración incompleta (falta Usuario o API Key)."
 
-            token = get_auth_token(company["username"], company["access_key"])
-            if not token:
-                return [], f"No se pudo autenticar '{company['name']}'. Verifique credenciales."
-            
-            c_data = []
-            products = get_all_products(token)
-            if products:
-                for p in products:
-                    # Flatten logic similar to Streamlit app
-                    p_base = {
-                        "code": p.get("code", "N/A"),
-                        "name": p.get("name", "Sin Nombre"),
-                        "company_name": company["name"],
-                        "quantity": 0.0,
-                        "warehouse_name": "N/A"
-                    }
-                    
-                    if "warehouses" in p:
-                        for wh in p["warehouses"]:
-                            item = p_base.copy()
-                            item["warehouse_name"] = wh.get("name", "Unknown")
-                            item["quantity"] = float(wh.get("quantity", 0))
-                            c_data.append(item)
-                    else:
-                        c_data.append(p_base)
-            return c_data, None
-        except Exception as e:
-            print(f"Error processing {company['name']}: {e}")
-            return [], f"Error en '{company['name']}': {str(e)}"
+        token = get_auth_token(company["username"], company["access_key"])
+        if not token:
+            return [], f"No se pudo autenticar '{company['name']}'. Verifique credenciales."
+        
+        c_data = []
+        products = get_all_products(token)
+        if products:
+            for p in products:
+                # Flatten logic similar to Streamlit app
+                p_base = {
+                    "code": p.get("code", "N/A"),
+                    "name": p.get("name", "Sin Nombre"),
+                    "company_name": company["name"],
+                    "quantity": 0.0,
+                    "warehouse_name": "N/A"
+                }
+                
+                if "warehouses" in p:
+                    for wh in p["warehouses"]:
+                        item = p_base.copy()
+                        item["warehouse_name"] = wh.get("name", "Unknown")
+                        item["quantity"] = float(wh.get("quantity", 0))
+                        c_data.append(item)
+                else:
+                    c_data.append(p_base)
+        return c_data, None
+    except Exception as e:
+        print(f"Error processing {company['name']}: {e}")
+        return [], f"Error en '{company['name']}': {str(e)}"
+
+# 1. Fetch Siigo Data
+# process_company is now global
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
         future_to_company = {executor.submit(process_company, c): c for c in companies}
