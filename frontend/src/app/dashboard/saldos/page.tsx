@@ -18,6 +18,10 @@ interface InventoryItem {
 export default function SaldosPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [data, setData] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [lastUpdated, setLastUpdated] = useState("");
   const [role, setRole] = useState("viewer");
 
@@ -55,39 +59,76 @@ export default function SaldosPage() {
 
   const fetchData = async () => {
     setIsLoading(true);
+    setLoadingProgress(0);
+    setLoadingMessage("Iniciando...");
+
     const token = localStorage.getItem("gco_token");
     if (!token) {
       alert("Sesión no válida. Por favor, reingresa.");
+      setIsLoading(false);
       return;
     }
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
-      const response = await axios.get(`${baseUrl}/inventory/`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 60000 // 60s timeout
+      // Use EventSource for streaming updates
+      // Note: Native EventSource doesn't support Headers (Authorization). 
+      // We need a polyfill or bypass via query param, or use fetch with reader.
+      // Easiest for now: Use fetch with ReadableStream reader.
+
+      const response = await fetch(`${baseUrl}/inventory/stream`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.data.errors && response.data.errors.length > 0) {
-        alert("⚠️ Atencion:\n" + response.data.errors.join("\n"));
+
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || ""; // Keep incomplete chunk
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.replace("data: ", "");
+            try {
+              const eventData = JSON.parse(jsonStr);
+
+              if (eventData.progress !== undefined) {
+                setLoadingProgress(eventData.progress);
+                setLoadingMessage(eventData.message);
+              }
+
+              if (eventData.complete_data) {
+                const finalData = eventData.complete_data;
+                if (finalData.errors && finalData.errors.length > 0) {
+                  alert("⚠️ Atencion:\n" + finalData.errors.join("\n"));
+                }
+                if (finalData.data) {
+                  setData(finalData.data);
+                  setLastUpdated(new Date().toLocaleTimeString());
+                }
+              }
+            } catch (e) {
+              console.error("Error parsing SSE", e);
+            }
+          }
+        }
       }
 
-
-      if (response.data.data) {
-        setData(response.data.data);
-        setLastUpdated(new Date().toLocaleTimeString());
-      }
     } catch (error: any) {
       console.error("Error updating inventory:", error);
-      if (error.code === 'ECONNABORTED') {
-        alert("⏱️ Tiempo agotado. El servidor no respondió en 60s.");
-      }
-      else if (error.message === "Network Error" || !error.response) {
-        alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad.\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro en la barra de direcciones.");
-      } else {
-        alert("Error cargando inventario: " + (error.response?.data?.detail || error.message));
-      }
+      alert("Error cargando inventario: " + error.message);
     } finally {
       setIsLoading(false);
+      setLoadingMessage("");
+      setLoadingProgress(0);
     }
   };
 
@@ -216,10 +257,21 @@ export default function SaldosPage() {
           <button
             onClick={fetchData}
             disabled={isLoading}
-            className={`flex items-center space-x-2 bg-[#183C30] hover:bg-[#122e24] text-white px-6 py-2.5 rounded-xl transition-all font-medium ${isLoading ? "opacity-90" : "shadow-lg shadow-green-900/20"}`}
+            className={`flex items-center space-x-2 bg-[#183C30] hover:bg-[#122e24] text-white px-6 py-2.5 rounded-xl transition-all font-medium ${isLoading ? "opacity-90 w-48 justify-center" : "shadow-lg shadow-green-900/20"}`}
           >
-            <RefreshCcw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            <span>{isLoading ? "Sincronizando..." : "Actualizar"}</span>
+            {isLoading ? (
+              <div className="flex flex-col items-center w-full">
+                <span className="text-xs mb-1">{loadingMessage} {loadingProgress}%</span>
+                <div className="w-full bg-green-800 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-green-400 h-full transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <RefreshCcw className="h-4 w-4" />
+                <span>Actualizar</span>
+              </>
+            )}
           </button>
         </div>
       </div>

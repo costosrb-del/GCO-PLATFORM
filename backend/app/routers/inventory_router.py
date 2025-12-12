@@ -145,3 +145,63 @@ def get_consolidated_inventory(
         cache.save(cache_key, final_result)
 
     return filter_for_user(final_result, user.get("role"))
+from fastapi.responses import StreamingResponse
+import json
+import time
+
+@router.get("/stream")
+def stream_inventory_updates(user: dict = Depends(verify_token)):
+    # Generator function for SSE
+    def event_stream():
+        companies = get_config()
+        all_data = []
+        errors = []
+        total_steps = len(companies) + 1 # +1 for Google Sheets
+        
+        yield f"data: {json.dumps({'progress': 0, 'message': 'Iniciando carga de inventario...'})}\n\n"
+
+        # 1. Fetch Siigo Data (Sequential for progress tracking - simple approach)
+        # Ideally we keep parallel but use a callback queue, but let's do sequential for reliable SSE feedback first or use futures with manual tracking
+        
+        # Parallel approach with progress tracking
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
+            future_to_company = {executor.submit(process_company, c): c for c in companies}
+            completed_count = 0
+            
+            for future in concurrent.futures.as_completed(future_to_company):
+                company = future_to_company[future]
+                res_data, res_err = future.result()
+                
+                if res_data:
+                    all_data.extend(res_data)
+                if res_err:
+                    errors.append(res_err)
+                
+                completed_count += 1
+                progress = int((completed_count / total_steps) * 100)
+                yield f"data: {json.dumps({'progress': progress, 'message': f'Cargado {company['name']}'})}\n\n"
+
+        # 2. Fetch Google Sheets
+        yield f"data: {json.dumps({'progress': 90, 'message': 'Cargando Inventario Externo...'})}\n\n"
+        sheet_url = os.getenv("GSHEET_INVENTORY_URL")
+        if sheet_url:
+            try:
+                gs_data = fetch_google_sheet_inventory(sheet_url)
+                if gs_data:
+                    all_data.extend(gs_data)
+            except Exception as e:
+                errors.append(f"Error Sheet: {str(e)}")
+        
+        # Finalize
+        final_result = {
+            "count": len(all_data),
+            "data": all_data,
+            "errors": errors
+        }
+        
+        # Filter before sending final payload
+        filtered = filter_for_user(final_result, user.get("role"))
+        
+        yield f"data: {json.dumps({'progress': 100, 'message': 'Finalizado', 'complete_data': filtered})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
