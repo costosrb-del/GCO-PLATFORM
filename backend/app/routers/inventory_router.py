@@ -52,18 +52,18 @@ def get_consolidated_inventory(
     user: dict = Depends(verify_token),
     force_refresh: bool = False
 ):
-    # Only Admin can force refresh
-    if force_refresh and user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Solo Administradores pueden actualizar el inventario.")
+    # Only Admin can force refresh -> REMOVED restriction to allow real-time data for all
+    # if force_refresh and user.get("role") != "admin":
+    #    raise HTTPException(status_code=403, detail="Solo Administradores pueden actualizar el inventario.")
 
     cache_key = "inventory_snapshot.json"
     
-    # Try Cache First
-    if not force_refresh:
-        cached = cache.load(cache_key)
-        if cached:
-            # print("Serving Inventory Snapshot")
-            return filter_for_user(cached, user.get("role"))
+    # Try Cache First -> DISABLED to always fetch fresh data
+    # if not force_refresh:
+    #     cached = cache.load(cache_key)
+    #     if cached:
+    #         # print("Serving Inventory Snapshot")
+    #         return filter_for_user(cached, user.get("role"))
 
     # If we are here, we need to fetch.
     # If Viewer hit a cache miss, we allow fetching to prevent broken UI, 
