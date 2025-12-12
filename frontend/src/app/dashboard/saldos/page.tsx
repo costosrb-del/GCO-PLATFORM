@@ -47,6 +47,7 @@ export default function SaldosPage() {
     // 2. Apply Constraints for Viewer
     if (userRole === "viewer") {
       setFilterSales(true);
+      setViewMode("consolidated");
     }
 
     fetchData();
