@@ -19,6 +19,7 @@ export default function SaldosPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState("");
+  const [role, setRole] = useState("viewer");
 
   // Filters State
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
@@ -39,6 +40,15 @@ export default function SaldosPage() {
   const warehousesList = Array.from(new Set(data.map(item => item.warehouse_name))).sort();
 
   useEffect(() => {
+    // 1. Get Role
+    const userRole = localStorage.getItem("gco_role") || "viewer";
+    setRole(userRole);
+
+    // 2. Apply Constraints for Viewer
+    if (userRole === "viewer") {
+      setFilterSales(true);
+    }
+
     fetchData();
   }, []);
 
@@ -265,8 +275,13 @@ export default function SaldosPage() {
                 </div>
 
                 <div className="flex flex-col space-y-2">
-                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200 cursor-pointer" onClick={() => setFilterSales(!filterSales)}>
-                    <span className="text-sm font-medium text-gray-700 select-none">Solo Productos de Venta</span>
+                  <div
+                    className={`flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200 ${role === 'viewer' ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                    onClick={() => role !== 'viewer' && setFilterSales(!filterSales)}
+                  >
+                    <span className="text-sm font-medium text-gray-700 select-none">
+                      Solo Productos de Venta {role === 'viewer' && "(Bloqueado)"}
+                    </span>
                     <div
                       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${filterSales ? "bg-[#183C30]" : "bg-gray-300"}`}
                     >

@@ -20,7 +20,7 @@ def filter_for_user(result_dict, role):
         return result_dict
     
     data = result_dict.get("data", [])
-    allowed_warehouses = ["bodega principal rionegro", "bodega libre", "sin bodega", "n/a", "unknown", "sin ingresar"]
+    allowed_warehouses = ["bodega principal rionegro", "bodega libre"]
     
     filtered_data = []
     for item in data:
