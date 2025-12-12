@@ -428,10 +428,12 @@ export default function MovementsPage() {
                 <th className="px-6 py-4 font-bold">Fecha</th>
                 <th className="px-6 py-4 font-bold">Documento</th>
                 <th className="px-6 py-4 font-bold">Tercero / Empresa</th>
+                <th className="px-6 py-4 font-bold">SKU</th>
                 <th className="px-6 py-4 font-bold">Producto</th>
                 <th className="px-6 py-4 font-bold">Bodega</th>
                 <th className="px-6 py-4 font-bold text-right">Cantidad</th>
                 <th className="px-6 py-4 font-bold text-right">Total</th>
+                <th className="px-6 py-4 font-bold">Observacion</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -468,11 +470,15 @@ export default function MovementsPage() {
                     </div>
                   </td>
 
+                  {/* SKU */}
+                  <td className="px-6 py-4">
+                    <span className="font-mono text-xs text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">{item.code || item.product_code}</span>
+                  </td>
+
                   {/* Product */}
                   <td className="px-6 py-4">
-                    <div className="flex flex-col max-w-[250px]">
-                      <span className="text-gray-700 font-medium truncate" title={item.description || item.name}>{item.description || item.name}</span>
-                      <span className="text-[10px] text-gray-400 font-mono bg-gray-50 w-fit px-1 rounded mt-1">{item.product_code || item.code}</span>
+                    <div className="flex flex-col max-w-[200px]">
+                      <span className="text-gray-700 font-medium truncate text-xs" title={item.description || item.name}>{item.description || item.name}</span>
                     </div>
                   </td>
 
@@ -492,6 +498,13 @@ export default function MovementsPage() {
                   {/* Total Price */}
                   <td className="px-6 py-4 text-right text-gray-600 font-mono text-xs">
                     {formatCurrency(item.total || 0)}
+                  </td>
+
+                  {/* Observation */}
+                  <td className="px-6 py-4">
+                    <div className="max-w-[150px] truncate text-xs text-gray-400 italic" title={item.observations}>
+                      {item.observations || "-"}
+                    </div>
                   </td>
                 </tr>
               ))}
