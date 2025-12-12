@@ -58,7 +58,7 @@ export default function MovementsPage() {
     try {
       // Determine API URL (Hardcoded or Env Var)
       // For now, if running locally use localhost, else assuming relative path or env
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
       let url = `${baseUrl}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
 
       if (selectedCompanies.length > 0) {

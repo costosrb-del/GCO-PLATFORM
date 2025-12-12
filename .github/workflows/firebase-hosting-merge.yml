@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: cd frontend && npm install && npm run build
         env:
-          NEXT_PUBLIC_API_URL: https://gco-backend-hcmjiaf72a-uc.a.run.app
+          NEXT_PUBLIC_API_URL: https://gco-siigo-api-245366645678.us-central1.run.app
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

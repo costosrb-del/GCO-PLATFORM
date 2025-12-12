@@ -47,7 +47,7 @@ export default function SaldosPage() {
     }
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
       const response = await axios.get(`${baseUrl}/inventory/`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 60000 // 60s timeout
