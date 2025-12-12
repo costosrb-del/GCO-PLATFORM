@@ -38,6 +38,10 @@ export default function SaldosPage() {
   const companiesList = Array.from(new Set(data.map(item => item.company_name))).sort();
   const warehousesList = Array.from(new Set(data.map(item => item.warehouse_name))).sort();
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const fetchData = async () => {
     setIsLoading(true);
     const token = localStorage.getItem("gco_token");
