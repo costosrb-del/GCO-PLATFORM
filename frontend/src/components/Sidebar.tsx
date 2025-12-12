@@ -35,8 +35,8 @@ export function Sidebar() {
         <Link
           href="/dashboard"
           className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${pathname === "/dashboard"
-              ? "bg-white/10 text-white font-medium"
-              : "text-gray-300 hover:bg-white/5 hover:text-white"
+            ? "bg-white/10 text-white font-medium"
+            : "text-gray-300 hover:bg-white/5 hover:text-white"
             }`}
         >
           <LayoutDashboard className="h-5 w-5" />
@@ -47,8 +47,8 @@ export function Sidebar() {
           <Link
             href="/dashboard/users"
             className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${pathname === "/dashboard/users"
-                ? "bg-white/10 text-white font-medium"
-                : "text-gray-300 hover:bg-white/5 hover:text-white"
+              ? "bg-white/10 text-white font-medium"
+              : "text-gray-300 hover:bg-white/5 hover:text-white"
               }`}
           >
             <User className="h-5 w-5" />
@@ -83,21 +83,24 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/saldos"
                     className={`block px-4 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/saldos"
-                        ? "bg-white text-[#183C30] font-medium shadow-md"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                      ? "bg-white text-[#183C30] font-medium shadow-md"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
                       }`}
                   >
                     Saldos Consolidados
                   </Link>
-                  <Link
-                    href="/dashboard/movements"
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/movements"
+
+                  {role === "admin" && (
+                    <Link
+                      href="/dashboard/movements"
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/movements"
                         ? "bg-white text-[#183C30] font-medium shadow-md"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
-                  >
-                    <span>Auditoria Movimientos</span>
-                  </Link>
+                        }`}
+                    >
+                      <span>Auditoria Movimientos</span>
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             )}
