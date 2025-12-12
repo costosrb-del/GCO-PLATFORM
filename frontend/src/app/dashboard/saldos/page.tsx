@@ -18,8 +18,8 @@ interface InventoryItem {
 export default function SaldosPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [data, setData] = useState<InventoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Duplicate lines removed
+
   const [loadingMessage, setLoadingMessage] = useState("");
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [lastUpdated, setLastUpdated] = useState("");
