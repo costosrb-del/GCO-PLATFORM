@@ -19,4 +19,5 @@ EXPOSE 8080
 
 # Run the application
 # Use the PORT environment variable provided by Cloud Run, default to 8080
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
+# Run the application via the production runner script
+CMD ["python", "run_prod.py"]
