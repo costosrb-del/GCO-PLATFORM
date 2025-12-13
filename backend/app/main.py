@@ -27,6 +27,7 @@ async def startup_event():
     for route in app.routes:
         logger.info(f" - {route.path} [{route.name}]")
 
+    # Startup complete
     logger.info("Ready to accept connections.")
 
 app.add_middleware(
