@@ -5,6 +5,9 @@ WORKDIR /app
 # Upgrade pip to avoid warnings
 RUN pip install --upgrade pip
 
+# Ensure logs are flushed immediately
+ENV PYTHONUNBUFFERED=1
+
 # Copy only requirements first to cache dependencies
 COPY requirements.txt .
 
