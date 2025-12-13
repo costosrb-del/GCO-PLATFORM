@@ -4,6 +4,25 @@ from app.routers import movements_router, auth_router, inventory_router, export_
 
 app = FastAPI(title="GCO Siigo API", version="2.0.0")
 
+# Setup Logging
+import logging
+import sys
+import os
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Application starting up...")
+    logger.info(f"Port config: {os.getenv('PORT', 'Not Set')}")
+    logger.info("Ready to accept connections.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
