@@ -55,7 +55,20 @@ export default function SaldosPage() {
       setViewMode("consolidated");
     }
 
-    // Auto-fetch removed. User must click "Consultar/Actualizar".
+    // 3. Try to load cached data from session (Persistence across tabs)
+    try {
+      const cached = sessionStorage.getItem("gco_inventory_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Only use cache if it's less than 30 minutes old (optional validity check)
+        // For now just load it so user sees something immediately
+        setData(parsed.data);
+        setLastUpdated(parsed.lastUpdated);
+        console.log("Loaded inventory from Session Cache");
+      }
+    } catch (e) {
+      console.error("Failed to load session cache", e);
+    }
   }, []);
 
   const fetchData = async () => {
@@ -71,12 +84,8 @@ export default function SaldosPage() {
     }
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app");
-      // Use EventSource for streaming updates
-      // Note: Native EventSource doesn't support Headers (Authorization). 
-      // We need a polyfill or bypass via query param, or use fetch with reader.
-      // Easiest for now: Use fetch with ReadableStream reader.
-
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
+      // Force refresh only when user explicitly clicks Update
       const response = await fetch(`${baseUrl}/inventory/stream?force_refresh=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -118,7 +127,15 @@ export default function SaldosPage() {
                 }
                 if (finalData.data) {
                   setData(finalData.data);
-                  setLastUpdated(new Date().toLocaleTimeString());
+                  const nowIdx = new Date().toLocaleTimeString();
+                  setLastUpdated(nowIdx);
+
+                  // Save to Session Storage
+                  sessionStorage.setItem("gco_inventory_cache", JSON.stringify({
+                    data: finalData.data,
+                    lastUpdated: nowIdx,
+                    timestamp: Date.now()
+                  }));
                 }
               }
             } catch (e) {
