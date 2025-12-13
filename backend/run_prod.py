@@ -27,6 +27,7 @@ if __name__ == "__main__":
     try:
         port_env = os.environ.get("PORT", "8080")
         port = int(port_env)
+        # Main entry point for Cloud Run
         logger.info(f"Starting application on port {port}...")
         
         # Disable reload in production for better performance
