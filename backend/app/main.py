@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 async def startup_event():
     logger.info("Application starting up...")
     logger.info(f"Port config: {os.getenv('PORT', 'Not Set')}")
+    
+    # Log all registered routes
+    logger.info("Registered Routes:")
+    for route in app.routes:
+        logger.info(f" - {route.path} [{route.name}]")
+
     logger.info("Ready to accept connections.")
 
 app.add_middleware(
