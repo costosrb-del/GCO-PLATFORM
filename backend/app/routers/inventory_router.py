@@ -60,21 +60,12 @@ def filter_for_user(result_dict, role):
         return result_dict
     
     data = result_dict.get("data", [])
-    allowed_warehouses = ["bodega principal rionegro", "sin ingresar"]
-    
     filtered_data = []
     for item in data:
         wh_name = str(item.get("warehouse_name", "")).lower()
         
-        is_allowed = False
-        if wh_name in allowed_warehouses:
-             is_allowed = True
-        elif "bodega principal rionegro" in wh_name:
-             is_allowed = True
-        elif "bodega libre" in wh_name:
-             is_allowed = True
-        
-        if is_allowed:
+        # User requested ONLY "Bodega Principal" and "Bodega Libre"
+        if "bodega principal" in wh_name or "bodega libre" in wh_name:
             filtered_data.append(item)
             
     return {
