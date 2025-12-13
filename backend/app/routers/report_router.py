@@ -1,7 +1,6 @@
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 import logging
-from app.services.inventory import get_all_products
 from app.services.config import get_config
 from app.routers.inventory_router import get_consolidated_inventory
 from app.services.email_service import send_daily_report_email
