@@ -94,6 +94,13 @@ def get_consolidated_inventory(
     all_data = []
     errors = []
 
+    # 0. Try Cache First
+    if not force_refresh:
+        cached_data = cache.load(cache_key)
+        if cached_data:
+            print("Serving inventory from CACHE")
+            return filter_for_user(cached_data, user.get("role"))
+
     # 1. Fetch Siigo Data
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
         future_to_company = {executor.submit(process_company, c): c for c in companies}
