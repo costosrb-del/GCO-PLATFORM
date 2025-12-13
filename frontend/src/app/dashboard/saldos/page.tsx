@@ -77,7 +77,7 @@ export default function SaldosPage() {
       // We need a polyfill or bypass via query param, or use fetch with reader.
       // Easiest for now: Use fetch with ReadableStream reader.
 
-      const response = await fetch(`${baseUrl}/inventory/stream`, {
+      const response = await fetch(`${baseUrl}/inventory/stream?force_refresh=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
