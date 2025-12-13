@@ -16,6 +16,7 @@ def get_config():
     companies = []
     # Support up to 20 companies
     # Support up to 20 companies
+    print("Cargando configuración de empresas...")
     for i in range(1, 21):  
         # Try multiple naming conventions
         name = os.getenv(f"COMPANY_{i}_NAME")
@@ -28,11 +29,16 @@ def get_config():
         
         if name:
             is_valid = bool(username and access_key)
+            if not is_valid:
+                print(f"DEBUG CONFIG: Empresa {i} ({name}) incompleta. Username: {'OK' if username else 'MISSING'}, Key: {'OK' if access_key else 'MISSING'}")
+            
             companies.append({
                 "id": i,
                 "name": name.strip(),
+                # Ensure we strip potential whitespace from copy-paste
                 "username": (username or "").strip(),
                 "access_key": (access_key or "").strip(),
                 "valid": is_valid
             })
+    print(f"Total empresas encontradas: {len(companies)}")
     return companies
