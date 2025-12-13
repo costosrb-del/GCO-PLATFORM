@@ -21,6 +21,7 @@ def get_auth_token(username, access_key, partner_id="SiigoApi"):
     retry_delay = 2
 
     for attempt in range(max_retries):
+        response = None
         try:
             response = requests.post(AUTH_URL, json=data, headers=headers)
             

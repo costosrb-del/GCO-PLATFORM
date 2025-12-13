@@ -106,7 +106,7 @@ def get_consolidated_inventory(
                 errors.append(res_err)
 
     # 2. Fetch Google Sheets Data
-    sheet_url = os.getenv("GSHEET_INVENTORY_URL")
+    sheet_url = os.getenv("GSHEET_INVENTORY_URL") or os.getenv("GOOGLE_SHEET_URL")
     if sheet_url:
         try:
             gs_data = fetch_google_sheet_inventory(sheet_url)
@@ -161,7 +161,7 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
 
         # 2. Fetch Google Sheets
         yield f"data: {json.dumps({'progress': 90, 'message': 'Cargando Inventario Externo...'})}\n\n"
-        sheet_url = os.getenv("GSHEET_INVENTORY_URL")
+        sheet_url = os.getenv("GSHEET_INVENTORY_URL") or os.getenv("GOOGLE_SHEET_URL")
         if sheet_url:
             try:
                 gs_data = fetch_google_sheet_inventory(sheet_url)

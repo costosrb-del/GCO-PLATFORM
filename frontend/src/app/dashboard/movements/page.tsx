@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import axios from "axios";
 import {
   Loader2, Search, Filter, RefreshCcw, Calendar,
   TrendingUp, TrendingDown, Download, ChevronLeft,
   ChevronRight, SlidersHorizontal, FileSpreadsheet,
-  Building2, MapPin, FileText
+  Building2, MapPin, FileText, Check, ChevronDown
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Listbox, Transition } from "@headlessui/react";
 import { useRouter } from "next/navigation";
 
 // Utility for formatting currency
@@ -39,9 +41,39 @@ export default function MovementsPage() {
   const [selectedMovTypes, setSelectedMovTypes] = useState<string[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
 
+  // Available Options (Fetched from Config)
+  const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
+
+  // -- STATE: Client-side Date Filters --
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
+  const [filterSku, setFilterSku] = useState("");
+
+  // -- STATE: Column Filters --
+  const [colFilters, setColFilters] = useState<Record<string, string>>({});
+  const [activeColFilter, setActiveColFilter] = useState<string | null>(null);
+
   // -- STATE: Pagination --
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+
+  // -- INIT --
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const token = localStorage.getItem("gco_token");
+        if (!token) return;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app");
+        const res = await axios.get(`${baseUrl}/config/companies`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data) setAvailableCompanies(res.data);
+      } catch (e) {
+        console.error("Error fetching companies", e);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // -- FETCH DATA --
   const fetchMovements = async () => {
@@ -58,7 +90,7 @@ export default function MovementsPage() {
     try {
       // Determine API URL (Hardcoded or Env Var)
       // For now, if running locally use localhost, else assuming relative path or env
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app");
       let url = `${baseUrl}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
 
       if (selectedCompanies.length > 0) {
@@ -101,6 +133,9 @@ export default function MovementsPage() {
   // -- DERIVED LISTS FOR FILTERS --
   const uniqueWarehouses = useMemo(() => Array.from(new Set(data.map(d => d.warehouse || "Sin Bodega"))).sort(), [data]);
   const uniqueDocTypes = useMemo(() => Array.from(new Set(data.map(d => d.doc_type))).sort(), [data]);
+  // uniqueCompanies is now based on fetched config + data to ensure consistency? 
+  // No, let's keep uniqueCompanies derived from data for the FILTER panel (what is currently shown), 
+  // but use availableCompanies for the QUERY selection.
   const uniqueCompanies = useMemo(() => Array.from(new Set(data.map(d => d.company || "Sin Empresa"))).sort(), [data]);
 
   // -- FILTERING LOGIC --
@@ -140,13 +175,62 @@ export default function MovementsPage() {
       }
 
       // 5. Company Filter (Client-side)
+      // If we queried specific companies, data will only contain them naturally.
+      // But if we want to filter further (e.g. queried 3, view 1), we can.
       if (selectedCompanies.length > 0 && !selectedCompanies.includes(item.company || "Sin Empresa")) {
         return false;
       }
 
+      // 6. Client-side Date Filter (Aparte del llamado)
+      if (filterStartDate && item.date < filterStartDate) return false;
+      if (filterEndDate && item.date > filterEndDate) return false;
+
+      // 7. Client-side SKU Filter
+      if (filterSku) {
+        const itemSku = (item.code || item.product_code || "").toString().toLowerCase();
+        if (!itemSku.includes(filterSku.toLowerCase())) return false;
+      }
+
+      // 8. Specific Column Filters
+      // Keys matching the ones used in headers
+      for (const [key, value] of Object.entries(colFilters)) {
+        if (!value) continue;
+        const term = value.toLowerCase();
+
+        let match = false;
+
+        if (key === "date") match = (item.date || "").toLowerCase().includes(term);
+        else if (key === "doc") {
+          match = (item.doc_number || "").toLowerCase().includes(term) || (item.doc_type || "").toLowerCase().includes(term);
+        }
+        else if (key === "client_company") {
+          match = (item.client || "").toLowerCase().includes(term) || (item.company || "").toLowerCase().includes(term);
+        }
+        else if (key === "sku") {
+          match = (item.code || item.product_code || "").toString().toLowerCase().includes(term);
+        }
+        else if (key === "product") {
+          match = (item.description || item.name || "").toLowerCase().includes(term);
+        }
+        else if (key === "warehouse") {
+          match = (item.warehouse || "").toLowerCase().includes(term);
+        }
+        else if (key === "quantity") {
+          match = (item.quantity || "0").toString().includes(term);
+        }
+        else if (key === "total") {
+          match = (item.total || "0").toString().includes(term);
+        }
+        else if (key === "observations") {
+          match = (item.observations || "").toLowerCase().includes(term);
+        }
+
+        if (!match) return false;
+      }
+
       return true;
     });
-  }, [data, searchTerm, selectedWarehouses, selectedDocTypes, selectedMovTypes, selectedCompanies]);
+  }, [data, searchTerm, selectedWarehouses, selectedDocTypes, selectedMovTypes, selectedCompanies, filterStartDate, filterEndDate, filterSku, colFilters]);
 
   // -- PAGINATION LOGIC --
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
@@ -163,37 +247,50 @@ export default function MovementsPage() {
   const handleExport = () => {
     if (filteredData.length === 0) return;
 
-    // Create CSV content
-    const headers = ["Fecha", "Documento", "Numero", "Tipo", "Empresa", "Tercero", "NIT", "Bodega", "Codigo", "Producto", "Cantidad", "Precio", "Total", "Observaciones"];
-    const csvRows = [headers.join(",")];
+    // Prepare data for Excel
+    const excelData = filteredData.map(row => ({
+      "Fecha": row.date,
+      "Documento": row.doc_type,
+      "Numero": row.doc_number,
+      "Tipo Movimiento": row.type,
+      "Empresa": row.company,
+      "Tercero": row.client,
+      "NIT": row.nit,
+      "Bodega": row.warehouse,
+      "SKU": row.product_code || row.code,
+      "Producto": row.description || row.name,
+      "Cantidad": Number(row.quantity),
+      "Precio Unitario": Number(row.price), // Ensure numbers
+      "Total": Number(row.total), // Ensure numbers
+      "Observaciones": row.observations
+    }));
 
-    filteredData.forEach(row => {
-      const values = [
-        row.date,
-        row.doc_type,
-        row.doc_number,
-        row.type,
-        `"${(row.company || "").replace(/"/g, '""')}"`,
-        `"${(row.client || "").replace(/"/g, '""')}"`,
-        row.nit,
-        `"${(row.warehouse || "").replace(/"/g, '""')}"`,
-        row.product_code || row.code,
-        `"${(row.description || row.name || "").replace(/"/g, '""')}"`,
-        row.quantity,
-        row.price,
-        row.total,
-        `"${(row.observations || "").replace(/"/g, '""')}"`
-      ];
-      csvRows.push(values.join(","));
-    });
+    // Create a new workbook and add the worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Movimientos");
 
-    const csvContent = "data:text/csv;charset=utf-8," + "\uFEFF" + encodeURI(csvRows.join("\n")); // Add BOM for Excel
-    const link = document.createElement("a");
-    link.setAttribute("href", csvContent);
-    link.setAttribute("download", `movimientos_${startDate}_${endDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Adjust column widths (optional but nice)
+    const wscols = [
+      { wch: 12 }, // Fecha
+      { wch: 10 }, // Documento
+      { wch: 15 }, // Numero
+      { wch: 15 }, // Tipo
+      { wch: 30 }, // Empresa
+      { wch: 30 }, // Tercero
+      { wch: 15 }, // NIT
+      { wch: 20 }, // Bodega
+      { wch: 15 }, // SKU
+      { wch: 40 }, // Producto
+      { wch: 10 }, // Cantidad
+      { wch: 15 }, // Precio
+      { wch: 15 }, // Total
+      { wch: 50 }, // Obs
+    ];
+    worksheet["!cols"] = wscols;
+
+    // Generate Excel file
+    XLSX.writeFile(workbook, `Movimientos_${startDate}_${endDate}.xlsx`);
   };
 
   // Toggle Selection Helper
@@ -203,6 +300,53 @@ export default function MovementsPage() {
     } else {
       setList([...list, value]);
     }
+  };
+
+  // Helper Component for Headers
+  const FilterableHeader = ({ label, colKey, align = "left" }: { label: string, colKey: string, align?: "left" | "right" }) => {
+    const isActive = activeColFilter === colKey;
+    const hasValue = colFilters[colKey]?.length > 0;
+
+    return (
+      <th className={`px-6 py-4 font-bold relative group ${align === "right" ? "text-right" : "text-left"}`}>
+        <div className={`flex items-center gap-2 ${align === "right" ? "justify-end" : "justify-start"}`}>
+          <span>{label}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setActiveColFilter(isActive ? null : colKey); }}
+            className={`p-1 rounded-full transition-colors ${hasValue ? "bg-green-100 text-green-700" : "text-gray-300 group-hover:text-gray-500 hover:bg-gray-100"}`}
+          >
+            <Search className="h-3 w-3" />
+          </button>
+        </div>
+
+        {isActive && (
+          <div className="absolute top-10 left-0 z-50 bg-white border border-gray-200 shadow-xl p-2 rounded-lg min-w-[150px] animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <input
+              autoFocus
+              type="text"
+              placeholder={`Filtrar ${label}...`}
+              className="w-full text-xs p-1.5 border border-gray-300 rounded focus:border-[#183C30] outline-none text-gray-700 font-normal"
+              value={colFilters[colKey] || ""}
+              onChange={e => setColFilters(prev => ({ ...prev, [colKey]: e.target.value }))}
+            />
+            <div className="flex justify-between mt-2">
+              <button
+                onClick={() => setActiveColFilter(null)}
+                className="text-[10px] text-gray-500 hover:text-gray-700 px-1"
+              >
+                Cerrar
+              </button>
+              <button
+                onClick={() => setColFilters(prev => ({ ...prev, [colKey]: "" }))}
+                className="text-[10px] text-red-500 hover:text-red-700 px-1"
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+        )}
+      </th>
+    );
   };
 
   return (
@@ -215,8 +359,10 @@ export default function MovementsPage() {
           <p className="text-gray-500 text-sm">Consulta detallada, filtrado y exportacion de transacciones.</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex items-center bg-gray-50 p-1.5 rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center bg-gray-50 p-1.5 rounded-xl border border-gray-100 shadow-sm gap-2 sm:gap-0">
+
+            {/* DATE PICKERS */}
             <div className="flex items-center px-3 space-x-2 border-r border-gray-200">
               <span className="text-xs font-semibold text-gray-400 uppercase">Desde</span>
               <input
@@ -235,6 +381,57 @@ export default function MovementsPage() {
                 className="bg-transparent text-sm font-medium outline-none text-gray-700 w-32"
               />
             </div>
+
+            {/* COMPANY SELECTOR (QUERY) */}
+            <div className="px-2 relative z-20">
+              <Listbox value={selectedCompanies} onChange={setSelectedCompanies} multiple>
+                <div className="relative">
+                  <Listbox.Button className="relative w-48 cursor-pointer rounded-lg bg-white py-2 pl-3 pr-10 text-left border border-gray-200 focus:outline-none focus:ring-1 focus:ring-green-500 sm:text-xs">
+                    <span className="block truncate text-gray-600">
+                      {selectedCompanies.length === 0 ? "Todas las empresas" : `${selectedCompanies.length} Empresas`}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </span>
+                  </Listbox.Button>
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <Listbox.Options className="absolute mt-1 max-h-60 w-64 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-xs z-50">
+                      {availableCompanies.length === 0 && <div className="p-2 text-gray-400">Cargando empresas...</div>}
+                      {availableCompanies.map((c, idx) => (
+                        <Listbox.Option
+                          key={idx}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? "bg-green-50 text-green-900" : "text-gray-900"
+                            }`
+                          }
+                          value={c}
+                        >
+                          {({ selected }) => (
+                            <>
+                              <span className={`block truncate ${selected ? "font-medium" : "font-normal"}`}>
+                                {c}
+                              </span>
+                              {selected ? (
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#183C30]">
+                                  <Check className="h-4 w-4" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))}
+                    </Listbox.Options>
+                  </Transition>
+                </div>
+              </Listbox>
+            </div>
+
+
             <button
               onClick={fetchMovements}
               disabled={isLoading}
@@ -243,14 +440,14 @@ export default function MovementsPage() {
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               <span>Consultar</span>
             </button>
-            <div className="flex items-center space-x-2 ml-2">
+            <div className="flex items-center space-x-2 ml-2 px-2">
               <input
                 type="checkbox"
                 checked={forceRefresh}
                 onChange={e => setForceRefresh(e.target.checked)}
                 className="rounded border-gray-300 text-[#183C30] focus:ring-[#183C30]"
               />
-              <span className="text-xs text-gray-500">Recargar Todo</span>
+              <span className="text-xs text-gray-500 whitespace-nowrap">Recargar</span>
             </div>
           </div>
 
@@ -266,10 +463,10 @@ export default function MovementsPage() {
             <button
               onClick={handleExport}
               disabled={data.length === 0}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium transition-all"
+              className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium transition-all whitespace-nowrap"
             >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span className="hidden sm:inline">Exportar CSV</span>
+              <FileSpreadsheet className="h-4 w-4 shrink-0" />
+              <span className="hidden xl:inline">Exportar Excel</span>
             </button>
           </div>
         </div>
@@ -368,6 +565,48 @@ export default function MovementsPage() {
         </div>
       )}
 
+      {/* FILTER PANEL EXTRA: Client Side Dates */}
+      {showFilters && (
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mt-2 mb-4 animate-in fade-in slide-in-from-top-1">
+          <p className="text-xs font-bold text-gray-400 uppercase mb-2">Filtrar resultados (Local)</p>
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Desde:</span>
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={e => setFilterStartDate(e.target.value)}
+                className="border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:border-green-500"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Hasta:</span>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={e => setFilterEndDate(e.target.value)}
+                className="border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:border-green-500"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">SKU:</span>
+              <input
+                type="text"
+                value={filterSku}
+                onChange={e => setFilterSku(e.target.value)}
+                placeholder="Ej: 3005..."
+                className="border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:border-green-500 w-24"
+              />
+            </div>
+            {(filterStartDate || filterEndDate || filterSku) && (
+              <button onClick={() => { setFilterStartDate(""); setFilterEndDate(""); setFilterSku(""); }} className="text-xs text-red-500 hover:underline">
+                Limpiar Filtros
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* KPI BANNERS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
@@ -425,15 +664,15 @@ export default function MovementsPage() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-4 font-bold">Fecha</th>
-                <th className="px-6 py-4 font-bold">Documento</th>
-                <th className="px-6 py-4 font-bold">Tercero / Empresa</th>
-                <th className="px-6 py-4 font-bold">SKU</th>
-                <th className="px-6 py-4 font-bold">Producto</th>
-                <th className="px-6 py-4 font-bold">Bodega</th>
-                <th className="px-6 py-4 font-bold text-right">Cantidad</th>
-                <th className="px-6 py-4 font-bold text-right">Total</th>
-                <th className="px-6 py-4 font-bold">Observacion</th>
+                <FilterableHeader label="Fecha" colKey="date" />
+                <FilterableHeader label="Documento" colKey="doc" />
+                <FilterableHeader label="Tercero / Empresa" colKey="client_company" />
+                <FilterableHeader label="SKU" colKey="sku" />
+                <FilterableHeader label="Producto" colKey="product" />
+                <FilterableHeader label="Bodega" colKey="warehouse" />
+                <FilterableHeader label="Cantidad" colKey="quantity" align="right" />
+                <FilterableHeader label="Total" colKey="total" align="right" />
+                <FilterableHeader label="Observacion" colKey="observations" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

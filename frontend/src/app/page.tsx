@@ -33,7 +33,7 @@ export default function LoginPage() {
 
       // 3b. Fetch Role from Backend
       // In Production, ensure NEXT_PUBLIC_API_URL is set!
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
 
       try {
         // 15 Seconds timeout to allow Cloud Run Cold Start

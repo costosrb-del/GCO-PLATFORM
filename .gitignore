@@ -91,3 +91,8 @@ coverage.xml
 .mypy_cache
 .pytest_cache
 .hypotheses
+
+# Local Debug
+debug_output.txt
+test_movements_debug.py
+local_cache/
