@@ -11,7 +11,8 @@ class CacheService:
         # Default to 'local' if explicitly set, otherwise try 'cloud'
         self.mode = os.getenv("CACHE_MODE", "cloud") 
         self.bucket_name = os.getenv("CACHE_BUCKET", "gco-platform-cache-v2")
-        self.local_dir = "local_cache"
+        # Use /tmp for local cache in production/cloud environments (ephemeral)
+        self.local_dir = os.getenv("LOCAL_CACHE_DIR", "/tmp/gco_local_cache")
         self.client = None
         self.bucket = None
         
