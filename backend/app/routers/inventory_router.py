@@ -156,8 +156,11 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
                     errors.append(res_err)
                 
                 completed_count += 1
+                completed_count += 1
                 progress = int((completed_count / total_steps) * 100)
-                yield f"data: {json.dumps({'progress': progress, 'message': f'Cargado {company['name']}'})}\n\n"
+                msg = f"Cargado {company.get('name', 'Empresa')}"
+                payload = json.dumps({'progress': progress, 'message': msg})
+                yield f"data: {payload}\n\n"
 
         # 2. Fetch Google Sheets
         yield f"data: {json.dumps({'progress': 90, 'message': 'Cargando Inventario Externo...'})}\n\n"
