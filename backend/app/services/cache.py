@@ -17,16 +17,9 @@ class CacheService:
         self.bucket = None
         
         if self.mode == "cloud" and storage:
-            try:
-                self.client = storage.Client()
-                # We don't create bucket here to avoid permissions issues if not admin. 
-                # Assuming bucket exists or will be created manually/terraform.
-                # However, for MVP, we might want to try-create?
-                # Let's just wrap usage.
-                self.bucket = self.client.bucket(self.bucket_name)
-            except Exception as e:
-                logging.warning(f"GCS Init failed (likely no creds). Falling back to local cache. Error: {e}")
-                self.mode = "local"
+            # Lazy initialization to prevent import blocking
+            self.client = None 
+            self.bucket = None
         else:
             self.mode = "local"
 
@@ -35,8 +28,23 @@ class CacheService:
                 os.makedirs(self.local_dir, exist_ok=True)
             logging.info(f"CacheService initialized in LOCAL mode ({self.local_dir})")
 
+    def _connect(self):
+        if self.mode == "cloud" and not self.client:
+            try:
+                logging.info("Connecting to Google Cloud Storage...")
+                self.client = storage.Client()
+                self.bucket = self.client.bucket(self.bucket_name)
+            except Exception as e:
+                logging.error(f"Failed to connect to GCS: {e}. Falling back to local.")
+                self.mode = "local"
+                self.local_dir = os.getenv("LOCAL_CACHE_DIR", "/tmp/gco_local_cache")
+                if not os.path.exists(self.local_dir):
+                    os.makedirs(self.local_dir, exist_ok=True)
+
     def save(self, key: str, data: dict):
         try:
+            self._connect()
+            
             json_str = json.dumps(data)
             if self.mode == "cloud":
                 # Ensure bucket exists or handle 404
@@ -60,6 +68,8 @@ class CacheService:
 
     def load(self, key: str):
         try:
+            self._connect()
+            
             if self.mode == "cloud":
                 if not self.bucket.exists():
                      return None
