@@ -175,7 +175,7 @@ export default function SaldosPage() {
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
-      const response = await axios.get(`${baseUrl}/inventory/analysis/sales-averages?days=20`, {
+      const response = await axios.get(`${baseUrl}/inventory/analysis/sales-averages?days=7`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 300000 // 5 minutes timeout
       });
@@ -404,10 +404,12 @@ export default function SaldosPage() {
               onClick={fetchAverages}
               disabled={isLoadingAverages}
               className={`flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-xl border border-orange-200 transition-all ${isLoadingAverages ? "opacity-70 cursor-wait" : ""}`}
-              title="Calcular promedios de venta 20 días"
+              title="Calcular promedios de venta 7 días"
             >
               {isLoadingAverages ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
-              <span className="text-sm font-medium hidden md:inline">Actualizar Promedios (20d)</span>
+              <span className="text-sm font-medium hidden md:inline">
+                {isLoadingAverages ? "Calculando..." : "Actualizar Promedios (7d)"}
+              </span>
             </button>
           )}
 
@@ -608,7 +610,7 @@ export default function SaldosPage() {
                     <th className="px-6 py-4 font-medium">Producto</th>
                     {/* <th className="px-6 py-4 font-medium">Resumen Empresas</th> Removed */}
                     {/* Always visible columns for averages */}
-                    <th className="px-6 py-4 font-medium text-center">Promedio (20d)</th>
+                    <th className="px-6 py-4 font-medium text-center">Promedio (7d)</th>
                     <th
                       className="px-6 py-4 font-medium text-center cursor-pointer hover:bg-gray-100 group"
                       onClick={() => handleSort('daysSupply')}

@@ -40,7 +40,7 @@ class InventoryPDF(FPDF):
         
         # Header
         # Columns: SKU | Producto | Promedio (20d) | Dias Inv. | Fecha Agotado | Cantidad
-        header = ['SKU', 'Producto', 'Prom. (20d)', 'Dias Inv.', 'Fecha Agotado', 'Total']
+        header = ['SKU', 'Producto', 'Prom. (7d)', 'Dias Inv.', 'Fecha Agotado', 'Total']
         w = [30, 80, 20, 20, 25, 20] # Column widths
         
         for i, h in enumerate(header):
