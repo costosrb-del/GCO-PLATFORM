@@ -1,10 +1,12 @@
-
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 import logging
 from app.services.config import get_config
 from app.routers.inventory_router import get_consolidated_inventory
 from app.services.email_service import send_daily_report_email
-from app.services.auth import verify_token
+from app.services.movements import get_consolidated_movements
+from app.services.auth import get_auth_token
+from app.routers.auth_router import verify_token
+# from app.services.auth import verify_token <- Incorrect
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 logger = logging.getLogger(__name__)

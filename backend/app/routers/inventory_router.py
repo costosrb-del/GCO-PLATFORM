@@ -12,6 +12,8 @@ from app.services.config import get_config
 from app.services.utils import fetch_google_sheet_inventory
 from app.services.cache import cache
 from app.routers.auth_router import verify_token
+# Import analytics service
+from app.services.analytics import calculate_average_sales
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -61,11 +63,15 @@ def filter_for_user(result_dict, role):
     
     data = result_dict.get("data", [])
     filtered_data = []
+    
+    # Allowed warehouses for viewer (Case insensitive logic below)
+    allowed_terms = ["bodega principal rionegro", "bodega libre"]
+    
     for item in data:
-        wh_name = str(item.get("warehouse_name", "")).lower()
+        wh_name = str(item.get("warehouse_name", "")).strip().lower()
         
-        # User requested ONLY "Bodega Principal" and "Bodega Libre"
-        if "bodega principal" in wh_name or "bodega libre" in wh_name:
+        # Strict inclusion check
+        if any(term in wh_name for term in allowed_terms):
             filtered_data.append(item)
             
     return {
@@ -192,3 +198,50 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
             "X-Accel-Buffering": "no"
         }
     )
+
+@router.get("/analysis/sales-averages")
+def get_sales_averages(user: dict = Depends(verify_token), days: int = 30):
+    """
+    Returns a dictionary of {SKU: daily_average_sales} based on the last 'days' of sales (FV).
+    This is a heavy operation, meant to be called on demand.
+    """
+    # Optional: Check if user has permission
+    # if user.get("role") not in ["admin", "wholesaler"]: ... 
+    
+    try:
+        averages, audit = calculate_average_sales(days=days)
+        return {
+            "days": days,
+            "averages": averages,
+            "audit": audit
+        }
+    except Exception as e:
+        print(f"Error in sales averages endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+from app.services.pdf_generator import create_inventory_pdf_bytes
+from fastapi.responses import Response
+
+@router.post("/export/pdf")
+def export_inventory_pdf(
+    items: List[dict],
+    user: dict = Depends(verify_token)
+):
+    """
+    Generates a PDF report from the provided list of inventory items.
+    """
+    try:
+        pdf_bytes = create_inventory_pdf_bytes(items)
+        
+        filename = f"Reporte_Inventario_{time.strftime('%Y%m%d_%H%M%S')}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")

@@ -2,7 +2,7 @@
 
 import { useState, Fragment, useEffect } from "react";
 import axios from "axios";
-import { Loader2, Search, Filter, RefreshCcw, Download, FileSpreadsheet, FileText, Check, ChevronDown } from "lucide-react";
+import { Loader2, Search, Filter, RefreshCcw, Download, FileSpreadsheet, FileText, Check, ChevronDown, TrendingUp, ArrowUpDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Listbox, Transition } from "@headlessui/react";
 import { clsx } from "clsx";
@@ -16,10 +16,19 @@ interface InventoryItem {
   quantity: number;
 }
 
+interface SalesAverage {
+  sku: string;
+  average: number;
+}
+
 export default function SaldosPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Duplicate lines removed
+
+  // Averages State
+  const [averages, setAverages] = useState<Record<string, number>>({});
+  const [isLoadingAverages, setIsLoadingAverages] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const [loadingMessage, setLoadingMessage] = useState("");
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -155,9 +164,54 @@ export default function SaldosPage() {
     }
   };
 
-  // ... imports moved to top
+  const fetchAverages = async () => {
+    setIsLoadingAverages(true);
+    const token = localStorage.getItem("gco_token");
+    if (!token) {
+      alert("Sesión no válida.");
+      setIsLoadingAverages(false);
+      return;
+    }
 
-  const handleExport = (type: "excel" | "pdf") => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
+      const response = await axios.get(`${baseUrl}/inventory/analysis/sales-averages?days=20`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 300000 // 5 minutes timeout
+      });
+
+      if (response.data && response.data.averages) {
+        console.log("Averages received:", response.data.averages);
+        setAverages(response.data.averages);
+
+        const audit = response.data.audit;
+        if (audit) {
+          let detailMsg = `✅ Promedios Actualizados Correctamente\n`;
+          detailMsg += `📅 Periodo: ${audit.start_date} al ${audit.end_date} (${audit.days_window} días)\n`;
+          detailMsg += `📊 Movimientos Totales: ${audit.total_movements}\n`;
+          detailMsg += `📐 Fórmula: ${audit.formula}\n\n`;
+          detailMsg += `🏢 Detalle por Empresa:\n`;
+
+          for (const [company, count] of Object.entries(audit.companies)) {
+            detailMsg += ` • ${company}: ${count}\n`;
+          }
+          alert(detailMsg);
+        } else {
+          alert(`Promedios actualizados. ${Object.keys(response.data.averages).length} productos procesados.`);
+        }
+      } else {
+        console.warn("No averages found in response", response.data);
+        alert("No se encontraron datos de ventas para el periodo seleccionado.");
+      }
+    } catch (error: any) {
+      console.error("Error fetching averages:", error);
+      alert("Error calculando promedios: " + (error.response?.data?.detail || error.message));
+    } finally {
+      setIsLoadingAverages(false);
+    }
+  };
+
+  const handleExport = async (type: "excel" | "pdf") => {
     if (type === "excel") {
       // Client-side Excel Export
       if (filteredData.length === 0) return;
@@ -187,9 +241,58 @@ export default function SaldosPage() {
 
       XLSX.writeFile(workbook, `Saldos_${new Date().toISOString().split("T")[0]}.xlsx`);
     } else {
-      // PDF Export (Keep server-side for now or implement client side later if requested)
-      // For now, let's just alert strictly for Excel as per request, or fall back to old logic for PDF
-      alert("Función PDF en mantenimiento. Por favor use Excel.");
+      // Server-side PDF Export
+      const exportData = (viewMode === 'consolidated' ? consolidatedData : filteredData).map((item: any) => {
+        // ensure conflictDate is calculated matchin UI logic
+        let cDate = "-";
+        const avg = item.dailyAverage || 0;
+        const days = item.daysSupply || 0;
+
+        if (avg > 0 && days < 9999) {
+          const d = new Date();
+          d.setDate(d.getDate() + Math.floor(days));
+          cDate = d.toLocaleDateString("es-CO", { day: '2-digit', month: 'short', year: 'numeric' });
+        } else if (item.quantity === 0) {
+          cDate = "Agotado";
+        }
+
+        return {
+          ...item,
+          conflictDate: cDate
+        };
+      });
+
+      if (exportData.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("gco_token");
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
+
+        alert("Generando PDF... por favor espere.");
+
+        const response = await axios.post(`${baseUrl}/inventory/export/pdf`, exportData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          responseType: 'blob'
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Saldos_${new Date().toISOString().split('T')[0]}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+      } catch (e) {
+        console.error("Error generating PDF", e);
+        alert("Error generando PDF. Intente nuevamente.");
+      }
     }
   };
 
@@ -219,22 +322,62 @@ export default function SaldosPage() {
   });
 
   // Consolidated Data Logic
-  const consolidatedData = Object.values(filteredData.reduce((acc, item) => {
+  let consolidatedData = Object.values(filteredData.reduce((acc, item) => {
     if (!acc[item.code]) {
       acc[item.code] = {
         code: item.code,
         name: item.name,
         quantity: 0,
         companies: new Set<string>(),
-        warehouses: new Set<string>()
+        warehouses: new Set<string>(),
+        dailyAverage: 0,
+        daysSupply: 0
       };
     }
     acc[item.code].quantity += item.quantity;
     acc[item.code].companies.add(item.company_name);
     acc[item.code].warehouses.add(item.warehouse_name);
     return acc;
-  }, {} as Record<string, { code: string, name: string, quantity: number, companies: Set<string>, warehouses: Set<string> }>))
-    .sort((a, b) => b.quantity - a.quantity);
+  }, {} as Record<string, { code: string, name: string, quantity: number, companies: Set<string>, warehouses: Set<string>, dailyAverage: number, daysSupply: number }>));
+
+  // Enrich with averages
+  consolidatedData = consolidatedData.map(item => {
+    const avg = averages[item.code] || 0;
+    let days = 0;
+    if (avg > 0) {
+      days = item.quantity / avg;
+    }
+    return { ...item, dailyAverage: avg, daysSupply: days };
+  });
+
+  // Sort Consolidated Data
+  if (sortConfig !== null && viewMode === 'consolidated') {
+    consolidatedData.sort((a, b) => {
+      let aValue: any = a[sortConfig.key as keyof typeof a];
+      let bValue: any = b[sortConfig.key as keyof typeof b];
+
+      if (sortConfig.key === 'daysSupply') {
+        // Handle Infinity or missing values
+        if (a.dailyAverage === 0 && a.quantity > 0) aValue = 999999; // Infinite supply logic
+        if (b.dailyAverage === 0 && b.quantity > 0) bValue = 999999;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Default sort by quantity
+    consolidatedData.sort((a, b) => b.quantity - a.quantity);
+  }
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const totalUnits = filteredData.reduce((acc, item) => acc + item.quantity, 0);
   const activeProducts = new Set(filteredData.filter(i => i.quantity > 0).map(i => i.code)).size;
@@ -254,6 +397,19 @@ export default function SaldosPage() {
 
         <div className="flex items-center space-x-3">
           {lastUpdated && <span className="text-xs text-gray-400 mr-2">Act: {lastUpdated}</span>}
+
+          {/* New Averages Button */}
+          {viewMode === 'consolidated' && (
+            <button
+              onClick={fetchAverages}
+              disabled={isLoadingAverages}
+              className={`flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-xl border border-orange-200 transition-all ${isLoadingAverages ? "opacity-70 cursor-wait" : ""}`}
+              title="Calcular promedios de venta 20 días"
+            >
+              {isLoadingAverages ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+              <span className="text-sm font-medium hidden md:inline">Actualizar Promedios (20d)</span>
+            </button>
+          )}
 
           {/* View Toggle */}
           <div className={`bg-gray-100 p-1 rounded-xl flex items-center mr-2 ${role === 'viewer' ? 'hidden' : ''}`}>
@@ -339,33 +495,38 @@ export default function SaldosPage() {
           <div className="px-6 pb-6 pt-0 space-y-6 animate-in slide-in-from-top-2 duration-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500 uppercase">Empresas ({selectedCompanies.length})</label>
-                <ListBoxMulti
-                  options={companiesList}
-                  selected={selectedCompanies}
-                  onChange={setSelectedCompanies}
-                  placeholder="Todas las empresas"
-                />
-              </div>
+              {role !== 'viewer' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-500 uppercase">Empresas ({selectedCompanies.length})</label>
+                    <ListBoxMulti
+                      options={companiesList}
+                      selected={selectedCompanies}
+                      onChange={setSelectedCompanies}
+                      placeholder="Todas las empresas"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500 uppercase">Bodegas ({selectedWarehouses.length})</label>
-                <ListBoxMulti
-                  options={warehousesList}
-                  selected={selectedWarehouses}
-                  onChange={setSelectedWarehouses}
-                  placeholder="Todas las bodegas"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-500 uppercase">Bodegas ({selectedWarehouses.length})</label>
+                    <ListBoxMulti
+                      options={warehousesList}
+                      selected={selectedWarehouses}
+                      onChange={setSelectedWarehouses}
+                      placeholder="Todas las bodegas"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Estado Stock</label>
                   <select
-                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20"
+                    className={`w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20 ${role === 'viewer' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                     value={stockStatus}
                     onChange={(e) => setStockStatus(e.target.value)}
+                    disabled={role === 'viewer'}
                   >
                     <option>Todos</option>
                     <option>Con Stock ({">"}0)</option>
@@ -376,7 +537,22 @@ export default function SaldosPage() {
                 <div className="flex flex-col space-y-2">
                   <div
                     className={`flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200 ${role === 'viewer' ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
-                    onClick={() => role !== 'viewer' && setFilterSales(!filterSales)}
+                    onClick={() => {
+                      if (role !== 'viewer') {
+                        const newFilterState = !filterSales;
+                        setFilterSales(newFilterState);
+                        if (newFilterState) {
+                          // Auto-select warehouses - Robust Match from available list
+                          const targetWarehouses = warehousesList.filter(wh => {
+                            const w = wh.toLowerCase();
+                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("bodega libre") || w.includes("externa");
+                          });
+                          if (targetWarehouses.length > 0) {
+                            setSelectedWarehouses(targetWarehouses);
+                          }
+                        }
+                      }
+                    }}
                   >
                     <span className="text-sm font-medium text-gray-700 select-none">
                       Solo Productos de Venta {role === 'viewer' && "(Bloqueado)"}
@@ -430,7 +606,20 @@ export default function SaldosPage() {
                   <>
                     <th className="px-6 py-4 font-medium">SKU</th>
                     <th className="px-6 py-4 font-medium">Producto</th>
-                    <th className="px-6 py-4 font-medium">Resumen Empresas</th>
+                    {/* <th className="px-6 py-4 font-medium">Resumen Empresas</th> Removed */}
+                    {/* Always visible columns for averages */}
+                    <th className="px-6 py-4 font-medium text-center">Promedio (20d)</th>
+                    <th
+                      className="px-6 py-4 font-medium text-center cursor-pointer hover:bg-gray-100 group"
+                      onClick={() => handleSort('daysSupply')}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Dias Inv.</span>
+                        <ArrowUpDown className="h-3 w-3 text-gray-400 group-hover:text-gray-700" />
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 font-medium text-center">Fecha Agotado</th>
+
                     <th className="px-6 py-4 font-medium text-right">Total Global</th>
                   </>
                 )}
@@ -455,20 +644,53 @@ export default function SaldosPage() {
                 )
               ) : (
                 consolidatedData.length > 0 ? (
-                  consolidatedData.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-6 py-3 font-mono text-gray-500 font-bold group-hover:text-gray-900">{item.code}</td>
-                      <td className="px-6 py-3 text-gray-800 font-medium">{item.name}</td>
-                      <td className="px-6 py-3 text-xs text-gray-500">
+                  consolidatedData.map((item, idx) => {
+                    // Calculate Stockout Date
+                    let conflictDate = "-";
+                    if (item.dailyAverage > 0 && item.daysSupply < 9999) {
+                      const days = Math.floor(item.daysSupply);
+                      const date = new Date();
+                      date.setDate(date.getDate() + days);
+                      conflictDate = date.toLocaleDateString("es-CO", { day: '2-digit', month: 'short', year: 'numeric' });
+                    } else if (item.quantity === 0) {
+                      conflictDate = "Agotado";
+                    }
+
+                    return (
+                      <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
+                        <td className="px-6 py-3 font-mono text-gray-500 font-bold group-hover:text-gray-900">{item.code}</td>
+                        <td className="px-6 py-3 text-gray-800 font-medium">{item.name}</td>
+                        {/* <td className="px-6 py-3 text-xs text-gray-500">
                         {Array.from(item.companies).join(", ")}
-                      </td>
-                      <td className={`px-6 py-3 text-right font-bold text-lg ${item.quantity > 0 ? "text-blue-700" : "text-gray-400"}`}>
-                        {item.quantity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))
+                      </td> Removed */}
+                        {/* Always visible cells for averages */}
+                        <td className="px-6 py-3 text-center text-gray-600">
+                          {item.dailyAverage > 0 ? item.dailyAverage.toFixed(2) : "-"}
+                        </td>
+                        <td className="px-6 py-3 text-center">
+                          {item.dailyAverage > 0 ? (
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${item.daysSupply < 15 ? "bg-red-100 text-red-700" :
+                              item.daysSupply < 45 ? "bg-yellow-100 text-yellow-800" :
+                                "bg-green-100 text-green-700"
+                              }`}>
+                              {item.daysSupply.toFixed(0)} días
+                            </span>
+                          ) : (
+                            <span className="text-gray-300 text-xs">∞</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3 text-center text-xs font-medium text-gray-500">
+                          {conflictDate}
+                        </td>
+
+                        <td className={`px-6 py-3 text-right font-bold text-lg ${item.quantity > 0 ? "text-blue-700" : "text-gray-400"}`}>
+                          {item.quantity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    )
+                  })
                 ) : (
-                  <tr><td colSpan={4} className="px-6 py-20 text-center text-gray-400">Sin datos consolidados</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-20 text-center text-gray-400">Sin datos consolidados</td></tr>
                 )
               )}
             </tbody>

@@ -17,8 +17,8 @@ def get_auth_token(username, access_key, partner_id="SiigoApi"):
     
     import time
 
-    max_retries = 3
-    retry_delay = 2
+    max_retries = 5
+    retry_delay = 3
 
     for attempt in range(max_retries):
         response = None
@@ -26,9 +26,9 @@ def get_auth_token(username, access_key, partner_id="SiigoApi"):
             response = requests.post(AUTH_URL, json=data, headers=headers)
             
             if response.status_code == 429:
-                print(f"Rate limit exceeded (429). Retrying in {retry_delay} seconds...")
+                print(f"Rate limit exceeded (429) for {username}. Retrying in {retry_delay}s... (Attempt {attempt+1}/{max_retries})")
                 time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
+                retry_delay = min(retry_delay * 2, 60) # Cap at 60s
                 continue
                 
             response.raise_for_status()

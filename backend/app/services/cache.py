@@ -9,7 +9,7 @@ except ImportError:
 class CacheService:
     def __init__(self):
         # Default to 'local' if explicitly set, otherwise try 'cloud'
-        self.mode = os.getenv("CACHE_MODE", "cloud") 
+        self.mode = os.getenv("CACHE_MODE", "local") 
         self.bucket_name = os.getenv("CACHE_BUCKET", "gco-platform-cache-v2")
         # Use /tmp for local cache in production/cloud environments (ephemeral)
         self.local_dir = os.getenv("LOCAL_CACHE_DIR", "/tmp/gco_local_cache")
