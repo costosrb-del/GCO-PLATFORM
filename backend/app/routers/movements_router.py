@@ -208,6 +208,12 @@ def get_movements(
                 
                 # 7. Final Filter (Return only what user asked for)
                 filtered_response = [x for x in db_data if start_date <= x['date'] <= end_date]
+                
+                # NEW: Filter by Doc Type if requested (Consistency for Cache)
+                if doc_types:
+                     # doc_types is a list like ['FV', 'FC']
+                     filtered_response = [x for x in filtered_response if x.get('doc_type') in doc_types]
+
                 return filtered_response, None
 
             except Exception as e:

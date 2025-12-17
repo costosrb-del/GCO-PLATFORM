@@ -384,8 +384,8 @@ export default function SaldosPage() {
 
         if (sortConfig.key === 'daysSupply') {
           // Handle Infinity or missing values
-          if (a.dailyAverage === 0 && a.quantity > 0) aValue = 999999; // Infinite supply logic
-          if (b.dailyAverage === 0 && b.quantity > 0) bValue = 999999;
+          if (a.dailyAverage === 0 && a.quantity > 0) aValue = Number.POSITIVE_INFINITY;
+          if (b.dailyAverage === 0 && b.quantity > 0) bValue = Number.POSITIVE_INFINITY;
         }
 
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;

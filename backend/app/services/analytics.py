@@ -14,7 +14,12 @@ def calculate_average_sales(days=30):
     # Exclude today to avoid partial data affecting the average.
     today = datetime.now()
     end_date = today - timedelta(days=1)
-    start_date = end_date - timedelta(days=days)
+    
+    # FIXED: Subtract (days - 1) because the range [start, end] is inclusive.
+    # Example: End=16. Days=7. Start should be 10. (10,11,12,13,14,15,16 = 7 days).
+    # 16 - (7-1) = 16 - 6 = 10. Correct.
+    # Previous: 16 - 7 = 9. (9..16 = 8 days).
+    start_date = end_date - timedelta(days=days - 1)
     
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
