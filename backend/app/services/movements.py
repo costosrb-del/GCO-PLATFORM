@@ -100,17 +100,20 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
         # 2. Fetch pages 2 to N
         # Switched to SERIAL execution to ensure data integrity and avoid 429 errors on massive loads.
         # This is slower but guarantees we don't drop pages due to concurrency limits.
-        for p_num in range(2, total_pages + 1):
-             try:
-                 if progress_callback and p_num % 5 == 0:
-                     progress_callback(f"{endpoint}: Pag {p_num}/{total_pages}...")
-                     
-                 page_results = fetch_page(p_num)
-                 all_docs.extend(page_results)
-                 
-             except Exception as e:
-                 logging.error(f"Error fetching page {p_num}: {e}")
-                 print(f"Error fetching page {p_num}: {e}")
+        # 2. Fetch pages 2 to N in parallel
+        # Re-enabled PARALLEL execution with safety limit (max_workers=4) to speed up loading
+        # while keeping risk of 429 low.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_page = {executor.submit(fetch_page, p): p for p in range(2, total_pages + 1)}
+            
+            for future in concurrent.futures.as_completed(future_to_page):
+                p_num = future_to_page[future]
+                try:
+                    page_results = future.result()
+                    all_docs.extend(page_results)
+                except Exception as e:
+                    logging.error(f"Error fetching page {p_num}: {e}")
+                    print(f"Error fetching page {p_num}: {e}")
 
     logging.info(f"Total docs fetched for {endpoint}: {len(all_docs)}")
     return all_docs

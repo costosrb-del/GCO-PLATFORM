@@ -49,7 +49,8 @@ export const useMovements = (startDate: string, endDate: string, companies: stri
             // Use axios
             const { data } = await axios.get(`${getBaseUrl()}/movements/`, {
                 headers: { Authorization: `Bearer ${token}` },
-                params: params
+                params: params,
+                timeout: 300000 // 5 minutes timeout for heavy historical sync
             });
 
             return data as MovementsResponse;
