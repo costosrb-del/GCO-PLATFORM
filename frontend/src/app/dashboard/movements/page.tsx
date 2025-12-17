@@ -122,6 +122,13 @@ export default function MovementsPage() {
 
     console.log(`Searching in ${totalChunks} chunks...`, chunks);
 
+    // VALIDATION: If no chunks (e.g. Start > End or Invalid Dates)
+    if (totalChunks === 0) {
+      alert("⚠️ Rango de fechas inválido. Verifica que la fecha 'Desde' sea menor o igual a 'Hasta'.");
+      setIsLoading(false);
+      return;
+    }
+
     // Warn user if heavy
     if (totalChunks > 2) {
       // notification toast?
@@ -134,6 +141,8 @@ export default function MovementsPage() {
     for (let i = 0; i < totalChunks; i++) {
       const { start, end } = chunks[i];
       let url = `${API_URL}/movements/?start_date=${start}&end_date=${end}&force_refresh=${forceRefresh}`;
+
+      console.log(`[Chunk ${i + 1}/${totalChunks}] Fetching: ${url}`);
 
       // Append filters to URL
       if (selectedCompanies.length > 0) {
