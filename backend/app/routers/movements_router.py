@@ -61,106 +61,97 @@ def get_movements(
                     min_cache_date = "2999-12-31" 
                     max_cache_date = "1900-01-01"
 
-                # 4. Logic: Smart Gap Detection (Backfill & Forward Fill)
-                fetch_ranges = [] # List of tuples (start, end) to fetch
-
+                # 4. Logic: Smart Gap Detection (Hole Filling)
+                fetch_ranges = [] 
+                
                 if force_refresh:
+                    # ... Existing Force Refresh Logic ...
                     print(f"[{c_name}] Forcing refresh: {start_date} to {end_date} (Yearly Chunking)")
-                    # Chunk by YEAR to ensure safe incremental saving and avoid massive timeouts
                     try:
                         sy = int(start_date[:4])
                         ey = int(end_date[:4])
                         for y in range(sy, ey + 1):
                             chunk_start = f"{y}-01-01"
                             chunk_end = f"{y}-12-31"
-                            # Clamp to requested range
                             if chunk_start < start_date: chunk_start = start_date
                             if chunk_end > end_date: chunk_end = end_date
-                            
                             fetch_ranges.append((chunk_start, chunk_end))
                     except:
-                        # Fallback if date parsing fails
                          fetch_ranges.append((start_date, end_date))
+                
                 else:
-                    # Case A: Backfill (User asks for older data than we have)
-                    # If start_date < min_cache_date, we need [start_date, min_cache_date - 1 day]
-                    # But simpler: just fetch [start_date, min(end_date, min_cache_date)]?
-                    # Let's keep it robust. If cache is empty (2999 min), start_date < 2999 is True.
+                    # NEW ROBUST LOGIC: Check for specific missing months (Holes)
+                    # Instead of trusting Min/Max, we verify if we have data for each requested month.
                     
-                    if not db_data:
-                         # No data, fetch everything requested
-                         fetch_ranges.append((start_date, end_date))
-                    else:
-                        # 1. Check Backward Gap (Missing History)
-                        if start_date < min_cache_date:
-                            gap_end = min(end_date, min_cache_date)
-                            print(f"[{c_name}] Backfill Needed: {start_date} -> {gap_end}")
-                            
-                            # Chunk this gap by MONTH to prevent timeouts (Critical for high density)
-                            try:
-                                from datetime import datetime, timedelta
-                                from dateutil.relativedelta import relativedelta
-                                
-                                # Convert strings to dates
-                                gs = datetime.strptime(start_date, "%Y-%m-%d")
-                                ge = datetime.strptime(gap_end, "%Y-%m-%d")
-                                
-                                current = gs
-                                while current <= ge:
-                                    # End of current month
-                                    # Logic: last day of this month => replace day=28/29/30/31... harder to calculate exactly
-                                    # Simpler: current + 1 month, day=1, then minus 1 day
-                                    next_month_start = current + relativedelta(months=1)
-                                    next_month_start = next_month_start.replace(day=1) 
-                                    month_end = next_month_start - timedelta(days=1)
-                                    
-                                    # Clamp
-                                    chunk_start = current.strftime("%Y-%m-%d")
-                                    chunk_end = month_end.strftime("%Y-%m-%d")
-                                    
-                                    if chunk_end > gap_end:
-                                        chunk_end = gap_end
-                                        
-                                    fetch_ranges.append((chunk_start, chunk_end))
-                                    current = next_month_start
-                                    
-                            except Exception as e:
-                                print(f"Chunking Error: {e}")
-                                fetch_ranges.append((start_date, gap_end))
+                    try:
+                        # 1. Map existing content by YYYY-MM
+                        existing_months = set()
+                        if db_data:
+                            # Optimize: Check first and last to see if we even need to scan? No, scan is safer.
+                            # O(N) scan. N ~ 50k. Fast enough (ms).
+                            existing_months = {x['date'][:7] for x in db_data if x.get('date')}
                         
-                        # 2. Check Forward Gap (New Data)
-                        if end_date > max_cache_date:
-                            gap_start = max(start_date, max_cache_date)
-                            print(f"[{c_name}] Forward Fill Needed: {gap_start} -> {end_date}")
+                        from datetime import datetime, timedelta
+                        from dateutil.relativedelta import relativedelta
+                        
+                        req_start = datetime.strptime(start_date, "%Y-%m-%d")
+                        req_end = datetime.strptime(end_date, "%Y-%m-%d")
+                        
+                        # Normalize to Month Start for iteration
+                        curr = req_start.replace(day=1) 
+                        target_end = req_end.replace(day=1)
+                        
+                        missing_months_start = None
+                        
+                        while curr <= target_end:
+                            month_key = curr.strftime("%Y-%m")
                             
-                            try:
-                                from datetime import datetime, timedelta
-                                from dateutil.relativedelta import relativedelta
-                                
-                                gs = datetime.strptime(gap_start, "%Y-%m-%d")
-                                ge = datetime.strptime(end_date, "%Y-%m-%d")
-                                
-                                current = gs
-                                while current <= ge:
-                                    next_month_start = current + relativedelta(months=1)
-                                    next_month_start = next_month_start.replace(day=1)
-                                    month_end = next_month_start - timedelta(days=1)
+                            # Check if this month is missing
+                            if month_key not in existing_months:
+                                if missing_months_start is None:
+                                    missing_months_start = curr
+                            else:
+                                # We found data! Close previous gap if exists
+                                if missing_months_start:
+                                    # End of gap is LAST DAY of PREVIOUS month
+                                    gap_end_date = curr - timedelta(days=1)
                                     
-                                    chunk_start = current.strftime("%Y-%m-%d")
-                                    chunk_end = month_end.strftime("%Y-%m-%d")
-                                    
-                                    if chunk_end > end_date:
-                                        chunk_end = end_date
+                                    # Clamp start
+                                    g_start_str = missing_months_start.strftime("%Y-%m-%d")
+                                    if missing_months_start.year == req_start.year and missing_months_start.month == req_start.month:
+                                        if g_start_str < start_date: g_start_str = start_date
                                         
-                                    fetch_ranges.append((chunk_start, chunk_end))
-                                    current = next_month_start
+                                    g_end_str = gap_end_date.strftime("%Y-%m-%d")
+                                    if g_end_str > end_date: g_end_str = end_date
                                     
-                            except Exception as e:
-                                print(f"Chunking Error: {e}")
-                                fetch_ranges.append((gap_start, end_date))
+                                    print(f"[{c_name}] Hole Detected: {g_start_str} -> {g_end_str}")
+                                    fetch_ranges.append((g_start_str, g_end_str))
+                                    missing_months_start = None
+                            
+                            # Next month
+                            curr += relativedelta(months=1)
+                        
+                        # Close final gap if open
+                        if missing_months_start:
+                            # End of range
+                            last_day_of_req = req_end
+                            
+                            g_start_str = missing_months_start.strftime("%Y-%m-%d")
+                            if missing_months_start.year == req_start.year and missing_months_start.month == req_start.month:
+                                if g_start_str < start_date: g_start_str = start_date
+                                
+                            g_end_str = last_day_of_req.strftime("%Y-%m-%d")
+                            
+                            print(f"[{c_name}] Missing Range (End): {g_start_str} -> {g_end_str}")
+                            fetch_ranges.append((g_start_str, g_end_str))
+                            
+                    except Exception as e:
+                        print(f"Error in Smart Hole Detection: {e}")
+                        # Fallback: Fetch everything requested
+                        fetch_ranges.append((start_date, end_date))
 
                 if not fetch_ranges:
-                     print(f"[{c_name}] Served fully from cache. ({min_cache_date} to {max_cache_date})")
+                     print(f"[{c_name}] Cache Complete. No holes found in range.")
 
                 # 5. Fetching Gaps
                 auth_token = None
