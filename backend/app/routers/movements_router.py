@@ -90,19 +90,45 @@ def get_movements(
                          # No data, fetch everything requested
                          fetch_ranges.append((start_date, end_date))
                     else:
-                        # 1. Check Backward Gap
+                        # 1. Check Backward Gap (Missing History)
                         if start_date < min_cache_date:
-                            # We need from requested start up to what we already have
                             gap_end = min(end_date, min_cache_date)
                             print(f"[{c_name}] Backfill Needed: {start_date} -> {gap_end}")
-                            fetch_ranges.append((start_date, gap_end))
+                            
+                            # Chunk this gap by YEAR to prevent timeouts
+                            try:
+                                sy = int(start_date[:4])
+                                ey = int(gap_end[:4])
+                                for y in range(sy, ey + 1):
+                                    cs = f"{y}-01-01"
+                                    ce = f"{y}-12-31"
+                                    if cs < start_date: cs = start_date
+                                    if ce > gap_end: ce = gap_end
+                                    # Correction: if min_cache_date is e.g. 2024-05-01, gap_end might be 2024-05-01.
+                                    # We must ensure we don't fetch overlapping day if possible, or just rely on dedupe.
+                                    # The original logic used <= so overlap is handled.
+                                    if cs <= ce:
+                                        fetch_ranges.append((cs, ce))
+                            except:
+                                fetch_ranges.append((start_date, gap_end))
                         
-                        # 2. Check Forward Gap
+                        # 2. Check Forward Gap (New Data)
                         if end_date > max_cache_date:
-                            # We need from where we stopped up to requested end
                             gap_start = max(start_date, max_cache_date)
                             print(f"[{c_name}] Forward Fill Needed: {gap_start} -> {end_date}")
-                            fetch_ranges.append((gap_start, end_date))
+                            
+                            try:
+                                sy = int(gap_start[:4])
+                                ey = int(end_date[:4])
+                                for y in range(sy, ey + 1):
+                                    cs = f"{y}-01-01"
+                                    ce = f"{y}-12-31"
+                                    if cs < gap_start: cs = gap_start
+                                    if ce > end_date: ce = end_date
+                                    if cs <= ce:
+                                        fetch_ranges.append((cs, ce))
+                            except:
+                                fetch_ranges.append((gap_start, end_date))
 
                 if not fetch_ranges:
                      print(f"[{c_name}] Served fully from cache. ({min_cache_date} to {max_cache_date})")
@@ -136,7 +162,7 @@ def get_movements(
                         # Checkpoint: Save IMMEDIATELY after each chunk
                         # This ensures that if 2020-2023 flows work but 2024 fails/times out, 
                         # we still persisted the first 4 years. User can just retry to get the rest.
-                        if force_refresh:
+                        if True:
                              db_data.sort(key=lambda x: x['date'])
                              cache.save(cache_key, db_data)
                              print(f"[{c_name}] Checkpoint saved for {r_start}-{r_end}")
