@@ -22,14 +22,15 @@ const formatUnits = (value: number) => {
 interface YoYChartProps {
     data: any[];
     isLoading: boolean;
+    targetYear: number;
 }
 
-export function YoYChart({ data, isLoading }: YoYChartProps) {
+export function YoYChart({ data, isLoading, targetYear }: YoYChartProps) {
     const [metric, setMetric] = useState<"money" | "units">("money");
     const [viewMode, setViewMode] = useState<"monthly" | "quarterly">("monthly");
 
-    const currentYear = new Date().getFullYear();
-    const previousYear = currentYear - 1;
+    const currentYear = targetYear;
+    const previousYear = targetYear - 1;
 
     const processedData = useMemo(() => {
         if (!data) return [];
@@ -155,7 +156,7 @@ export function YoYChart({ data, isLoading }: YoYChartProps) {
                             <Tooltip
                                 cursor={{ fill: 'rgba(0,0,0,0.02)' }}
                                 contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #E5E7EB' }}
-                                formatter={(value: number) => metric === "money" ? new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value) : new Intl.NumberFormat("es-CO").format(value)}
+                                formatter={(value: any) => metric === "money" ? new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(Number(value)) : new Intl.NumberFormat("es-CO").format(Number(value))}
                             />
                             <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
                             <Bar dataKey="previous" name={previousYear.toString()} fill="#E5E7EB" radius={[4, 4, 0, 0]} barSize={30} />

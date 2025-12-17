@@ -178,7 +178,7 @@ export function SalesTrendChart({ data, isLoading, isError, searchRef = "" }: Sa
                                 />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value: number) => [metric === "money" ? formatCurrency(value) : formatUnits(value), metric === "money" ? "Ventas" : "Unidades"]}
+                                    formatter={(value: any) => [metric === "money" ? formatCurrency(Number(value)) : formatUnits(Number(value)), metric === "money" ? "Ventas" : "Unidades"]}
                                     labelStyle={{ color: '#6B7280', fontSize: '12px', marginBottom: '4px' }}
                                 />
                                 <Area
