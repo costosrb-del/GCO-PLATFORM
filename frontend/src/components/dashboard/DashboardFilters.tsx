@@ -4,6 +4,7 @@
 import { Filter, Calendar as CalendarIcon, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { SyncStatusModal } from "@/components/dashboard/SyncStatusModal";
 
 interface DashboardFiltersProps {
     dateRange: { start: string, end: string };
@@ -29,6 +30,9 @@ export function DashboardFilters({ dateRange, setDateRange, searchRef, setSearch
                 >
                     <span className="mr-1">↻</span> Recargar y Corregir
                 </Button>
+
+                {/* Audit Button */}
+                <SyncStatusModal />
             </div>
 
             {/* Date Range */}

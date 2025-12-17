@@ -269,3 +269,51 @@ def sync_movements(
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/status")
+def get_sync_status(
+    token: str = Depends(verify_token)
+):
+    """
+    Returns the sync status (min date, max date, count) for each company.
+    Used for the audit dashboard.
+    """
+    try:
+        all_companies = get_config()
+        status_report = []
+
+        for company in all_companies:
+            if not company.get("valid", True): continue
+            
+            c_name = company.get("name")
+            cache_key = f"history_{c_name}.json"
+            
+            # Load cache (Metadata check would be faster, but loading is safer for accuracy)
+            db_data = cache.load(cache_key) or []
+            
+            if db_data:
+                valid_dates = [x['date'] for x in db_data if x.get('date')]
+                if valid_dates:
+                    min_date = min(valid_dates)
+                    max_date = max(valid_dates)
+                    count = len(db_data)
+                else:
+                    min_date = "N/A"
+                    max_date = "N/A"
+                    count = 0
+            else:
+                min_date = "Sin Datos"
+                max_date = "Sin Datos"
+                count = 0
+                
+            status_report.append({
+                "company": c_name,
+                "min_date": min_date,
+                "max_date": max_date,
+                "count": count
+            })
+            
+        return status_report
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
