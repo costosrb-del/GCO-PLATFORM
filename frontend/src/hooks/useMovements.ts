@@ -56,7 +56,11 @@ export const useMovements = (startDate: string, endDate: string, companies: stri
             return data as MovementsResponse;
         },
         // Only run if dates are present
+        // Optimizing for "Load Once per Day/Session"
         enabled: !!startDate && !!endDate,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: Infinity,          // Never consider data 'stale' automatically
+        gcTime: Infinity,             // Keep in memory indefinitely (v5 name for cacheTime)
+        refetchOnWindowFocus: false,  // Do not refetch when switching tabs
+        refetchOnMount: false,        // Do not refetch when component remounts
     });
 };
