@@ -92,13 +92,27 @@ export default function MovementsPage() {
     setCurrentPage(1);
     setData([]); // Reset table
 
+    // 0. Validate Dates BEFORE anything else
+    if (!startDate || !endDate) {
+      alert("⚠️ Por favor selecciona ambas fechas (Desde y Hasta).");
+      setIsLoading(false);
+      return;
+    }
+
     // Helper: Split range into 3-month chunks
     const getChunks = (start: string, end: string) => {
       const chunks = [];
       let curr = new Date(start);
-      const final = new Date(end);
+      // Valid Date Check
+      if (isNaN(curr.getTime())) return [];
 
-      while (curr <= final) {
+      const final = new Date(end);
+      if (isNaN(final.getTime())) return [];
+
+      // Safety break for infinite loops
+      let limit = 0;
+
+      while (curr <= final && limit < 50) {
         let chunkEnd = new Date(curr);
         chunkEnd.setMonth(chunkEnd.getMonth() + 3);
         chunkEnd.setDate(chunkEnd.getDate() - 1);
@@ -113,25 +127,37 @@ export default function MovementsPage() {
         // Next chunk starts +1 day
         curr = new Date(chunkEnd);
         curr.setDate(curr.getDate() + 1);
+        limit++;
       }
       return chunks;
     }
 
-    const chunks = getChunks(startDate, endDate);
-    const totalChunks = chunks.length;
+    let chunks = getChunks(startDate, endDate);
 
-    console.log(`Searching in ${totalChunks} chunks...`, chunks);
-
-    // VALIDATION: If no chunks (e.g. Start > End or Invalid Dates)
-    if (totalChunks === 0) {
-      alert("⚠️ Rango de fechas inválido. Verifica que la fecha 'Desde' sea menor o igual a 'Hasta'.");
-      setIsLoading(false);
-      return;
+    // FAILSAFE: If logic returns empty but dates seem valid, just try the whole range.
+    if (chunks.length === 0) {
+      const s = new Date(startDate);
+      const e = new Date(endDate);
+      if (s > e) {
+        alert("⚠️ La fecha 'Desde' no puede ser mayor que 'Hasta'.");
+        setIsLoading(false);
+        return;
+      } else {
+        console.warn("Chunk logic returned 0. Using fallback.");
+        chunks.push({ start: startDate, end: endDate });
+      }
     }
 
+    const totalChunks = chunks.length;
+
+    console.log(`Searching from ${startDate} to ${endDate} in ${totalChunks} chunks...`, chunks);
+
     // Warn user if heavy
-    if (totalChunks > 2) {
-      // notification toast?
+    if (totalChunks > 12) {
+      if (!confirm(`⚠️ Estás a punto de solicitar ${totalChunks} trimestres de datos. Esto puede tardar. ¿Continuar?`)) {
+        setIsLoading(false);
+        return;
+      }
     }
 
     let allData: any[] = [];
