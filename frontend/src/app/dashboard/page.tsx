@@ -37,12 +37,15 @@ export default function DashboardHome() {
 
   // 3. Central Data Fetching (Fetch Range = Full History 2020 - Present)
   const fetchRange = useMemo(() => {
-    // Always fetch from 2020 Jan 1st to ensure we have ALL data for deep analysis
-    const currentYear = new Date().getFullYear();
+    // Always fetch from 2020 Jan 1st up to TODAY.
+    // We cap at 'today' to prevent the backend from trying to fetch future gaps (which are always empty),
+    // allowing the cache to successfully seal the "historical" data up to yesterday.
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
 
     return {
       start: `2020-01-01`,
-      end: `${currentYear}-12-31`
+      end: todayStr
     };
   }, []); // Stable fetch range.
 
