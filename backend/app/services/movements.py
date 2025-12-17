@@ -93,16 +93,11 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
                 progress_callback(f"{endpoint}: Pag {p_num}/{total_pages}...")
             
             p_data = get_documents(token, endpoint, start_date, end_date, page=p_num, page_size=PAGE_SIZE, date_param_name=date_param)
-            return p_data.get("results", []) if p_data else []
+            return p_data.get("results", []) if p_data else None
 
-        # 2. Fetch pages 2 to N in parallel
-        # We limit max_workers to avoid hitting rate limits too hard (Siigo likely has limits)
-        # 2. Fetch pages 2 to N
-        # Switched to SERIAL execution to ensure data integrity and avoid 429 errors on massive loads.
-        # This is slower but guarantees we don't drop pages due to concurrency limits.
-        # 2. Fetch pages 2 to N in parallel
-        # Re-enabled PARALLEL execution with safety limit (max_workers=4) to speed up loading
-        # while keeping risk of 429 low.
+        # 2. Fetch pages 2 to N in parallel (with localized verification)
+        failed_pages = []
+        
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             future_to_page = {executor.submit(fetch_page, p): p for p in range(2, total_pages + 1)}
             
@@ -110,10 +105,36 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
                 p_num = future_to_page[future]
                 try:
                     page_results = future.result()
-                    all_docs.extend(page_results)
+                    if page_results is not None:
+                        all_docs.extend(page_results)
+                    else:
+                        print(f"WARNING: Page {p_num} failed to fetch. Adding to retry queue.")
+                        failed_pages.append(p_num)
                 except Exception as e:
                     logging.error(f"Error fetching page {p_num}: {e}")
-                    print(f"Error fetching page {p_num}: {e}")
+                    failed_pages.append(p_num)
+
+        # 3. Retry Logic for Failed Pages (Sequential "Rescue")
+        if failed_pages:
+            print(f"Attempting to rescue {len(failed_pages)} failed pages...")
+            for p_num in failed_pages:
+                try:
+                    import time
+                    time.sleep(1.0) # Grace period
+                    p_data = get_documents(token, endpoint, start_date, end_date, page=p_num, page_size=PAGE_SIZE, date_param_name=date_param)
+                    if p_data and "results" in p_data:
+                        all_docs.extend(p_data["results"])
+                        print(f"SUCCESS: Rescued page {p_num}.")
+                    else:
+                        print(f"CRITICAL: Failed to rescue page {p_num} after retry.")
+                except Exception as e:
+                    print(f"CRITICAL: Exception rescuing page {p_num}: {e}")
+
+    # 4. Final Integrity Check
+    if len(all_docs) != total_results:
+        print(f"INTEGRITY WARNING: Expected {total_results} documents for {endpoint}, but got {len(all_docs)}. Some data may be missing.")
+    else:
+        print(f"Integrity Check Passed: {len(all_docs)}/{total_results} documents verified.")
 
     logging.info(f"Total docs fetched for {endpoint}: {len(all_docs)}")
     return all_docs
