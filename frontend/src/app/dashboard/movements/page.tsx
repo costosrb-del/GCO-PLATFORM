@@ -118,7 +118,13 @@ export default function MovementsPage() {
         alert("⏱️ Tiempo de espera agotado.\n\nEl backend no respondió en 5 minutos. La consulta es extremadamente pesada. \n\nINTENTO DE RECUPERACIÓN: Lo que se haya alcanzado a descargar se guardó. Por favor intenta 'Consultar' nuevamente para retomar.");
       }
       else if (error.message === "Network Error" || !error.response) {
-        alert(`⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\nURL intentada: ${url}\n\nPOSIBLE CAUSA: Mixed Content (si la URL es http://localhost) o Servidor Caído.`);
+        let errorMsg = `⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\nURL intentada: ${url}\n\n`;
+        if (url.includes("localhost")) {
+          errorMsg += "POSIBLE CAUSA: Mixed Content (El navegador bloquea http://localhost cuando estás en https).";
+        } else {
+          errorMsg += "POSIBLE CAUSA: Tiempo de Espera Agotado (Timeout).\nEstás pidiendo muchos datos (2024-2025) y el servidor tardó más de 5 minutos.\n\nSOLUCIÓN: Intenta buscar por rangos más pequeños (ej: Mes a Mes) o usa el botón 'Recargar y Corregir'.";
+        }
+        alert(errorMsg);
       }
       else if (error.response && error.response.status === 401) {
         // router.push("/"); // Temporarily disabled to debug "me saca" issue
