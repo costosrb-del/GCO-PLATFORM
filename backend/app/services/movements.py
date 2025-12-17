@@ -203,7 +203,7 @@ def extract_movements_from_doc(doc, doc_type):
     observation = doc.get("observations", "")
     
     items = doc.get("items", [])
-    print(f"DEBUG: Processing document {doc_number} with {len(items)} items")
+    # print(f"DEBUG: Processing document {doc_number} with {len(items)} items")
     
     for item in items:
         # In Siigo API, items might have code directly or nested in product
@@ -251,8 +251,8 @@ def extract_movements_from_doc(doc, doc_type):
         })
         
     # print(f"DEBUG: Extracted {len(movements)} movements from document {doc_number}")
-    if len(movements) > 0:
-        logging.info(f"Extracted {len(movements)} movements from {friendly_type} {doc_number}")
+    # if len(movements) > 0:
+    #     logging.info(f"Extracted {len(movements)} movements from {friendly_type} {doc_number}")
     return movements
 
 def get_consolidated_movements(token, start_date, end_date, progress_callback=None, selected_types=None):

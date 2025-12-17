@@ -95,21 +95,36 @@ def get_movements(
                             gap_end = min(end_date, min_cache_date)
                             print(f"[{c_name}] Backfill Needed: {start_date} -> {gap_end}")
                             
-                            # Chunk this gap by YEAR to prevent timeouts
+                            # Chunk this gap by MONTH to prevent timeouts (Critical for high density)
                             try:
-                                sy = int(start_date[:4])
-                                ey = int(gap_end[:4])
-                                for y in range(sy, ey + 1):
-                                    cs = f"{y}-01-01"
-                                    ce = f"{y}-12-31"
-                                    if cs < start_date: cs = start_date
-                                    if ce > gap_end: ce = gap_end
-                                    # Correction: if min_cache_date is e.g. 2024-05-01, gap_end might be 2024-05-01.
-                                    # We must ensure we don't fetch overlapping day if possible, or just rely on dedupe.
-                                    # The original logic used <= so overlap is handled.
-                                    if cs <= ce:
-                                        fetch_ranges.append((cs, ce))
-                            except:
+                                from datetime import datetime, timedelta
+                                from dateutil.relativedelta import relativedelta
+                                
+                                # Convert strings to dates
+                                gs = datetime.strptime(start_date, "%Y-%m-%d")
+                                ge = datetime.strptime(gap_end, "%Y-%m-%d")
+                                
+                                current = gs
+                                while current <= ge:
+                                    # End of current month
+                                    # Logic: last day of this month => replace day=28/29/30/31... harder to calculate exactly
+                                    # Simpler: current + 1 month, day=1, then minus 1 day
+                                    next_month_start = current + relativedelta(months=1)
+                                    next_month_start = next_month_start.replace(day=1) 
+                                    month_end = next_month_start - timedelta(days=1)
+                                    
+                                    # Clamp
+                                    chunk_start = current.strftime("%Y-%m-%d")
+                                    chunk_end = month_end.strftime("%Y-%m-%d")
+                                    
+                                    if chunk_end > gap_end:
+                                        chunk_end = gap_end
+                                        
+                                    fetch_ranges.append((chunk_start, chunk_end))
+                                    current = next_month_start
+                                    
+                            except Exception as e:
+                                print(f"Chunking Error: {e}")
                                 fetch_ranges.append((start_date, gap_end))
                         
                         # 2. Check Forward Gap (New Data)
@@ -118,16 +133,29 @@ def get_movements(
                             print(f"[{c_name}] Forward Fill Needed: {gap_start} -> {end_date}")
                             
                             try:
-                                sy = int(gap_start[:4])
-                                ey = int(end_date[:4])
-                                for y in range(sy, ey + 1):
-                                    cs = f"{y}-01-01"
-                                    ce = f"{y}-12-31"
-                                    if cs < gap_start: cs = gap_start
-                                    if ce > end_date: ce = end_date
-                                    if cs <= ce:
-                                        fetch_ranges.append((cs, ce))
-                            except:
+                                from datetime import datetime, timedelta
+                                from dateutil.relativedelta import relativedelta
+                                
+                                gs = datetime.strptime(gap_start, "%Y-%m-%d")
+                                ge = datetime.strptime(end_date, "%Y-%m-%d")
+                                
+                                current = gs
+                                while current <= ge:
+                                    next_month_start = current + relativedelta(months=1)
+                                    next_month_start = next_month_start.replace(day=1)
+                                    month_end = next_month_start - timedelta(days=1)
+                                    
+                                    chunk_start = current.strftime("%Y-%m-%d")
+                                    chunk_end = month_end.strftime("%Y-%m-%d")
+                                    
+                                    if chunk_end > end_date:
+                                        chunk_end = end_date
+                                        
+                                    fetch_ranges.append((chunk_start, chunk_end))
+                                    current = next_month_start
+                                    
+                            except Exception as e:
+                                print(f"Chunking Error: {e}")
                                 fetch_ranges.append((gap_start, end_date))
 
                 if not fetch_ranges:
