@@ -79,7 +79,7 @@ export default function MovementsPage() {
     fetchConfig();
   }, []);
 
-  // -- FETCH DATA --
+  // -- FETCH DATA (CHUNKED) --
   const fetchMovements = async () => {
     const token = localStorage.getItem("gco_token");
     if (!token) {
@@ -89,59 +89,105 @@ export default function MovementsPage() {
 
     setIsLoading(true);
     setHasSearched(true);
-    setCurrentPage(1); // Reset to first page on new search
+    setCurrentPage(1);
+    setData([]); // Reset table
 
-    let url = "";
+    // Helper: Split range into 3-month chunks
+    const getChunks = (start: string, end: string) => {
+      const chunks = [];
+      let curr = new Date(start);
+      const final = new Date(end);
 
-    try {
-      // Determine API URL (Hardcoded or Env Var)
-      url = `${API_URL}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
+      while (curr <= final) {
+        let chunkEnd = new Date(curr);
+        chunkEnd.setMonth(chunkEnd.getMonth() + 3);
+        chunkEnd.setDate(chunkEnd.getDate() - 1);
 
+        if (chunkEnd > final) chunkEnd = final;
+
+        chunks.push({
+          start: curr.toISOString().split("T")[0],
+          end: chunkEnd.toISOString().split("T")[0]
+        });
+
+        // Next chunk starts +1 day
+        curr = new Date(chunkEnd);
+        curr.setDate(curr.getDate() + 1);
+      }
+      return chunks;
+    }
+
+    const chunks = getChunks(startDate, endDate);
+    const totalChunks = chunks.length;
+
+    console.log(`Searching in ${totalChunks} chunks...`, chunks);
+
+    // Warn user if heavy
+    if (totalChunks > 2) {
+      // notification toast?
+    }
+
+    let allData: any[] = [];
+    let hasError = false;
+
+    // Process Chunks Sequentially
+    for (let i = 0; i < totalChunks; i++) {
+      const { start, end } = chunks[i];
+      let url = `${API_URL}/movements/?start_date=${start}&end_date=${end}&force_refresh=${forceRefresh}`;
+
+      // Append filters to URL
       if (selectedCompanies.length > 0) {
         selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
       }
-
-      // NEW: Server-Side Doc Type Filter
       if (selectedDocTypes.length > 0) {
         selectedDocTypes.forEach(t => url += `&doc_types=${encodeURIComponent(t)}`);
       }
 
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 300000 // 5 minutes timeout (300s)
-      });
+      try {
+        // Update Loading status with progress
+        // We can't easily update a text state inside the loop unless we use a ref or simplified state, 
+        // but isLoading is bool. Maybe specific state?
+        // For now, implicit wait. loading=true.
 
-      if (response.data.errors && response.data.errors.length > 0) {
-        alert("⚠️ Advertencias:\n" + response.data.errors.join("\n"));
-      }
+        const response = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 300000
+        });
 
-      if (response.data.data) {
-        setData(response.data.data);
-      } else {
-        setData([]);
-      }
-    } catch (error: any) {
-      console.error("Error fetching movements:", error);
-      if (error.code === 'ECONNABORTED') {
-        alert("⏱️ Tiempo de espera agotado.\n\nEl backend no respondió en 5 minutos. La consulta es extremadamente pesada. \n\nINTENTO DE RECUPERACIÓN: Lo que se haya alcanzado a descargar se guardó. Por favor intenta 'Consultar' nuevamente para retomar.");
-      }
-      else if (error.message === "Network Error" || !error.response) {
-        let errorMsg = `⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\nURL intentada: ${url}\n\n`;
-        if (url.includes("localhost")) {
-          errorMsg += "POSIBLE CAUSA: Mixed Content (El navegador bloquea http://localhost cuando estás en https).";
-        } else {
-          errorMsg += "POSIBLE CAUSA: Tiempo de Espera Agotado (Timeout).\nEstás pidiendo muchos datos (2024-2025) y el servidor tardó más de 5 minutos.\n\nSOLUCIÓN: Intenta buscar por rangos más pequeños (ej: Mes a Mes) o usa el botón 'Recargar y Corregir'.";
+        if (response.data.errors && response.data.errors.length > 0) {
+          // Log but don't stop?
+          console.warn("Chunk warnings:", response.data.errors);
         }
-        alert(errorMsg);
+
+        if (response.data.data) {
+          // progressive rendering: update state immediately?
+          // Yes, let's append!
+          const newData = response.data.data;
+          allData = [...allData, ...newData];
+          // Update UI progressively
+          setData(prev => [...prev, ...newData]);
+        }
+
+      } catch (error: any) {
+        console.error(`Error fetching chunk ${start}-${end}:`, error);
+        hasError = true;
+
+        if (error.code === 'ECONNABORTED') {
+          alert(`⏱️ Timeout en el rango ${start} a ${end}.`);
+        } else {
+          // Maybe break? Or continue to try getting other chunks?
+          // Usually if network is dead, break.
+          // If 500, maybe break.
+        }
       }
-      else if (error.response && error.response.status === 401) {
-        // router.push("/"); // Temporarily disabled to debug "me saca" issue
-        alert("Session expired or invalid token. Please log in again.");
-      } else {
-        alert("Error fetching data: " + (error.message || "Unknown error"));
-      }
-    } finally {
-      setIsLoading(false);
+    }
+
+    setIsLoading(false);
+
+    if (hasError && allData.length > 0) {
+      alert("⚠️ Ocurrieron errores en algunos rangos, pero se cargaron datos parciales.");
+    } else if (hasError && allData.length === 0) {
+      alert("❌ Error: No se pudieron cargar datos. Intenta un rango mas pequeño o verifica tu conexión.");
     }
   };
 
