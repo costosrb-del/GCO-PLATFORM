@@ -31,9 +31,9 @@ interface MovementsResponse {
     errors?: string[];
 }
 
-export const useMovements = (startDate: string, endDate: string, companies: string[] = []) => {
+export const useMovements = (startDate: string, endDate: string, companies: string[] = [], refreshId: number = 0) => {
     return useQuery({
-        queryKey: ['movements', startDate, endDate, companies],
+        queryKey: ['movements', startDate, endDate, companies, refreshId],
         queryFn: async () => {
             // Validate dates
             if (!startDate || !endDate) return { count: 0, data: [] };
@@ -45,6 +45,10 @@ export const useMovements = (startDate: string, endDate: string, companies: stri
             params.append('start_date', startDate);
             params.append('end_date', endDate);
             companies.forEach(c => params.append('companies', c));
+
+            if (refreshId > 0) {
+                params.append('force_refresh', 'true');
+            }
 
             // Use axios
             const { data } = await axios.get(`${getBaseUrl()}/movements/`, {
