@@ -45,6 +45,9 @@ export default function MovementsPage() {
   // Available Options (Fetched from Config)
   const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
 
+  // Static Helper for Doc Types (So user can select BEFORE fetching)
+  const AVAILABLE_DOC_TYPES = ["FV", "FC", "NC", "ND", "CC", "REM"];
+
   // -- STATE: Client-side Date Filters --
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
@@ -98,6 +101,11 @@ export default function MovementsPage() {
         selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
       }
 
+      // NEW: Server-Side Doc Type Filter
+      if (selectedDocTypes.length > 0) {
+        selectedDocTypes.forEach(t => url += `&doc_types=${encodeURIComponent(t)}`);
+      }
+
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 300000 // 5 minutes timeout (300s)
@@ -139,7 +147,13 @@ export default function MovementsPage() {
 
   // -- DERIVED LISTS FOR FILTERS --
   const uniqueWarehouses = useMemo(() => Array.from(new Set(data.map(d => d.warehouse || "Sin Bodega"))).sort(), [data]);
-  const uniqueDocTypes = useMemo(() => Array.from(new Set(data.map(d => d.doc_type))).sort(), [data]);
+  // Combined list: Static + Data-derived (to allow strict filtering but also show what's there)
+  const uniqueDocTypes = useMemo(() => {
+    const fromData = new Set(data.map(d => d.doc_type));
+    AVAILABLE_DOC_TYPES.forEach(t => fromData.add(t));
+    return Array.from(fromData).sort();
+  }, [data]);
+
   // uniqueCompanies is now based on fetched config + data to ensure consistency? 
   // No, let's keep uniqueCompanies derived from data for the FILTER panel (what is currently shown), 
   // but use availableCompanies for the QUERY selection.

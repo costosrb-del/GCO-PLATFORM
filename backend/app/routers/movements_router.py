@@ -20,6 +20,7 @@ def get_movements(
     start_date: str = Query(..., description="YYYY-MM-DD"),
     end_date: str = Query(..., description="YYYY-MM-DD"),
     companies: Optional[List[str]] = Query(None),
+    doc_types: Optional[List[str]] = Query(None),
     force_refresh: bool = Query(False)
 ):
     try:
@@ -176,7 +177,8 @@ def get_movements(
                             break
 
                     print(f"[{c_name}] Fetching Gap: {r_start} to {r_end}...")
-                    gap_data = fetch_movements(auth_token, r_start, r_end)
+                    # PASS doc_types FILTER HERE
+                    gap_data = fetch_movements(auth_token, r_start, r_end, selected_types=doc_types)
                     
                     if gap_data:
                         # Tag
