@@ -88,12 +88,11 @@ export default function MovementsPage() {
     setHasSearched(true);
     setCurrentPage(1); // Reset to first page on new search
 
+    let url = "";
+
     try {
       // Determine API URL (Hardcoded or Env Var)
-      // For now, if running locally use localhost, else assuming relative path or env
-      // Determine API URL (Hardcoded or Env Var)
-      // For now, if running locally use localhost, else assuming relative path or env
-      let url = `${API_URL}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
+      url = `${API_URL}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
 
       if (selectedCompanies.length > 0) {
         selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
@@ -119,7 +118,7 @@ export default function MovementsPage() {
         alert("⏱️ Tiempo de espera agotado.\n\nEl backend no respondió en 5 minutos. La consulta es extremadamente pesada. \n\nINTENTO DE RECUPERACIÓN: Lo que se haya alcanzado a descargar se guardó. Por favor intenta 'Consultar' nuevamente para retomar.");
       }
       else if (error.message === "Network Error" || !error.response) {
-        alert("⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\n\nPOSIBLE CAUSA: Estás usando la versión en Firebase (HTTPS) pero tu servidor es Local (HTTP). El navegador bloquea esto por seguridad ('Mixed Content').\n\nSOLUCIÓN: Ejecuta el frontend localmente ('npm run dev') o permite contenido inseguro.");
+        alert(`⚠️ Error de Conexión\n\nNo se pudo conectar con el Backend.\nURL intentada: ${url}\n\nPOSIBLE CAUSA: Mixed Content (si la URL es http://localhost) o Servidor Caído.`);
       }
       else if (error.response && error.response.status === 401) {
         // router.push("/"); // Temporarily disabled to debug "me saca" issue
