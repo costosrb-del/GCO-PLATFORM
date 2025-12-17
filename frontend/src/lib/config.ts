@@ -15,6 +15,8 @@ export const API_URL = (() => {
     return 'https://gco-siigo-api-245366645678.us-central1.run.app';
 })();
 
+console.log(`[Config] API_URL resolved to: ${API_URL}`);
+
 export const getApiUrl = (path: string = "") => {
     // Remove leading slash if present to avoid double slashes
     const cleanPath = path.startsWith("/") ? path.substring(1) : path;
