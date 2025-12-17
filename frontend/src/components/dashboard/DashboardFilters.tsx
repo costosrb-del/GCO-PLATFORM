@@ -10,9 +10,10 @@ interface DashboardFiltersProps {
     setDateRange: (range: { start: string, end: string }) => void;
     searchRef: string;
     setSearchRef: (term: string) => void;
+    onForceRefresh: () => void;
 }
 
-export function DashboardFilters({ dateRange, setDateRange, searchRef, setSearchRef }: DashboardFiltersProps) {
+export function DashboardFilters({ dateRange, setDateRange, searchRef, setSearchRef, onForceRefresh }: DashboardFiltersProps) {
     return (
         <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             {/* Year/Range Selectors */}
@@ -20,6 +21,14 @@ export function DashboardFilters({ dateRange, setDateRange, searchRef, setSearch
                 <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
                     <Filter className="h-4 w-4" /> Filtros Globales
                 </span>
+                <Button
+                    onClick={onForceRefresh}
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 h-8 text-xs bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:text-orange-800"
+                >
+                    <span className="mr-1">↻</span> Recargar y Corregir
+                </Button>
             </div>
 
             {/* Date Range */}

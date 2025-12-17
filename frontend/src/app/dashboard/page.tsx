@@ -19,8 +19,11 @@ export default function DashboardHome() {
 
   useEffect(() => {
     // Get role from storage
-    const stored = localStorage.getItem("gco_role");
-    setRole(stored);
+    const stored = localStorage.getItem("gco_token");
+    setRole(stored ? "admin" : null); // Simple check, real role logic is in Sidebar
+    const roleStored = localStorage.getItem("gco_role");
+    if (roleStored) setRole(roleStored);
+
   }, []);
 
   // 2. Local State (UI Filters)
@@ -34,6 +37,7 @@ export default function DashboardHome() {
     };
   });
   const [searchRef, setSearchRef] = useState("");
+  const [refreshId, setRefreshId] = useState(0); // For forcing re-fetch
 
   // 3. Central Data Fetching (Fetch Range = Full History 2020 - Present)
   const fetchRange = useMemo(() => {
@@ -50,7 +54,14 @@ export default function DashboardHome() {
   }, []); // Stable fetch range.
 
   // Only refetch if the YEAR changes (stable here).
-  const { data: rawData, isLoading, isError } = useMovements(fetchRange.start, fetchRange.end);
+  // Pass refreshId to trigger force refresh when changed
+  const { data: rawData, isLoading, isError } = useMovements(fetchRange.start, fetchRange.end, [], refreshId);
+
+  const handleForceRefresh = () => {
+    if (confirm("¿Estás seguro? Esto volverá a descargar todos los datos desde Siigo para corregir cualquier error. Puede tomar unos minutos.")) {
+      setRefreshId(prev => prev + 1);
+    }
+  };
 
   // 4. Client-Side Filtering
   // Filter the RAW huge dataset based on the UI `dateRange`.
@@ -84,6 +95,7 @@ export default function DashboardHome() {
         setDateRange={setDateRange}
         searchRef={searchRef}
         setSearchRef={setSearchRef}
+        onForceRefresh={handleForceRefresh}
       />
 
       {/* Access Control Check */}
