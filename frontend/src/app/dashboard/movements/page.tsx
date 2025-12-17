@@ -11,6 +11,7 @@ import {
 import * as XLSX from "xlsx";
 import { Listbox, Transition } from "@headlessui/react";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/lib/config";
 
 // Utility for formatting currency
 const formatCurrency = (value: number) => {
@@ -63,8 +64,8 @@ export default function MovementsPage() {
       try {
         const token = localStorage.getItem("gco_token");
         if (!token) return;
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app");
-        const res = await axios.get(`${baseUrl}/config/companies`, {
+        if (!token) return;
+        const res = await axios.get(`${API_URL}/config/companies`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data) setAvailableCompanies(res.data);
@@ -90,8 +91,9 @@ export default function MovementsPage() {
     try {
       // Determine API URL (Hardcoded or Env Var)
       // For now, if running locally use localhost, else assuming relative path or env
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-hcmjiaf72a-uc.a.run.app");
-      let url = `${baseUrl}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
+      // Determine API URL (Hardcoded or Env Var)
+      // For now, if running locally use localhost, else assuming relative path or env
+      let url = `${API_URL}/movements/?start_date=${startDate}&end_date=${endDate}&force_refresh=${forceRefresh}`;
 
       if (selectedCompanies.length > 0) {
         selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);

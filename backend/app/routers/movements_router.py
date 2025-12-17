@@ -46,74 +46,87 @@ def get_movements(
                 cache_key = f"history_{c_name}.json" 
                 db_data = cache.load(cache_key) or []
                 
-                # 3. Determine Max Date avail in Cache
-                # Initialize with a very old date or matching start_date logic
-                max_cache_date = "2020-01-01"
+                # 3. Determine Date Boundaries in Cache
+                min_cache_date = "2999-12-31"
+                max_cache_date = "1900-01-01"
+                
                 if db_data:
                     valid_dates = [x['date'] for x in db_data if x.get('date')]
                     if valid_dates:
+                        min_cache_date = min(valid_dates)
                         max_cache_date = max(valid_dates)
-
-                # 4. Logic: Do we need to fetch?
-                fetch_needed = False
-                fetch_start = start_date
-                fetch_end = end_date
-                
-                if force_refresh:
-                    fetch_needed = True
-                    # Fetch exactly what user asked (to fix holes or updates)
-                    fetch_start = start_date
-                    print(f"[{c_name}] Forcing refresh: {fetch_start} to {fetch_end}")
-                    
-                elif end_date > max_cache_date:
-                    fetch_needed = True
-                    # Optimization: Only fetch from last known date
-                    # If cache has up to Jan 31, and we want Feb 28.
-                    # Fetch from Jan 31 (overlap) to Feb 28.
-                    # If cache is empty (2020), fetch user start_date.
-                    # Ensure we don't go backwards if user asks for OLD data not in cache
-                    # (For this logic, we assume we fill forward. If user asks older than cache, we fetch it too)
-                    
-                    if start_date > max_cache_date:
-                        # Gap detected or simple forward fill
-                        fetch_start = max(start_date, max_cache_date)
-                    else:
-                        # User wants old data + new data?
-                        # If start_date < max_cache_date < end_date.
-                        # We already have start..max. We need max..end.
-                        fetch_start = max_cache_date
-                        
-                    print(f"[{c_name}] Incremental fetch: {fetch_start} to {fetch_end} (Cache Max: {max_cache_date})")
                 else:
-                    print(f"[{c_name}] Served fully from cache.")
+                    # Empty cache behavior
+                    min_cache_date = "2999-12-31" 
+                    max_cache_date = "1900-01-01"
 
-                # 5. Fetching
-                if fetch_needed:
-                    auth_token = get_auth_token(company.get("username"), company.get("access_key"))
-                    if not auth_token:
-                        return [], f"Auth Fallida: {c_name}"
+                # 4. Logic: Smart Gap Detection (Backfill & Forward Fill)
+                fetch_ranges = [] # List of tuples (start, end) to fetch
 
-                    new_data = fetch_movements(auth_token, fetch_start, fetch_end)
+                if force_refresh:
+                    print(f"[{c_name}] Forcing refresh: {start_date} to {end_date}")
+                    fetch_ranges.append((start_date, end_date))
+                else:
+                    # Case A: Backfill (User asks for older data than we have)
+                    # If start_date < min_cache_date, we need [start_date, min_cache_date - 1 day]
+                    # But simpler: just fetch [start_date, min(end_date, min_cache_date)]?
+                    # Let's keep it robust. If cache is empty (2999 min), start_date < 2999 is True.
                     
-                    if new_data:
-                        # Tag with company
-                        for m in new_data: m["company"] = c_name
-                        
-                        # 6. Merge / Upsert
-                        # Strategy: Remove overlaps in the *fetched range* from existing DB, then append.
-                        # This avoids duplicates if we re-fetched an existing month.
-                        
-                        # Filter out existing records that fall within the new fetch window
-                        # (To be replaced by the fresh data)
-                        db_data = [x for x in db_data if not (fetch_start <= x['date'] <= fetch_end)]
-                        
-                        # Append new data
-                        db_data.extend(new_data)
-                        
-                        # Save updated History
-                        cache.save(cache_key, db_data)
+                    if not db_data:
+                         # No data, fetch everything requested
+                         fetch_ranges.append((start_date, end_date))
                     else:
-                        print(f"[{c_name}] No new data returned from API.")
+                        # 1. Check Backward Gap
+                        if start_date < min_cache_date:
+                            # We need from requested start up to what we already have
+                            gap_end = min(end_date, min_cache_date)
+                            print(f"[{c_name}] Backfill Needed: {start_date} -> {gap_end}")
+                            fetch_ranges.append((start_date, gap_end))
+                        
+                        # 2. Check Forward Gap
+                        if end_date > max_cache_date:
+                            # We need from where we stopped up to requested end
+                            gap_start = max(start_date, max_cache_date)
+                            print(f"[{c_name}] Forward Fill Needed: {gap_start} -> {end_date}")
+                            fetch_ranges.append((gap_start, end_date))
+
+                if not fetch_ranges:
+                     print(f"[{c_name}] Served fully from cache. ({min_cache_date} to {max_cache_date})")
+
+                # 5. Fetching Gaps
+                auth_token = None
+                new_data_found = False
+                
+                for r_start, r_end in fetch_ranges:
+                    # Safety check
+                    if r_start >= r_end: continue
+
+                    if not auth_token:
+                        auth_token = get_auth_token(company.get("username"), company.get("access_key"))
+                        if not auth_token: 
+                            errors.append(f"Auth Fallida: {c_name}")
+                            break
+
+                    print(f"[{c_name}] Fetching Gap: {r_start} to {r_end}...")
+                    gap_data = fetch_movements(auth_token, r_start, r_end)
+                    
+                    if gap_data:
+                        # Tag
+                        for m in gap_data: m["company"] = c_name
+                        
+                        # Merge immediately to memory list to handle multiple gaps
+                        # Filter overlap for this specific gap to be safe
+                        db_data = [x for x in db_data if not (r_start <= x['date'] <= r_end)]
+                        db_data.extend(gap_data)
+                        new_data_found = True
+                    else:
+                         print(f"[{c_name}] Gap {r_start}-{r_end} was empty on Server.")
+
+                # 6. Save if we changed anything
+                if new_data_found:
+                    # Sort by date for tidiness (optional but good for debugging)
+                    db_data.sort(key=lambda x: x['date'])
+                    cache.save(cache_key, db_data)
                 
                 # 7. Final Filter (Return only what user asked for)
                 filtered_response = [x for x in db_data if start_date <= x['date'] <= end_date]
@@ -145,3 +158,92 @@ def get_movements(
     except Exception as e:
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+from pydantic import BaseModel
+class SyncRequest(BaseModel):
+    years: List[int]
+
+@router.post("/sync")
+def sync_movements(
+    request: SyncRequest,
+    token: str = Depends(verify_token)
+):
+    """
+    Trigger a background sync for specific years.
+    This effectively builds the 'Data Warehouse' by fetching full historical years
+    and merging them into the master cache file.
+    """
+    try:
+        all_companies = get_config()
+        # Filter only valid companies
+        target_companies = [c for c in all_companies if c.get("valid", True)]
+        
+        results = []
+        
+        def process_sync(company, year):
+            c_name = company.get("name")
+            start_date = f"{year}-01-01"
+            end_date = f"{year}-12-31"
+            
+            # If current year, cap at today to avoid future dates error
+            if year == datetime.now().year:
+                end_date = datetime.now().strftime("%Y-%m-%d")
+                
+            try:
+                print(f"[{c_name}] Syncing Year {year}...")
+                
+                # Fetch FULL year
+                auth_token = get_auth_token(company.get("username"), company.get("access_key"))
+                if not auth_token:
+                    return f"Auth Failed: {c_name}"
+
+                new_data = fetch_movements(auth_token, start_date, end_date)
+                if not new_data:
+                    return f"No data for {c_name} in {year}"
+
+                # Tag with company
+                for m in new_data: m["company"] = c_name
+
+                # Load Master Cache
+                cache_key = f"history_{c_name}.json" 
+                db_data = cache.load(cache_key) or []
+                
+                # MERGE Strategy:
+                # 1. Remove all records belonging to this YEAR from current DB
+                # 2. Append the freshly fetched year
+                
+                # Filter out records where 'date' starts with f"{year}-"
+                year_prefix = str(year)
+                db_data = [x for x in db_data if not x.get('date', '').startswith(year_prefix)]
+                
+                # Add new
+                db_data.extend(new_data)
+                
+                # Save
+                cache.save(cache_key, db_data)
+                return f"Success {c_name} {year}: {len(new_data)} records"
+
+            except Exception as e:
+                print(f"Error Syncing {c_name} {year}: {e}")
+                return f"Error {c_name} {year}: {str(e)}"
+
+        # Run Heavy Sync
+        # We process (Company x Year) combinations
+        tasks = []
+        for c in target_companies:
+            for y in request.years:
+                tasks.append((c, y))
+                
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_task = {executor.submit(process_sync, t[0], t[1]): t for t in tasks}
+            
+            for future in concurrent.futures.as_completed(future_to_task):
+                res = future.result()
+                results.append(res)
+                
+        return {"status": "completed", "details": results}
+
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -1,11 +1,17 @@
 ﻿"use client";
 
-import { useState, Fragment, useEffect } from "react";
+import { useState, Fragment, useEffect, useMemo } from "react";
 import axios from "axios";
-import { Loader2, Search, Filter, RefreshCcw, Download, FileSpreadsheet, FileText, Check, ChevronDown, TrendingUp, ArrowUpDown } from "lucide-react";
+import { Loader2, Search, Filter, RefreshCcw, Download, FileSpreadsheet, FileText, Check, ChevronDown, TrendingUp, ArrowUpDown, MessageCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Listbox, Transition } from "@headlessui/react";
 import { clsx } from "clsx";
+import { API_URL } from "@/lib/config";
+
+import { useInventory, useSalesAverages, useRefreshSalesAverages } from "@/hooks/useInventory";
+import { useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 // Types
 interface InventoryItem {
@@ -21,13 +27,22 @@ interface SalesAverage {
   average: number;
 }
 
+interface ConsolidatedItem {
+  code: string;
+  name: string;
+  quantity: number;
+  companies: Set<string>;
+  warehouses: Set<string>;
+  dailyAverage: number;
+  daysSupply: number;
+}
+
 export default function SaldosPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Averages State
-  const [averages, setAverages] = useState<Record<string, number>>({});
-  const [isLoadingAverages, setIsLoadingAverages] = useState(false);
+
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -69,32 +84,44 @@ export default function SaldosPage() {
       const cached = sessionStorage.getItem("gco_inventory_cache");
       if (cached) {
         const parsed = JSON.parse(cached);
-        // Only use cache if it's less than 30 minutes old (optional validity check)
-        // For now just load it so user sees something immediately
         setData(parsed.data);
         setLastUpdated(parsed.lastUpdated);
-        console.log("Loaded inventory from Session Cache");
       }
     } catch (e) {
       console.error("Failed to load session cache", e);
     }
+
+    // 4. Load Averages from LocalStorage (Persist 1 Day)
+
   }, []);
 
-  const fetchData = async () => {
+  const { data: averagesData, isFetching: isAveragesFetching } = useSalesAverages(true);
+  const { mutate: refreshAverages, isPending: isRefreshingAverages } = useRefreshSalesAverages();
+  const { data: inventoryData, isLoading: isInventoryLoading, error: inventoryError } = useInventory();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (inventoryData) {
+      setData(inventoryData);
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [inventoryData]);
+
+  // Keep manual refresh with Stream for progress feedback
+  const handleManualRefresh = async () => {
     setIsLoading(true);
     setLoadingProgress(0);
     setLoadingMessage("Iniciando...");
 
     const token = localStorage.getItem("gco_token");
     if (!token) {
-      alert("Sesión no válida. Por favor, reingresa.");
+      toast.error("Sesión no válida. Por favor, reingresa.");
       setIsLoading(false);
       return;
     }
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
-      // Force refresh only when user explicitly clicks Update
+      const baseUrl = API_URL;
       const response = await fetch(`${baseUrl}/inventory/stream?force_refresh=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -116,7 +143,7 @@ export default function SaldosPage() {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n\n");
-        buffer = lines.pop() || ""; // Keep incomplete chunk
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -132,19 +159,16 @@ export default function SaldosPage() {
               if (eventData.complete_data) {
                 const finalData = eventData.complete_data;
                 if (finalData.errors && finalData.errors.length > 0) {
-                  alert("⚠️ Atencion:\n" + finalData.errors.join("\n"));
+                  toast.warning("⚠️ Atencion:\n" + finalData.errors.join("\n"));
                 }
                 if (finalData.data) {
+                  // Update Local State
                   setData(finalData.data);
                   const nowIdx = new Date().toLocaleTimeString();
                   setLastUpdated(nowIdx);
 
-                  // Save to Session Storage
-                  sessionStorage.setItem("gco_inventory_cache", JSON.stringify({
-                    data: finalData.data,
-                    lastUpdated: nowIdx,
-                    timestamp: Date.now()
-                  }));
+                  // Update React Query Cache
+                  queryClient.setQueryData(['inventory'], finalData.data);
                 }
               }
             } catch (e) {
@@ -156,7 +180,7 @@ export default function SaldosPage() {
 
     } catch (error: any) {
       console.error("Error updating inventory:", error);
-      alert("Error cargando inventario: " + error.message);
+      toast.error("Error cargando inventario: " + error.message);
     } finally {
       setIsLoading(false);
       setLoadingMessage("");
@@ -164,51 +188,52 @@ export default function SaldosPage() {
     }
   };
 
-  const fetchAverages = async () => {
-    setIsLoadingAverages(true);
-    const token = localStorage.getItem("gco_token");
-    if (!token) {
-      alert("Sesión no válida.");
-      setIsLoadingAverages(false);
-      return;
-    }
 
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
-      const response = await axios.get(`${baseUrl}/inventory/analysis/sales-averages?days=7`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 300000 // 5 minutes timeout
-      });
 
-      if (response.data && response.data.averages) {
-        console.log("Averages received:", response.data.averages);
-        setAverages(response.data.averages);
+  const handleShareWhatsApp = () => {
+    // 1. Header
+    const dateStr = new Date().toLocaleDateString("es-CO", { day: '2-digit', month: '2-digit', year: 'numeric' });
+    let message = `📊 *Reporte GCO - ${dateStr}*\n_SKU: Unds (Días Inv)_\n\n`;
 
-        const audit = response.data.audit;
-        if (audit) {
-          let detailMsg = `✅ Promedios Actualizados Correctamente\n`;
-          detailMsg += `📅 Periodo: ${audit.start_date} al ${audit.end_date} (${audit.days_window} días)\n`;
-          detailMsg += `📊 Movimientos Totales: ${audit.total_movements}\n`;
-          detailMsg += `📐 Fórmula: ${audit.formula}\n\n`;
-          detailMsg += `🏢 Detalle por Empresa:\n`;
+    // 2. Body (List)
+    // Use consolidatedData if available (has averages), otherwise detailed
+    const sourceData = viewMode === 'consolidated' ? consolidatedData : filteredData;
 
-          for (const [company, count] of Object.entries(audit.companies)) {
-            detailMsg += ` • ${company}: ${count}\n`;
-          }
-          alert(detailMsg);
-        } else {
-          alert(`Promedios actualizados. ${Object.keys(response.data.averages).length} productos procesados.`);
-        }
-      } else {
-        console.warn("No averages found in response", response.data);
-        alert("No se encontraron datos de ventas para el periodo seleccionado.");
+    // Limit to top 30 to avoid URL length limits
+    const limit = 30;
+    const itemsToShow = sourceData.slice(0, limit);
+
+    // 3. Open WhatsApp
+    // Use proper newlines and simplified format
+    const lines = itemsToShow.map((item: any) => {
+      const code = item.code;
+      const qty = Math.floor(item.quantity).toLocaleString();
+
+      let daysStr = "Sin Info";
+      if (viewMode === 'consolidated' && item.dailyAverage > 0) {
+        daysStr = `${Math.floor(item.daysSupply)}d`;
+      } else if (item.quantity === 0) {
+        daysStr = "AGOTADO";
       }
-    } catch (error: any) {
-      console.error("Error fetching averages:", error);
-      alert("Error calculando promedios: " + (error.response?.data?.detail || error.message));
-    } finally {
-      setIsLoadingAverages(false);
+
+      // Format: • 7001: 50unds | Inv: 10d ⚠️
+      const alert = (viewMode === 'consolidated' && item.daysSupply < 15 && item.daysSupply > 0) ? " ⚠️" : "";
+      return `• *${code}*: ${qty}unds | Inv: ${daysStr}${alert}`;
+    });
+
+    let header = `📊 *REPORTE GCO - ${dateStr}*\nSKU | Unds | Días Inv\n`;
+    let body = lines.join("\n");
+    let footer = `\n_Generado desde GCO Platform_`;
+
+    if (sourceData.length > limit) {
+      footer = `\n... y ${sourceData.length - limit} más.` + footer;
     }
+
+    const finalMessage = header + "\n" + body + "\n" + footer;
+
+    // Explicitly use %0A for newlines if encodedURIComponent doesn't behave as expected in some contexts, but standard is encodeURIComponent
+    const url = `https://wa.me/?text=${encodeURIComponent(finalMessage)}`;
+    window.open(url, '_blank');
   };
 
   const handleExport = async (type: "excel" | "pdf") => {
@@ -269,7 +294,7 @@ export default function SaldosPage() {
 
       try {
         const token = localStorage.getItem("gco_token");
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
+        const baseUrl = API_URL;
 
         alert("Generando PDF... por favor espere.");
 
@@ -296,80 +321,84 @@ export default function SaldosPage() {
     }
   };
 
-  const filteredData = data.filter(item => {
-    if (filterSales) {
-      // Exempt 'Inventario Externo' from sales filter code check
-      // Robust check for company name
-      const isExternal = item.company_name && item.company_name.includes("Inventario Externo");
-      if (!isExternal && !salesCodes.includes(item.code)) return false;
-    }
-    if (selectedCompanies.length > 0 && !selectedCompanies.includes(item.company_name)) return false;
-    if (selectedWarehouses.length > 0 && !selectedWarehouses.includes(item.warehouse_name)) return false;
+  const filteredData = useMemo<InventoryItem[]>(() => {
+    return data.filter((item: InventoryItem) => {
+      if (filterSales) {
+        // Exempt 'Inventario Externo' from sales filter code check
+        // Robust check for company name
+        const isExternal = item.company_name && item.company_name.includes("Inventario Externo");
+        if (!isExternal && !salesCodes.includes(item.code)) return false;
+      }
+      if (selectedCompanies.length > 0 && !selectedCompanies.includes(item.company_name)) return false;
+      if (selectedWarehouses.length > 0 && !selectedWarehouses.includes(item.warehouse_name)) return false;
 
-    if (stockStatus === "Con Stock (>0)" && item.quantity <= 0) return false;
-    if (stockStatus === "Sin Stock (0)" && item.quantity !== 0) return false;
+      if (stockStatus === "Con Stock (>0)" && item.quantity <= 0) return false;
+      if (stockStatus === "Sin Stock (0)" && item.quantity !== 0) return false;
 
-
-
-    if (searchTerm) {
-      const lowerTerm = searchTerm.toLowerCase();
-      return (
-        item.name.toLowerCase().includes(lowerTerm) ||
-        item.code.toLowerCase().includes(lowerTerm)
-      );
-    }
-    return true;
-  });
+      if (searchTerm) {
+        const lowerTerm = searchTerm.toLowerCase();
+        return (
+          item.name.toLowerCase().includes(lowerTerm) ||
+          item.code.toLowerCase().includes(lowerTerm)
+        );
+      }
+      return true;
+    });
+  }, [data, filterSales, selectedCompanies, selectedWarehouses, stockStatus, searchTerm]);
 
   // Consolidated Data Logic
-  let consolidatedData = Object.values(filteredData.reduce((acc, item) => {
-    if (!acc[item.code]) {
-      acc[item.code] = {
-        code: item.code,
-        name: item.name,
-        quantity: 0,
-        companies: new Set<string>(),
-        warehouses: new Set<string>(),
-        dailyAverage: 0,
-        daysSupply: 0
-      };
-    }
-    acc[item.code].quantity += item.quantity;
-    acc[item.code].companies.add(item.company_name);
-    acc[item.code].warehouses.add(item.warehouse_name);
-    return acc;
-  }, {} as Record<string, { code: string, name: string, quantity: number, companies: Set<string>, warehouses: Set<string>, dailyAverage: number, daysSupply: number }>));
-
-  // Enrich with averages
-  consolidatedData = consolidatedData.map(item => {
-    const avg = averages[item.code] || 0;
-    let days = 0;
-    if (avg > 0) {
-      days = item.quantity / avg;
-    }
-    return { ...item, dailyAverage: avg, daysSupply: days };
-  });
-
-  // Sort Consolidated Data
-  if (sortConfig !== null && viewMode === 'consolidated') {
-    consolidatedData.sort((a, b) => {
-      let aValue: any = a[sortConfig.key as keyof typeof a];
-      let bValue: any = b[sortConfig.key as keyof typeof b];
-
-      if (sortConfig.key === 'daysSupply') {
-        // Handle Infinity or missing values
-        if (a.dailyAverage === 0 && a.quantity > 0) aValue = 999999; // Infinite supply logic
-        if (b.dailyAverage === 0 && b.quantity > 0) bValue = 999999;
+  const consolidatedData = useMemo<ConsolidatedItem[]>(() => {
+    let consolidated = Object.values(filteredData.reduce((acc: Record<string, ConsolidatedItem>, item: InventoryItem) => {
+      if (!acc[item.code]) {
+        acc[item.code] = {
+          code: item.code,
+          name: item.name,
+          quantity: 0,
+          companies: new Set<string>(),
+          warehouses: new Set<string>(),
+          dailyAverage: 0,
+          daysSupply: 0
+        };
       }
+      acc[item.code].quantity += item.quantity;
+      acc[item.code].companies.add(item.company_name);
+      acc[item.code].warehouses.add(item.warehouse_name);
+      return acc;
+    }, {} as Record<string, ConsolidatedItem>));
 
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
+    // Enrich with averages
+    consolidated = consolidated.map((item: ConsolidatedItem) => {
+      const avg = averagesData?.averages?.[item.code] || 0;
+      let days = 0;
+      if (avg > 0) {
+        days = item.quantity / avg;
+      }
+      return { ...item, dailyAverage: avg, daysSupply: days };
     });
-  } else {
-    // Default sort by quantity
-    consolidatedData.sort((a, b) => b.quantity - a.quantity);
-  }
+
+    // Sort Consolidated Data
+    if (sortConfig !== null && viewMode === 'consolidated') {
+      consolidated.sort((a, b) => {
+        let aValue: any = a[sortConfig.key as keyof typeof a];
+        let bValue: any = b[sortConfig.key as keyof typeof b];
+
+        if (sortConfig.key === 'daysSupply') {
+          // Handle Infinity or missing values
+          if (a.dailyAverage === 0 && a.quantity > 0) aValue = 999999; // Infinite supply logic
+          if (b.dailyAverage === 0 && b.quantity > 0) bValue = 999999;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      // Default sort by quantity
+      consolidated.sort((a, b) => b.quantity - a.quantity);
+    }
+
+    return consolidated;
+  }, [filteredData, averagesData, sortConfig, viewMode]);
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -401,14 +430,14 @@ export default function SaldosPage() {
           {/* New Averages Button */}
           {viewMode === 'consolidated' && (
             <button
-              onClick={fetchAverages}
-              disabled={isLoadingAverages}
-              className={`flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-xl border border-orange-200 transition-all ${isLoadingAverages ? "opacity-70 cursor-wait" : ""}`}
+              onClick={() => refreshAverages()}
+              disabled={isRefreshingAverages}
+              className={`flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-xl border border-orange-200 transition-all ${isRefreshingAverages ? "opacity-70 cursor-wait" : ""}`}
               title="Calcular promedios de venta 7 días"
             >
-              {isLoadingAverages ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+              {isRefreshingAverages ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
               <span className="text-sm font-medium hidden md:inline">
-                {isLoadingAverages ? "Calculando..." : "Actualizar Promedios (7d)"}
+                {isRefreshingAverages ? "Calculando..." : "Actualizar Promedios (7d)"}
               </span>
             </button>
           )}
@@ -450,10 +479,18 @@ export default function SaldosPage() {
             <FileText className="h-5 w-5" />
           </button>
 
+          <button
+            onClick={handleShareWhatsApp}
+            className="p-2.5 text-[#25D366] bg-green-50 hover:bg-green-100 rounded-xl transition-colors border border-green-200"
+            title="Compartir en WhatsApp"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </button>
+
           <div className="w-px h-8 bg-gray-200 mx-2"></div>
 
           <button
-            onClick={fetchData}
+            onClick={handleManualRefresh}
             disabled={isLoading}
             className={`flex items-center space-x-2 bg-[#183C30] hover:bg-[#122e24] text-white px-6 py-2.5 rounded-xl transition-all font-medium ${isLoading ? "opacity-90 w-48 justify-center" : "shadow-lg shadow-green-900/20"}`}
           >
@@ -591,7 +628,23 @@ export default function SaldosPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {isInventoryLoading && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4 mb-6">
+          <div className="flex space-x-4 mb-4">
+            <Skeleton className="h-8 w-1/4" />
+            <Skeleton className="h-8 w-1/4" />
+          </div>
+          <div className="space-y-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex gap-4">
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden ${isInventoryLoading ? 'hidden' : ''}`}>
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-sm text-left relative">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50/80 backdrop-blur sticky top-0 z-10">

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_URL } from "@/lib/config";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -18,7 +19,40 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   // Local state removed in favor of props
 
   useEffect(() => {
-    setRole(localStorage.getItem("gco_role") || "");
+    // 1. Initial Load from LocalStorage (Optimistic)
+    const storedRole = localStorage.getItem("gco_role");
+    if (storedRole) setRole(storedRole);
+
+    // 2. Background Verification (Correctness Check)
+    const verifyRole = async () => {
+      const token = localStorage.getItem("gco_token");
+      if (!token) return;
+
+      if (!token) return;
+
+      const baseUrl = API_URL;
+
+      try {
+        const res = await fetch(`${baseUrl}/auth/me`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Only update if different to avoid flicker
+          if (data.role && data.role !== storedRole) {
+            console.log("Background Check: Role updated to", data.role);
+            localStorage.setItem("gco_role", data.role);
+            setRole(data.role);
+          }
+        }
+      } catch (err) {
+        console.warn("Background role check failed (likely offline or cold start still pending)", err);
+      }
+    };
+
+    // Trigger background check
+    verifyRole();
   }, []);
 
   return (

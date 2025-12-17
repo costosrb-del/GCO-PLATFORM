@@ -49,12 +49,9 @@ def verify_token(token: str = Depends(oauth2_scheme)):
         except Exception:
             pass
             
-    # 3. Last resort: Check for legacy Dev tokens
-    if not user_email:
-        if token == "token-admin-secret": 
-            user_email = "costos@origenbotanico.com"
-        elif token == "token-viewer-secret":
-            user_email = "visualizador@origenbotanico.com"
+    # 3. Last resort: REMOVED Legacy Dev tokens for security
+    # if not user_email:
+    #    ...
 
     if not user_email:
         raise HTTPException(status_code=401, detail="Invalid Authentication Token")

@@ -8,3 +8,6 @@ fpdf
 
 firebase-admin
 google-cloud-storage
+
+pytest
+httpx

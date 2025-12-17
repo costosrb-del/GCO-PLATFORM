@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Loader2, UserPlus, Shield, User } from "lucide-react";
+import { API_URL } from "@/lib/config";
 
 export default function UsersPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -13,7 +14,7 @@ export default function UsersPage() {
     const [role, setRole] = useState("viewer");
     const [isCreating, setIsCreating] = useState(false);
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://gco-siigo-api-245366645678.us-central1.run.app";
+    const baseUrl = API_URL;
 
     const fetchUsers = async () => {
         try {

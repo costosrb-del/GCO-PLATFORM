@@ -1,17 +1,104 @@
-import { Zap } from "lucide-react";
+
+"use client";
+
+import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { SalesTrendChart } from "@/components/dashboard/SalesTrendChart";
+import { TopProductsChart } from "@/components/dashboard/TopProductsChart";
+import { YoYChart } from "@/components/dashboard/YoYChart";
+import { useAutoSync } from "@/hooks/useAutoSync";
+import { useMovements } from "@/hooks/useMovements";
+import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
 
 export default function DashboardHome() {
+  // 1. Auto Sync on Mount
+  useAutoSync();
+
+  // 2. Local State (UI Filters)
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    const start = new Date();
+    start.setDate(today.getDate() - 30); // Default view: 30 days
+    return {
+      start: start.toISOString().split("T")[0],
+      end: today.toISOString().split("T")[0],
+    };
+  });
+  const [searchRef, setSearchRef] = useState("");
+
+  // 3. Central Data Fetching (Fetch Range = Full History 2020 - Present)
+  const fetchRange = useMemo(() => {
+    // Always fetch from 2020 Jan 1st to ensure we have ALL data for deep analysis
+    const currentYear = new Date().getFullYear();
+
+    return {
+      start: `2020-01-01`,
+      end: `${currentYear}-12-31`
+    };
+  }, []); // Stable fetch range.
+
+  // Only refetch if the YEAR changes (stable here).
+  const { data: rawData, isLoading, isError } = useMovements(fetchRange.start, fetchRange.end);
+
+  // 4. Client-Side Filtering
+  // Filter the RAW huge dataset based on the UI `dateRange`.
+  const filteredData = useMemo(() => {
+    if (!rawData?.data) return [];
+
+    return rawData.data.filter(m => {
+      // Date within range?
+      if (m.date < dateRange.start || m.date > dateRange.end) return false;
+      return true;
+    });
+  }, [rawData, dateRange]);
+
+  // Determine Active Year for YoY Comparison based on Filter
+  const activeYear = dateRange.end ? new Date(dateRange.end).getFullYear() : new Date().getFullYear();
+
   return (
-    <div className="p-8">
-      <div className="bg-white rounded-2xl p-10 shadow-sm border border-gray-100 text-center">
-        <div className="h-20 w-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-           <Zap className="h-10 w-10 text-[#183C30]" />
+    <div className="p-8 space-y-6">
+
+      {/* Loading Indicator (Minimal, Top Right) */}
+      {isLoading && !rawData && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 text-xs text-blue-600 bg-white shadow-lg border border-blue-100 px-3 py-1 rounded-full">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Sincronizando datos...
         </div>
-        <h1 className="text-3xl font-bold text-[#183C30] mb-2">¡Sistema Operativo!</h1>
-        <p className="text-gray-500 max-w-lg mx-auto">
-          Bienvenido al nuevo panel de control. Selecciona una opción del menú lateral para comenzar.
-        </p>
+      )}
+
+      {/* Global Filters */}
+      <DashboardFilters
+        dateRange={dateRange}
+        setDateRange={setDateRange}
+        searchRef={searchRef}
+        setSearchRef={setSearchRef}
+      />
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="col-span-1 lg:col-span-3">
+          <SalesTrendChart
+            data={filteredData} // Passing filtered data
+            isLoading={isLoading && !rawData}
+            isError={isError}
+            searchRef={searchRef}
+          />
+        </div>
+        <div className="col-span-1 lg:col-span-1">
+          <TopProductsChart
+            data={filteredData} // Passing filtered data
+            isLoading={isLoading && !rawData}
+            isError={isError}
+          />
+        </div>
       </div>
+
+      {/* YoY Comparison Section */}
+      <YoYChart
+        data={rawData?.data || []} // Low-Level Component handles Year Filtering
+        isLoading={isLoading && !rawData}
+        targetYear={activeYear} // Dynamic Year from Filters
+      />
     </div>
   );
 }

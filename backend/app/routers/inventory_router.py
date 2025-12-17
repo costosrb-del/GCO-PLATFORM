@@ -18,12 +18,27 @@ from app.services.analytics import calculate_average_sales
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 # Helper function moved to module level for shared use
-def process_company(company):
+def process_company(company, force_refresh=False):
     try:
         # Check for configuration validity first
         if not company.get("valid", True):
             return [], f"Empresa '{company['name']}' tiene configuración incompleta (falta Usuario o API Key)."
 
+        cache_key = f"inventory_{company['username']}.json"
+        
+        # 1. Try Cache (if not forced)
+        if not force_refresh:
+            cached = cache.load(cache_key)
+            if cached:
+                # Check TTL (15 minutes = 900 seconds)
+                age = time.time() - cached.get("timestamp", 0)
+                if age < 900:
+                    # print(f"Using cache for {company['name']} (Age: {int(age)}s)")
+                    return cached.get("data", []), None
+                # else:
+                #     print(f"Cache expired for {company['name']} (Age: {int(age)}s)")
+
+        # 2. Fetch Fresh Data
         token = get_auth_token(company["username"], company["access_key"])
         if not token:
             return [], f"No se pudo autenticar '{company['name']}'. Verifique credenciales."
@@ -48,6 +63,13 @@ def process_company(company):
                         c_data.append(item)
                 else:
                     c_data.append(p_base)
+        
+        # 3. Save to Cache
+        cache.save(cache_key, {
+            "timestamp": time.time(),
+            "data": c_data
+        })
+        
         return c_data, None
     except Exception as e:
         print(f"Error processing {company['name']}: {e}")
@@ -100,7 +122,7 @@ def get_consolidated_inventory(
 
     # 1. Fetch Siigo Data
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
-        future_to_company = {executor.submit(process_company, c): c for c in companies}
+        future_to_company = {executor.submit(process_company, c, force_refresh): c for c in companies}
         
         for future in concurrent.futures.as_completed(future_to_company):
             res_data, res_err = future.result()
@@ -134,7 +156,10 @@ def get_consolidated_inventory(
     return filter_for_user(final_result, user.get("role"))
 
 @router.get("/stream")
-def stream_inventory_updates(user: dict = Depends(verify_token)):
+def stream_inventory_updates(
+    user: dict = Depends(verify_token),
+    force_refresh: bool = False
+):
     # Generator function for SSE
     def event_stream():
         companies = get_config()
@@ -147,7 +172,7 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
 
         # 1. Fetch Siigo Data (Parallel with manual tracking)
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
-            future_to_company = {executor.submit(process_company, c): c for c in companies}
+            future_to_company = {executor.submit(process_company, c, force_refresh): c for c in companies}
             completed_count = 0
             
             for future in concurrent.futures.as_completed(future_to_company):
@@ -200,21 +225,41 @@ def stream_inventory_updates(user: dict = Depends(verify_token)):
     )
 
 @router.get("/analysis/sales-averages")
-def get_sales_averages(user: dict = Depends(verify_token), days: int = 30):
+def get_sales_averages(
+    user: dict = Depends(verify_token), 
+    days: int = 30,
+    force_refresh: bool = False
+):
     """
     Returns a dictionary of {SKU: daily_average_sales} based on the last 'days' of sales (FV).
-    This is a heavy operation, meant to be called on demand.
+    This is a heavy operation, cached indefinitely until force_refresh=True.
     """
     # Optional: Check if user has permission
     # if user.get("role") not in ["admin", "wholesaler"]: ... 
     
+    cache_key = "sales_averages.json"
+
+    # 1. Try Cache
+    if not force_refresh:
+        cached = cache.load(cache_key)
+        # Verify if cached data matches requested 'days' window
+        if cached and cached.get("days") == days:
+             # print("Serving sales averages from CACHE")
+             return cached
+
     try:
         averages, audit = calculate_average_sales(days=days)
-        return {
+        result = {
             "days": days,
             "averages": averages,
-            "audit": audit
+            "audit": audit,
+            "timestamp": time.time()
         }
+        
+        # 2. Save Cache
+        cache.save(cache_key, result)
+        
+        return result
     except Exception as e:
         print(f"Error in sales averages endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))

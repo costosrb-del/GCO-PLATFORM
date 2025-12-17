@@ -21,7 +21,7 @@ def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, d
     # We rely on Python-side strict filtering to discard any old/irrelevant data.
     params = {
         "page": page,
-        "page_size": page_size,
+        "page_size": 100, # Force 100 to maximize throughput
         "date_start": start_date,
         "date_end": end_date,
     }
@@ -97,16 +97,20 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
 
         # 2. Fetch pages 2 to N in parallel
         # We limit max_workers to avoid hitting rate limits too hard (Siigo likely has limits)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_page = {executor.submit(fetch_page, p): p for p in range(2, total_pages + 1)}
-            
-            for future in concurrent.futures.as_completed(future_to_page):
-                try:
-                    page_results = future.result()
-                    all_docs.extend(page_results)
-                except Exception as e:
-                    logging.error(f"Error fetching page parallel: {e}")
-                    print(f"Error fetching page parallel: {e}")
+        # 2. Fetch pages 2 to N
+        # Switched to SERIAL execution to ensure data integrity and avoid 429 errors on massive loads.
+        # This is slower but guarantees we don't drop pages due to concurrency limits.
+        for p_num in range(2, total_pages + 1):
+             try:
+                 if progress_callback and p_num % 5 == 0:
+                     progress_callback(f"{endpoint}: Pag {p_num}/{total_pages}...")
+                     
+                 page_results = fetch_page(p_num)
+                 all_docs.extend(page_results)
+                 
+             except Exception as e:
+                 logging.error(f"Error fetching page {p_num}: {e}")
+                 print(f"Error fetching page {p_num}: {e}")
 
     logging.info(f"Total docs fetched for {endpoint}: {len(all_docs)}")
     return all_docs
@@ -126,7 +130,8 @@ def extract_movements_from_doc(doc, doc_type):
         "credit-notes": "NC",
         "debit-notes": "ND",
         "purchases": "FC",
-        "journals": "CC"
+        "journals": "CC",
+        "delivery-notes": "REM"
     }
     friendly_type = type_map.get(doc_type, doc_type)
     
@@ -141,6 +146,8 @@ def extract_movements_from_doc(doc, doc_type):
         mov_type = "ENTRADA" # Compra de mercancía
     elif doc_type == "journals":
         mov_type = "AJUSTE" # Movimiento manual / Contable
+    elif doc_type == "delivery-notes":
+        mov_type = "SALIDA" # Remisión (Salida de inventario)
     
     # Extract Third Party info (Customer/Vendor)
     # Siigo API varies 'customer', 'provider', 'company', or sometimes 'contact'
@@ -249,7 +256,8 @@ def get_consolidated_movements(token, start_date, end_date, progress_callback=No
         ("credit-notes", "Notas Crédito (NC)", "NC"),
         ("debit-notes", "Notas Débito (ND)", "ND"),
         ("purchases", "Facturas de Compra (FC)", "FC"),
-        ("journals", "Comprobantes Contables (CC)", "CC")
+        ("journals", "Comprobantes Contables (CC)", "CC"),
+        ("delivery-notes", "Remisiones (REM)", "REM")
     ]
     
     # Filter types to process

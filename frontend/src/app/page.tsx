@@ -6,6 +6,7 @@ import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { API_URL } from "@/lib/config";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,41 +34,15 @@ export default function LoginPage() {
 
       // 3b. Fetch Role from Backend
       // In Production, ensure NEXT_PUBLIC_API_URL is set!
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://gco-siigo-api-245366645678.us-central1.run.app");
+      const baseUrl = API_URL;
 
-      try {
-        // 15 Seconds timeout to allow Cloud Run Cold Start
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        console.log(`Fetching role from ${baseUrl}/auth/me...`);
-        const roleRes = await fetch(`${baseUrl}/auth/me`, {
-          headers: { "Authorization": `Bearer ${token}` },
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (roleRes.ok) {
-          const roleData = await roleRes.json();
-          console.log("Role assigned:", roleData.role);
-          localStorage.setItem("gco_role", roleData.role);
-        } else {
-          console.warn("Role fetch failed status:", roleRes.status);
-          // Fallback for Costos
-          if (user.email === "costos@origenbotanico.com") {
-            localStorage.setItem("gco_role", "admin");
-          } else {
-            localStorage.setItem("gco_role", "viewer");
-          }
-        }
-      } catch (err) {
-        console.error("Backend unreachable or timeout", err);
-        // Fallback for Costos (Offline Mode / Network Error)
-        if (user.email === "costos@origenbotanico.com") {
-          localStorage.setItem("gco_role", "admin");
-        } else {
-          localStorage.setItem("gco_role", "viewer");
-        }
+      // 3b. Optimistic Role Assignment (to avoid Cloud Run Cold Start)
+      if (user.email === "costos@origenbotanico.com") {
+        localStorage.setItem("gco_role", "admin");
+        console.log("Optimistic role: admin");
+      } else {
+        localStorage.setItem("gco_role", "viewer");
+        console.log("Optimistic role: viewer");
       }
 
       // 4. Redirect
