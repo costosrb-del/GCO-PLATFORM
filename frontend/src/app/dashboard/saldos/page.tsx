@@ -103,7 +103,18 @@ export default function SaldosPage() {
   useEffect(() => {
     if (inventoryData) {
       setData(inventoryData);
-      setLastUpdated(new Date().toLocaleTimeString());
+      const nowIdx = new Date().toLocaleTimeString();
+      setLastUpdated(nowIdx);
+
+      // Update Persistent Cache
+      try {
+        sessionStorage.setItem("gco_inventory_cache", JSON.stringify({
+          data: inventoryData,
+          lastUpdated: nowIdx
+        }));
+      } catch (e) {
+        console.error("Cache save failed", e);
+      }
     }
   }, [inventoryData]);
 
@@ -169,6 +180,12 @@ export default function SaldosPage() {
 
                   // Update React Query Cache
                   queryClient.setQueryData(['inventory'], finalData.data);
+
+                  // Update Session Cache (Fix for F5 reverting to old data)
+                  sessionStorage.setItem("gco_inventory_cache", JSON.stringify({
+                    data: finalData.data,
+                    lastUpdated: nowIdx
+                  }));
                 }
               }
             } catch (e) {
@@ -699,7 +716,7 @@ export default function SaldosPage() {
                 )
               ) : (
                 consolidatedData.length > 0 ? (
-                  consolidatedData.map((item, idx) => {
+                  consolidatedData.map((item) => {
                     // Calculate Stockout Date
                     let conflictDate = "-";
                     if (item.dailyAverage > 0 && item.daysSupply < 9999) {
@@ -712,7 +729,7 @@ export default function SaldosPage() {
                     }
 
                     return (
-                      <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
+                      <tr key={item.code} className="hover:bg-blue-50/30 transition-colors group">
                         <td className="px-6 py-3 font-mono text-gray-500 font-bold group-hover:text-gray-900">{item.code}</td>
                         <td className="px-6 py-3 text-gray-800 font-medium">{item.name}</td>
                         {/* <td className="px-6 py-3 text-xs text-gray-500">
