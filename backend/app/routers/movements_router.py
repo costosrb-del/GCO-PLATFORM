@@ -64,8 +64,22 @@ def get_movements(
                 fetch_ranges = [] # List of tuples (start, end) to fetch
 
                 if force_refresh:
-                    print(f"[{c_name}] Forcing refresh: {start_date} to {end_date}")
-                    fetch_ranges.append((start_date, end_date))
+                    print(f"[{c_name}] Forcing refresh: {start_date} to {end_date} (Yearly Chunking)")
+                    # Chunk by YEAR to ensure safe incremental saving and avoid massive timeouts
+                    try:
+                        sy = int(start_date[:4])
+                        ey = int(end_date[:4])
+                        for y in range(sy, ey + 1):
+                            chunk_start = f"{y}-01-01"
+                            chunk_end = f"{y}-12-31"
+                            # Clamp to requested range
+                            if chunk_start < start_date: chunk_start = start_date
+                            if chunk_end > end_date: chunk_end = end_date
+                            
+                            fetch_ranges.append((chunk_start, chunk_end))
+                    except:
+                        # Fallback if date parsing fails
+                         fetch_ranges.append((start_date, end_date))
                 else:
                     # Case A: Backfill (User asks for older data than we have)
                     # If start_date < min_cache_date, we need [start_date, min_cache_date - 1 day]
@@ -114,17 +128,25 @@ def get_movements(
                         # Tag
                         for m in gap_data: m["company"] = c_name
                         
-                        # Merge immediately to memory list to handle multiple gaps
-                        # Filter overlap for this specific gap to be safe
+                        # Merge immediately to memory list
+                        # Filter overlap for this specific gap to be safe (Clean overwrite)
                         db_data = [x for x in db_data if not (r_start <= x['date'] <= r_end)]
                         db_data.extend(gap_data)
+                        
+                        # Checkpoint: Save IMMEDIATELY after each chunk
+                        # This ensures that if 2020-2023 flows work but 2024 fails/times out, 
+                        # we still persisted the first 4 years. User can just retry to get the rest.
+                        if force_refresh:
+                             db_data.sort(key=lambda x: x['date'])
+                             cache.save(cache_key, db_data)
+                             print(f"[{c_name}] Checkpoint saved for {r_start}-{r_end}")
+                        
                         new_data_found = True
                     else:
                          print(f"[{c_name}] Gap {r_start}-{r_end} was empty on Server.")
 
-                # 6. Save if we changed anything
-                if new_data_found:
-                    # Sort by date for tidiness (optional but good for debugging)
+                # 6. Save Final (if not forced, or just to be sure)
+                if new_data_found and not force_refresh:
                     db_data.sort(key=lambda x: x['date'])
                     cache.save(cache_key, db_data)
                 
