@@ -55,7 +55,7 @@ export default function DashboardHome() {
 
   // Only refetch if the YEAR changes (stable here).
   // Pass refreshId to trigger force refresh when changed
-  const { data: rawData, isLoading, isError } = useMovements(fetchRange.start, fetchRange.end, [], refreshId);
+  const { data: rawData, isLoading, isError, error } = useMovements(fetchRange.start, fetchRange.end, [], refreshId);
 
   const handleForceRefresh = () => {
     if (confirm("¿Estás seguro? Esto volverá a descargar todos los datos desde Siigo para corregir cualquier error. Puede tomar unos minutos.")) {
@@ -86,6 +86,17 @@ export default function DashboardHome() {
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 text-xs text-blue-600 bg-white shadow-lg border border-blue-100 px-3 py-1 rounded-full">
           <Loader2 className="h-3 w-3 animate-spin" />
           Sincronizando datos...
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {isError && (
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm mb-4">
+          <p className="font-bold">Error de Sincronización</p>
+          <p>{error instanceof Error ? error.message : "Error desconocido"}</p>
+          {(error as any)?.response && (
+            <p className="text-xs mt-1 font-mono">{JSON.stringify((error as any).response?.data)}</p>
+          )}
         </div>
       )}
 
