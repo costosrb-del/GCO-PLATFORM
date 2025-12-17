@@ -342,8 +342,13 @@ export default function MovementsPage() {
   );
 
   // -- KPIs --
-  const kpiTotalIn = filteredData.reduce((acc, item) => item.type === "ENTRADA" ? acc + item.quantity : acc, 0);
-  const kpiTotalOut = filteredData.reduce((acc, item) => item.type === "SALIDA" ? acc + item.quantity : acc, 0);
+  const kpiTotalIn = filteredData.reduce((acc, item) => {
+    return item.type === "ENTRADA" ? acc + Number(item.quantity || 0) : acc;
+  }, 0);
+
+  const kpiTotalOut = filteredData.reduce((acc, item) => {
+    return item.type === "SALIDA" ? acc + Number(item.quantity || 0) : acc;
+  }, 0);
 
   // -- EXPORT FUNCTION --
   const handleExport = () => {
