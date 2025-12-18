@@ -719,7 +719,9 @@ export default function SaldosPage() {
                   consolidatedData.map((item) => {
                     // Calculate Stockout Date
                     let conflictDate = "-";
-                    if (item.dailyAverage > 0 && item.daysSupply < 9999) {
+                    // Only calculate date if we have valid averages
+                    const isValidAverage = item.dailyAverage > 0;
+                    if (isValidAverage && item.daysSupply < 9999) {
                       const days = Math.floor(item.daysSupply);
                       const date = new Date();
                       date.setDate(date.getDate() + days);
@@ -737,18 +739,26 @@ export default function SaldosPage() {
                       </td> Removed */}
                         {/* Always visible cells for averages */}
                         <td className="px-6 py-3 text-center text-gray-600">
-                          {item.dailyAverage > 0 ? item.dailyAverage.toFixed(2) : "-"}
+                          {isAveragesFetching && !item.dailyAverage ? (
+                            <span className="text-gray-400 text-xs animate-pulse">Calc...</span>
+                          ) : (
+                            item.dailyAverage > 0 ? item.dailyAverage.toFixed(2) : "-"
+                          )}
                         </td>
                         <td className="px-6 py-3 text-center">
-                          {item.dailyAverage > 0 ? (
-                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${item.daysSupply < 15 ? "bg-red-100 text-red-700" :
-                              item.daysSupply < 45 ? "bg-yellow-100 text-yellow-800" :
-                                "bg-green-100 text-green-700"
-                              }`}>
-                              {item.daysSupply.toFixed(0)} días
-                            </span>
+                          {isAveragesFetching && !item.dailyAverage ? (
+                            <span className="text-gray-400 text-xs animate-pulse">...</span>
                           ) : (
-                            <span className="text-gray-300 text-xs">∞</span>
+                            item.dailyAverage > 0 ? (
+                              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${item.daysSupply < 15 ? "bg-red-100 text-red-700" :
+                                item.daysSupply < 45 ? "bg-yellow-100 text-yellow-800" :
+                                  "bg-green-100 text-green-700"
+                                }`}>
+                                {item.daysSupply.toFixed(0)} días
+                              </span>
+                            ) : (
+                              <span className="text-gray-300 text-xs text-center block">-</span>
+                            )
                           )}
                         </td>
                         <td className="px-6 py-3 text-center text-xs font-medium text-gray-500">
