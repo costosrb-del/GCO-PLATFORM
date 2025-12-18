@@ -763,12 +763,17 @@ export default function SaldosPage() {
                             <span className="text-gray-400 text-xs animate-pulse">...</span>
                           ) : (
                             item.dailyAverage > 0 ? (
-                              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${item.daysSupply < 15 ? "bg-red-100 text-red-700" :
-                                item.daysSupply < 45 ? "bg-yellow-100 text-yellow-800" :
-                                  "bg-green-100 text-green-700"
-                                }`}>
-                                {item.daysSupply.toFixed(0)} días
-                              </span>
+                              <div className="flex flex-col items-center">
+                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${item.daysSupply < 15 ? "bg-red-100 text-red-700" :
+                                  item.daysSupply < 45 ? "bg-yellow-100 text-yellow-800" :
+                                    "bg-green-100 text-green-700"
+                                  }`}>
+                                  {item.daysSupply.toFixed(1)} días
+                                </span>
+                                <span className="text-[10px] text-gray-400 mt-1 font-mono">
+                                  {item.quantity.toFixed(0)} / {item.dailyAverage.toFixed(1)}
+                                </span>
+                              </div>
                             ) : (
                               <span className="text-gray-300 text-xs text-center block">-</span>
                             )
