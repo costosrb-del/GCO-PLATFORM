@@ -91,9 +91,22 @@ export default function SaldosPage() {
       console.error("Failed to load session cache", e);
     }
 
-    // 4. Load Averages from LocalStorage (Persist 1 Day)
+    // 4. Load Filters from LocalStorage
+    const savedCompanies = localStorage.getItem("gco_filters_companies");
+    const savedWarehouses = localStorage.getItem("gco_filters_warehouses");
+    if (savedCompanies) setSelectedCompanies(JSON.parse(savedCompanies));
+    if (savedWarehouses) setSelectedWarehouses(JSON.parse(savedWarehouses));
 
   }, []);
+
+  // Persist filters
+  useEffect(() => {
+    localStorage.setItem("gco_filters_companies", JSON.stringify(selectedCompanies));
+  }, [selectedCompanies]);
+
+  useEffect(() => {
+    localStorage.setItem("gco_filters_warehouses", JSON.stringify(selectedWarehouses));
+  }, [selectedWarehouses]);
 
   const { data: averagesData, isFetching: isAveragesFetching } = useSalesAverages(true);
   const { mutate: refreshAverages, isPending: isRefreshingAverages } = useRefreshSalesAverages();
