@@ -773,6 +773,9 @@ export default function SaldosPage() {
                                 <span className="text-[10px] text-gray-400 mt-1 font-mono">
                                   {item.quantity.toFixed(0)} / {item.dailyAverage.toFixed(1)}
                                 </span>
+                                <span className="text-[8px] text-gray-300">
+                                  {Array.from(item.warehouses).join(", ").substring(0, 20)}
+                                </span>
                               </div>
                             ) : (
                               <span className="text-gray-300 text-xs text-center block">-</span>

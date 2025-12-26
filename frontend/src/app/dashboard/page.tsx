@@ -6,13 +6,13 @@ import { Loader2, Lock } from "lucide-react";
 import { SalesTrendChart } from "@/components/dashboard/SalesTrendChart";
 import { TopProductsChart } from "@/components/dashboard/TopProductsChart";
 import { YoYChart } from "@/components/dashboard/YoYChart";
-import { useAutoSync } from "@/hooks/useAutoSync";
+// import { useAutoSync } from "@/hooks/useAutoSync";
 import { useMovements } from "@/hooks/useMovements";
 import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
 
 export default function DashboardHome() {
-  // 1. Auto Sync on Mount
-  useAutoSync();
+  // 1. Auto Sync on Mount REMOVED
+  // useAutoSync();
 
   // Role State
   const [role, setRole] = useState<string | null>(null);
