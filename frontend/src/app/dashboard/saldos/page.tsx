@@ -92,8 +92,8 @@ export default function SaldosPage() {
     }
 
     // 4. Load Filters from LocalStorage
-    const savedCompanies = localStorage.getItem("gco_filters_companies");
-    const savedWarehouses = localStorage.getItem("gco_filters_warehouses");
+    const savedCompanies = localStorage.getItem("gco_filters_companies_v2");
+    const savedWarehouses = localStorage.getItem("gco_filters_warehouses_v2");
     if (savedCompanies) setSelectedCompanies(JSON.parse(savedCompanies));
     if (savedWarehouses) setSelectedWarehouses(JSON.parse(savedWarehouses));
 
@@ -101,11 +101,11 @@ export default function SaldosPage() {
 
   // Persist filters
   useEffect(() => {
-    localStorage.setItem("gco_filters_companies", JSON.stringify(selectedCompanies));
+    localStorage.setItem("gco_filters_companies_v2", JSON.stringify(selectedCompanies));
   }, [selectedCompanies]);
 
   useEffect(() => {
-    localStorage.setItem("gco_filters_warehouses", JSON.stringify(selectedWarehouses));
+    localStorage.setItem("gco_filters_warehouses_v2", JSON.stringify(selectedWarehouses));
   }, [selectedWarehouses]);
 
   const { data: averagesData, isFetching: isAveragesFetching } = useSalesAverages(true);
@@ -120,7 +120,7 @@ export default function SaldosPage() {
       setLastUpdated(nowIdx);
 
       // Smart Defaults (Only on first load if no user preference)
-      const savedWarehouses = localStorage.getItem("gco_filters_warehouses");
+      const savedWarehouses = localStorage.getItem("gco_filters_warehouses_v2");
       if (!savedWarehouses && inventoryData.length > 0) {
         // User has no preference, apply requested defaults
         // Find exact warehouse names matching "rionegro" and "libre"
