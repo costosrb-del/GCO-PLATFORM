@@ -87,7 +87,7 @@ def filter_for_user(result_dict, role):
     filtered_data = []
     
     # Allowed warehouses for viewer (Case insensitive logic below)
-    allowed_terms = ["bodega principal rionegro", "bodega libre"]
+    allowed_terms = ["rionegro", "libre", "sin ingresar"]
     
     for item in data:
         wh_name = str(item.get("warehouse_name", "")).strip().lower()
