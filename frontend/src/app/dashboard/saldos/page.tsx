@@ -56,7 +56,7 @@ export default function SaldosPage() {
   const [stockStatus, setStockStatus] = useState("Todos");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [filterSales, setFilterSales] = useState(false);
+  const [filterSales, setFilterSales] = useState(true);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   const salesCodes = ["7007", "7008", "7009", "7957", "7901", "7101", "7210", "3005", "3001", "7416", "EVO-7701", "EVO-7702", "EVO-7703", "3012", "7299"];
@@ -118,6 +118,22 @@ export default function SaldosPage() {
       setData(inventoryData);
       const nowIdx = new Date().toLocaleTimeString();
       setLastUpdated(nowIdx);
+
+      // Smart Defaults (Only on first load if no user preference)
+      const savedWarehouses = localStorage.getItem("gco_filters_warehouses");
+      if (!savedWarehouses && inventoryData.length > 0) {
+        // User has no preference, apply requested defaults
+        // Find exact warehouse names matching "rionegro" and "libre"
+        const allWarehouses = Array.from(new Set(inventoryData.map((i: any) => i.warehouse_name)));
+        const defaults = allWarehouses.filter((wh: unknown) => {
+          const w = String(wh).toLowerCase();
+          return w.includes("rionegro") || w.includes("libre");
+        });
+
+        if (defaults.length > 0) {
+          setSelectedWarehouses(defaults as string[]);
+        }
+      }
 
       // Update Persistent Cache
       try {
@@ -614,7 +630,7 @@ export default function SaldosPage() {
                           // Auto-select warehouses - Robust Match from available list
                           const targetWarehouses = warehousesList.filter(wh => {
                             const w = wh.toLowerCase();
-                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("bodega libre") || w.includes("externa");
+                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("bodega libre") || w.includes("sin ingresar") || w.includes("externa");
                           });
                           if (targetWarehouses.length > 0) {
                             setSelectedWarehouses(targetWarehouses);
