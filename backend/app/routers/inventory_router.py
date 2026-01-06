@@ -117,8 +117,13 @@ def get_consolidated_inventory(
     if not force_refresh:
         cached_data = cache.load(cache_key)
         if cached_data:
-            print("Serving inventory from CACHE")
-            return filter_for_user(cached_data, user.get("role"))
+            # Check TTL for global snapshot (e.g. 15 minutes)
+            last_ts = cached_data.get("timestamp", 0) # Use get() to avoid crash if missing
+            if isinstance(last_ts, (int, float)) and (time.time() - last_ts) < 900:
+                print(f"Serving inventory from CACHE (Age: {int(time.time() - last_ts)}s)")
+                return filter_for_user(cached_data, user.get("role"))
+            else:
+                 print("Global cache expired. Refreshing...")
 
     # 1. Fetch Siigo Data
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
