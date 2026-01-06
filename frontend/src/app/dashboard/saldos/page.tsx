@@ -580,29 +580,25 @@ export default function SaldosPage() {
           <div className="px-6 pb-6 pt-0 space-y-6 animate-in slide-in-from-top-2 duration-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-              {role !== 'viewer' && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-500 uppercase">Empresas ({selectedCompanies.length})</label>
-                    <ListBoxMulti
-                      options={companiesList}
-                      selected={selectedCompanies}
-                      onChange={setSelectedCompanies}
-                      placeholder="Todas las empresas"
-                    />
-                  </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Empresas ({selectedCompanies.length})</label>
+                <ListBoxMulti
+                  options={companiesList}
+                  selected={selectedCompanies}
+                  onChange={setSelectedCompanies}
+                  placeholder="Todas las empresas"
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-500 uppercase">Bodegas ({selectedWarehouses.length})</label>
-                    <ListBoxMulti
-                      options={warehousesList}
-                      selected={selectedWarehouses}
-                      onChange={setSelectedWarehouses}
-                      placeholder="Todas las bodegas"
-                    />
-                  </div>
-                </>
-              )}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Bodegas ({selectedWarehouses.length})</label>
+                <ListBoxMulti
+                  options={warehousesList}
+                  selected={selectedWarehouses}
+                  onChange={setSelectedWarehouses}
+                  placeholder="Todas las bodegas"
+                />
+              </div>
 
               <div className="space-y-4">
                 <div>
