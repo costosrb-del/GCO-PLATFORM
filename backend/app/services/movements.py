@@ -171,14 +171,21 @@ def extract_movements_from_doc(doc, doc_type):
     elif doc_type == "journals":
         # Check for ENSAMBLE in observations or document name
         obs_lower = (doc.get("observations") or "").lower()
-        name_lower = (doc.get("name") or "").lower()
+        name_upper = (doc.get("name") or "").upper()
         
-        if "ensamble" in obs_lower or "ensamble" in name_lower or "transformacion" in obs_lower:
+        is_ensamble = "ENSAMBLE" in obs_lower or "TRANSFORMACION" in obs_lower or "NE-" in name_upper or name_upper.startswith("NE")
+        
+        if is_ensamble:
              friendly_type = "NE" # Updated from ENSAMBLE
-             # Ensambles usually produce items (ENTRADA) or consume them (SALIDA). 
-             # Logic is hard without sign. Let's assume AJUSTE/TRANSFORMACION unless known.
-             # User requested "Notas de Ensamble".
+             
+             # Try to determine direction if possible, otherwise generic TRANSFORMACION
+             # For journals, logic is tricky, but let's stick to user request.
              mov_type = "TRANSFORMACION"
+             
+             # If quantity is positive/negative (Siigo sometimes sends signed quantities in newer API versions for movements)
+             # If not, we just show it.
+        else:
+             mov_type = "AJUSTE" # Movimiento manual / Contable
         else:
              mov_type = "AJUSTE" # Movimiento manual / Contable
              
