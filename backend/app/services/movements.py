@@ -13,17 +13,17 @@ def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, d
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
-        "Partner-Id": "SiigoApi"
+        "Partner-Id": "GCOPlatform"
     }
     
-    # FIXED: Send ONLY date_start (accounting date).
-    # Sending created_start restricts valid invoices created after the period (e.g. next day).
-    # We rely on Python-side strict filtering to discard any old/irrelevant data.
+    start_key = date_param_name
+    end_key = date_param_name.replace("_start", "_end")
+    
     params = {
         "page": page,
         "page_size": 100, # Force 100 to maximize throughput
-        "date_start": start_date,
-        "date_end": end_date,
+        start_key: start_date,
+        end_key: end_date,
     }
     
     max_retries = 3
@@ -33,7 +33,7 @@ def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, d
         try:
             # print(f"DEBUG: Fetching {endpoint} page {page} with params {params}")
             logging.info(f"Fetching {endpoint} page {page}. Params: {params}")
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers, params=params, timeout=30)
             
             if response.status_code == 429:
                 logging.warning(f"Rate limit 429 for {endpoint}")
@@ -50,7 +50,12 @@ def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, d
         except requests.exceptions.RequestException as e:
             print(f"Error fetching {endpoint}: {e}")
             if hasattr(e, 'response') and e.response is not None:
-                print(f"Response content: {e.response.text}")
+                # print(f"Response content: {e.response.text}")
+                pass
+            
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                continue
             return None
             
     return None
@@ -84,7 +89,7 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
         return []
         
     total_pages = math.ceil(total_results / PAGE_SIZE)
-    print(f"DEBUG: {endpoint} has {total_results} results across {total_pages} pages.")
+    # print(f"DEBUG: {endpoint} has {total_results} results across {total_pages} pages.")
 
     if total_pages > 1:
         # Define worker for subsequent pages
@@ -98,7 +103,8 @@ def get_all_documents(token, endpoint, start_date, end_date, progress_callback=N
         # 2. Fetch pages 2 to N in parallel (with localized verification)
         failed_pages = []
         
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        # Reduced max_workers to 2 to improve stability
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             future_to_page = {executor.submit(fetch_page, p): p for p in range(2, total_pages + 1)}
             
             for future in concurrent.futures.as_completed(future_to_page):
@@ -169,14 +175,21 @@ def extract_movements_from_doc(doc, doc_type):
     elif doc_type == "purchases":
         mov_type = "ENTRADA" # Compra de mercancía
     elif doc_type == "journals":
-        # Check for ENSAMBLE in observations or document name
+        # Check for ENSAMBLE in observations, document name, or *Document Type Name*
         obs_lower = (doc.get("observations") or "").lower()
-        name_upper = (doc.get("name") or "").upper()
+        doc_name_upper = (doc.get("name") or "").upper() # e.g. CC-123
+        doc_type_info_name = (doc.get("document", {}).get("name") or "").upper() # e.g. Nota de Ensamble
         
-        is_ensamble = "ENSAMBLE" in obs_lower or "TRANSFORMACION" in obs_lower or "NE-" in name_upper or name_upper.startswith("NE")
+        is_ensamble = (
+            "ENSAMBLE" in obs_lower or 
+            "TRANSFORMACION" in obs_lower or 
+            "NE-" in doc_name_upper or 
+            doc_name_upper.startswith("NE") or
+            "ENSAMBLE" in doc_type_info_name
+        )
         
         if is_ensamble:
-             friendly_type = "NE" # Updated from ENSAMBLE
+             friendly_type = "NE"
              mov_type = "TRANSFORMACION"
         else:
              mov_type = "AJUSTE" # Movimiento manual / Contable
@@ -357,8 +370,8 @@ def get_consolidated_movements(token, start_date, end_date, progress_callback=No
             
         return type_movs
 
-    # Run in parallel to speed up
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    # Run in parallel to speed up - Reduced to 3 to prevent API congestion
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         future_to_type = {executor.submit(fetch_doc_type_movements, t): t for t in types_to_process}
         
         for future in concurrent.futures.as_completed(future_to_type):

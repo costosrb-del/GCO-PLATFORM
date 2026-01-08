@@ -801,9 +801,9 @@ export default function MovementsPage() {
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <div className="flex items-center space-x-2">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border notranslate ${item.type === 'ENTRADA'
-                          ? 'bg-green-50 text-green-600 border-green-100'
-                          : 'bg-red-50 text-red-600 border-red-100'
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border notranslate ${item.type === 'ENTRADA' ? 'bg-green-50 text-green-600 border-green-100' :
+                            item.type === 'TRANSFORMACION' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                              'bg-red-50 text-red-600 border-red-100'
                           }`} translate="no">
                           {item.doc_type}
                         </span>
@@ -844,8 +844,8 @@ export default function MovementsPage() {
                   </td>
 
                   {/* Quantity */}
-                  <td className={`px-6 py-4 text-right font-bold ${item.type === "ENTRADA" ? "text-green-600" : "text-red-600"}`}>
-                    {item.type === "ENTRADA" ? "+" : "-"}{Math.abs(item.quantity).toLocaleString()}
+                  <td className={`px-6 py-4 text-right font-bold ${item.quantity > 0 ? "text-green-600" : "text-red-600"}`}>
+                    {item.quantity > 0 ? "+" : ""}{item.quantity.toLocaleString()}
                   </td>
 
                   {/* Total Price */}
