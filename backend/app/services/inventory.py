@@ -22,7 +22,8 @@ def get_products(token, partner_id="SiigoApi", page=1, page_size=25):
 
     for attempt in range(max_retries):
         try:
-            response = requests.get(PRODUCTS_URL, headers=headers, params=params)
+            # Added timeout=30s to prevent infinite hanging
+            response = requests.get(PRODUCTS_URL, headers=headers, params=params, timeout=30)
             
             # Handle rate limiting
             if response.status_code == 429:
@@ -50,7 +51,7 @@ def get_products(token, partner_id="SiigoApi", page=1, page_size=25):
             print(f"Error fetching products (attempt {attempt+1}/{max_retries}): {e}")
             if hasattr(e, 'response') and e.response is not None:
                 print(f"Response status: {e.response.status_code}")
-                print(f"Response content: {e.response.text[:200]}")
+                # print(f"Response content: {e.response.text[:200]}")
             
             if attempt < max_retries - 1:
                 print(f"Retrying in {retry_delay} seconds...")
@@ -97,7 +98,8 @@ def get_all_products(token, partner_id="SiigoApi", progress_callback=None):
             return p_data["results"] if p_data and "results" in p_data else []
 
         # Fetch remaining pages in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        # Reduced max_workers from 10 to 5 to avoid triggering rate limits or overwhelming the network
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             pages_to_fetch = range(2, total_pages + 1)
             future_to_page = {executor.submit(fetch_page, p): p for p in pages_to_fetch}
             
