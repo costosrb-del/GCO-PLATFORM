@@ -27,7 +27,13 @@ export default function MovementsPage() {
   const router = useRouter();
 
   // -- STATE: API & Data --
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  // Default: Start of Previous Month to Today
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    d.setDate(1);
+    return d.toISOString().split("T")[0];
+  });
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +52,7 @@ export default function MovementsPage() {
   const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
 
   // Static Helper for Doc Types (So user can select BEFORE fetching)
-  const AVAILABLE_DOC_TYPES = ["FV", "FC", "NC", "ND", "CC", "REM"];
+  const AVAILABLE_DOC_TYPES = ["FV", "FC", "NC", "ND", "CC", "REM", "ENSAMBLE"];
 
   // -- STATE: Client-side Date Filters --
   const [filterStartDate, setFilterStartDate] = useState("");

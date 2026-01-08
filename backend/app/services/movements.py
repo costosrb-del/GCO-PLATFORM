@@ -169,7 +169,19 @@ def extract_movements_from_doc(doc, doc_type):
     elif doc_type == "purchases":
         mov_type = "ENTRADA" # Compra de mercancía
     elif doc_type == "journals":
-        mov_type = "AJUSTE" # Movimiento manual / Contable
+        # Check for ENSAMBLE in observations or document name
+        obs_lower = (doc.get("observations") or "").lower()
+        name_lower = (doc.get("name") or "").lower()
+        
+        if "ensamble" in obs_lower or "ensamble" in name_lower or "transformacion" in obs_lower:
+             friendly_type = "ENSAMBLE"
+             # Ensambles usually produce items (ENTRADA) or consume them (SALIDA). 
+             # Logic is hard without sign. Let's assume AJUSTE/TRANSFORMACION unless known.
+             # User requested "Notas de Ensamble".
+             mov_type = "TRANSFORMACION"
+        else:
+             mov_type = "AJUSTE" # Movimiento manual / Contable
+             
     elif doc_type == "delivery-notes":
         mov_type = "SALIDA" # Remisión (Salida de inventario)
     
