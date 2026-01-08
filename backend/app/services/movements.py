@@ -238,12 +238,16 @@ def extract_movements_from_doc(doc, doc_type):
              if isinstance(product, dict):
                  code = product.get("code")
         
-        # STRICT FILTER: Only items with a valid code are considered "Products"
+        # STRICT FILTER: Only items with a valid code are considered "Products", UNLESS it is an Ensamble
         # Financial lines (services without SKU) usually lack a code in Siigo API responses.
         if not code:
-            # print(f"DEBUG: Skipping non-product item: {item.get('description', 'N/A')}")
-            # logging.info(f"Skipping non-product item: {description} (No Code)")
-            continue
+            if friendly_type == "NE":
+                 # NE items might be raw materials without standard product codes in the API response view
+                 code = "NE-ITEM"
+            else:
+                 # print(f"DEBUG: Skipping non-product item: {item.get('description', 'N/A')}")
+                 # logging.info(f"Skipping non-product item: {description} (No Code)")
+                 continue
             
         qty = float(item.get("quantity", 0))
         
