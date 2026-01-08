@@ -621,10 +621,11 @@ export default function MovementsPage() {
                   <button
                     key={t}
                     onClick={() => toggleSelection(selectedDocTypes, setSelectedDocTypes, t)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selectedDocTypes.includes(t)
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors notranslate ${selectedDocTypes.includes(t)
                       ? 'bg-[#183C30] text-white border-[#183C30]'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                       }`}
+                    translate="no"
                   >
                     {t}
                   </button>
@@ -800,10 +801,10 @@ export default function MovementsPage() {
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <div className="flex items-center space-x-2">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.type === 'ENTRADA'
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border notranslate ${item.type === 'ENTRADA'
                           ? 'bg-green-50 text-green-600 border-green-100'
                           : 'bg-red-50 text-red-600 border-red-100'
-                          }`}>
+                          }`} translate="no">
                           {item.doc_type}
                         </span>
                         <span className="font-medium text-gray-900">{item.doc_number}</span>
