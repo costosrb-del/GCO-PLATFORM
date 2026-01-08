@@ -177,15 +177,7 @@ def extract_movements_from_doc(doc, doc_type):
         
         if is_ensamble:
              friendly_type = "NE" # Updated from ENSAMBLE
-             
-             # Try to determine direction if possible, otherwise generic TRANSFORMACION
-             # For journals, logic is tricky, but let's stick to user request.
              mov_type = "TRANSFORMACION"
-             
-             # If quantity is positive/negative (Siigo sometimes sends signed quantities in newer API versions for movements)
-             # If not, we just show it.
-        else:
-             mov_type = "AJUSTE" # Movimiento manual / Contable
         else:
              mov_type = "AJUSTE" # Movimiento manual / Contable
              
