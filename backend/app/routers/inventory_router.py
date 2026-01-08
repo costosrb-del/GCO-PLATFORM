@@ -155,8 +155,13 @@ def get_consolidated_inventory(
     }
     
     # Save Snapshot (optional if we are disabling cache reading, but keeping writing is fine)
-    if all_data:
+    # Save Snapshot ONLY if clean run (no errors) to avoid caching partial data
+    # If we have errors (e.g. one company failed), we return what we have but DO NOT cache it.
+    # This ensures the next user tries to fetch everything again.
+    if all_data and not errors:
         cache.save(cache_key, final_result)
+    elif errors:
+        print(f"Skipping cache save due to errors: {len(errors)} errors found.")
 
     return filter_for_user(final_result, user.get("role"))
 
