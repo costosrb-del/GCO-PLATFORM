@@ -52,7 +52,7 @@ export default function MovementsPage() {
   const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
 
   // Static Helper for Doc Types (So user can select BEFORE fetching)
-  const AVAILABLE_DOC_TYPES = ["FV", "FC", "NC", "ND", "CC", "REM", "ENSAMBLE"];
+  const AVAILABLE_DOC_TYPES = ["FV", "FC", "NC", "ND", "CC", "RM", "NE"];
 
   // -- STATE: Client-side Date Filters --
   const [filterStartDate, setFilterStartDate] = useState("");

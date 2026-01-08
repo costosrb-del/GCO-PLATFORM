@@ -155,7 +155,7 @@ def extract_movements_from_doc(doc, doc_type):
         "debit-notes": "ND",
         "purchases": "FC",
         "journals": "CC",
-        "delivery-notes": "REM"
+        "delivery-notes": "RM" # Updated from REM
     }
     friendly_type = type_map.get(doc_type, doc_type)
     
@@ -174,7 +174,7 @@ def extract_movements_from_doc(doc, doc_type):
         name_lower = (doc.get("name") or "").lower()
         
         if "ensamble" in obs_lower or "ensamble" in name_lower or "transformacion" in obs_lower:
-             friendly_type = "ENSAMBLE"
+             friendly_type = "NE" # Updated from ENSAMBLE
              # Ensambles usually produce items (ENTRADA) or consume them (SALIDA). 
              # Logic is hard without sign. Let's assume AJUSTE/TRANSFORMACION unless known.
              # User requested "Notas de Ensamble".
@@ -293,7 +293,7 @@ def get_consolidated_movements(token, start_date, end_date, progress_callback=No
         ("debit-notes", "Notas Débito (ND)", "ND"),
         ("purchases", "Facturas de Compra (FC)", "FC"),
         ("journals", "Comprobantes Contables (CC)", "CC"),
-        ("delivery-notes", "Remisiones (REM)", "REM")
+        ("delivery-notes", "Remisiones (RM)", "RM")
     ]
     
     # Filter types to process
@@ -301,11 +301,32 @@ def get_consolidated_movements(token, start_date, end_date, progress_callback=No
     if selected_types and len(selected_types) > 0:
         # User selected specific types. Map them.
         # Check against the 3rd element (key) or defaults
+        processed_endpoints = set()
+        
         for t in master_types:
              endpoint, desc, key = t
-             # Allow matching by endpoint or key (e.g. "FV", "FC")
+             
+             # Logic:
+             # 1. Direct Match: User asked for "FV", match "FV"
+             # 2. Indirect Match: User asked for "NE" (Ensamble), implies we MUST fetch "journals" (CC)
+             
+             should_include = False
+             
              if key in selected_types or endpoint in selected_types:
-                types_to_process.append(t)
+                 should_include = True
+                 
+             # Special Case: NE (Ensamble) lives inside Journals (CC)
+             if "NE" in selected_types and endpoint == "journals":
+                 should_include = True
+                 
+             # Special Case: ENSAMBLE (Old Key) lives inside Journals (CC)
+             if "ENSAMBLE" in selected_types and endpoint == "journals":
+                 should_include = True
+
+             if should_include:
+                 if endpoint not in processed_endpoints:
+                    types_to_process.append(t)
+                    processed_endpoints.add(endpoint)
     else:
         # Default: Process ALL if nothing specific selected
         types_to_process = master_types
