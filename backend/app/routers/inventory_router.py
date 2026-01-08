@@ -8,7 +8,7 @@ import os
 
 from app.services.inventory import get_all_products
 from app.services.auth import get_auth_token
-from app.services.config import get_config
+from app.services.config import get_config, get_google_sheet_url
 from app.services.utils import fetch_google_sheet_inventory
 from app.services.cache import cache
 from app.routers.auth_router import verify_token
@@ -137,7 +137,7 @@ def get_consolidated_inventory(
                 errors.append(res_err)
 
     # 2. Fetch Google Sheets Data
-    sheet_url = os.getenv("GSHEET_INVENTORY_URL") or os.getenv("GOOGLE_SHEET_URL")
+    sheet_url = get_google_sheet_url()
     if sheet_url:
         try:
             gs_data = fetch_google_sheet_inventory(sheet_url)
@@ -198,7 +198,7 @@ def stream_inventory_updates(
 
         # 2. Fetch Google Sheets
         yield f"data: {json.dumps({'progress': 90, 'message': 'Cargando Inventario Externo...'})}\n\n"
-        sheet_url = os.getenv("GSHEET_INVENTORY_URL") or os.getenv("GOOGLE_SHEET_URL")
+        sheet_url = get_google_sheet_url()
         if sheet_url:
             try:
                 gs_data = fetch_google_sheet_inventory(sheet_url)

@@ -42,3 +42,11 @@ def get_config():
             })
     print(f"Total empresas encontradas: {len(companies)}")
     return companies
+
+def get_google_sheet_url():
+    """
+    Returns the Google Sheet URL for external inventory.
+    Hardcoded update: 2025-01-08
+    """
+    # New URL provided by user
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vRDYM7-zJ4c5B1VftH2EGmL5buLTWt24mHN0oHOgYNK2zi37QNIEavPwnwpV06IKJMoPUJqea_tzOir/pub?gid=0&single=true&output=csv"
