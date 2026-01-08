@@ -48,5 +48,8 @@ def get_google_sheet_url():
     Returns the Google Sheet URL for external inventory.
     Hardcoded update: 2025-01-08
     """
-    # New URL provided by user
-    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vRDYM7-zJ4c5B1VftH2EGmL5buLTWt24mHN0oHOgYNK2zi37QNIEavPwnwpV06IKJMoPUJqea_tzOir/pub?gid=0&single=true&output=csv"
+    # New URL provided by user (Specific Sheet GID)
+    # The user provided a User-Facing URL (.../pubhtml...), we need to convert it to CSV export format
+    # Base: https://docs.google.com/spreadsheets/d/e/2PACX-1vRDYM7-zJ4c5B1VftH2EGmL5buLTWt24mHN0oHOgYNK2zi37QNIEavPwnwpV06IKJMoPUJqea_tzOir/pub
+    # Params: gid=523580823, single=true, output=csv
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vRDYM7-zJ4c5B1VftH2EGmL5buLTWt24mHN0oHOgYNK2zi37QNIEavPwnwpV06IKJMoPUJqea_tzOir/pub?gid=523580823&single=true&output=csv"

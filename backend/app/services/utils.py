@@ -13,10 +13,26 @@ def fetch_google_sheet_inventory(sheet_url):
         
         df = pd.read_csv(io.StringIO(response.content.decode("utf-8")))
         
-        # Expected columns: A=Code, B=Name, C=Quantity
-        # If headers are arbitrary, assume by index:
-        df = df.iloc[:, :3] 
-        df.columns = ["code", "name", "quantity"] 
+        # Try to find columns by name first (Case Insensitive)
+        df.columns = [c.strip().upper() for c in df.columns]
+        
+        # Mapping variations
+        sku_col = next((c for c in df.columns if "SKU" in c), None)
+        qty_col = next((c for c in df.columns if "CANTIDAD" in c or "LIBRE" in c), None)
+        name_col = next((c for c in df.columns if "NOMBRE" in c or "PRODUCTO" in c), None)
+
+        if sku_col and qty_col:
+            # Reconstruct DF with found columns
+            df_final = pd.DataFrame()
+            df_final["code"] = df[sku_col]
+            df_final["name"] = df[name_col] if name_col else "Sin Nombre"
+            df_final["quantity"] = df[qty_col]
+            df = df_final
+        else:
+            # Fallback to index if column names don't match expected pattern
+            # Expected columns: A=Code, B=Name, C=Quantity
+            df = df.iloc[:, :3] 
+            df.columns = ["code", "name", "quantity"] 
         
         external_data = []
         for index, row in df.iterrows():
