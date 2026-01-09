@@ -16,70 +16,57 @@ def get_current_month_dates():
     end_date = now.strftime("%Y-%m-%d")
     return start_date, end_date
 
+
+from app.services.config import get_config
+from app.services.auth import get_auth_token
+import concurrent.futures
+
 def fetch_sheet_data():
     try:
         response = requests.get(SHEET_URL)
         response.raise_for_status()
         
-        # Parse CSV
-        df = pd.read_csv(io.StringIO(response.text))
+        # Parse CSV with header on row 3 (index 2)
+        df = pd.read_csv(io.StringIO(response.text), header=2)
         
-        # Expected columns: SKU, NOMBRE, SALDO INICIAL, # INGRESO
-        # Normalize headers just in case
-        df.columns = [c.strip().upper() for c in df.columns]
+        # Normalize headers
+        # Expecting: # SKU, NOMBRE, SALDO INICIAL, # INGRESO
+        df.columns = [str(c).strip().upper() for c in df.columns]
         
-        # Create a dictionary for easy access
+        # Mapping for weird headers
+        # Rename '# SKU' to 'SKU' if present
+        df.rename(columns={'# SKU': 'SKU', '# INGRESO': 'INGRESO'}, inplace=True)
+        
         data = {}
         for _, row in df.iterrows():
-            # Handle potential NaN or formatting issues
             sku = str(row.get('SKU', '')).strip()
+            # Skip empty or NaN SKUs
             if not sku or sku.lower() == 'nan':
                 continue
                 
-            # Parse numbers, handling thousands separators (dots) and decimals (commas) if european style, 
-            # OR standard. The image shows "2.080,0", which is European/South American style (Dot=1000, Comma=Decimal).
-            # Python pandas might not handle "2.080,0" automatically if locale isn't set.
-            # We explicitly handle this.
-            
             def parse_european_number(val):
                 if pd.isna(val): return 0.0
                 if isinstance(val, (int, float)):
                     return float(val)
-                
                 s = str(val).strip()
-                # If it looks like '2.080,0', it's European.
-                # If it looks like '2,080.0', it's US/Standard.
-                # Heuristic: If last separator is ',', treat as decimal.
-                
                 if ',' in s and '.' in s:
                     if s.rfind(',') > s.rfind('.'):
-                        # 2.080,50 -> Comma is last, implies Euro
-                        s = s.replace('.', '')
-                        s = s.replace(',', '.')
+                        s = s.replace('.', '').replace(',', '.')
                     else:
-                        # 2,080.50 -> Dot is last, implies US
-                         s = s.replace(',', '')
+                        s = s.replace(',', '')
                 elif ',' in s:
-                    # Could be 2,5 (Euro decimal) or 2,000 (US thousands)
-                    # If there's only one comma, and it's 3 digits from end, likely thousands?
-                    # This is ambiguous. But given the prompt context is likely Colombia/Latam (using Siigo),
-                    # ',' is usually decimal in Excel/Sheets in Spanish, OR '.' is thousands.
-                    # The image shows "2.080,0". This is explicitly Euro style.
-                    # Let's assume Euro style if we see formatted strings.
-                    s = s.replace('.', '')
-                    s = s.replace(',', '.')
-                
+                    s = s.replace('.', '').replace(',', '.')
                 try:
                     return float(s)
                 except:
                     return 0.0
 
             saldo_inicial = parse_european_number(row.get('SALDO INICIAL', 0))
-            ingreso = parse_european_number(row.get('# INGRESO', 0)) # Note the '#' in image
+            ingreso = parse_european_number(row.get('INGRESO', 0))
             
+            # Note: We ignore Sheet Name as we will overwrite with Siigo Name
             data[sku] = {
                 "sku": sku,
-                "name": str(row.get('NOMBRE', 'Sin Nombre')),
                 "initial_balance": saldo_inicial,
                 "entries": ingreso
             }
@@ -89,168 +76,139 @@ def fetch_sheet_data():
         print(f"Error fetching sheet data: {e}")
         return {}
 
-def calculate_inventory_game(token):
-    # 1. Fetch Static Data (Initial Balance + Entries)
+def fetch_company_movements(company, start_date, end_date):
+    """
+    Helper to fetch exits (FV - NC) for a single company.
+    """
+    try:
+        token = get_auth_token(company["username"], company["access_key"])
+        if not token: 
+            return {}
+
+        movs = get_consolidated_movements(
+            token=token, 
+            start_date=start_date, 
+            end_date=end_date, 
+            selected_types=['FV', 'NC']
+        )
+        
+        local_exits = {}
+        for mov in movs:
+            sku = (mov.get('code') or mov.get('product_code') or "").strip()
+            if not sku: continue
+            
+            qty = float(mov.get('quantity', 0))
+            m_type = mov.get('type') # 'ENTRADA' or 'SALIDA'
+            
+            if sku not in local_exits: local_exits[sku] = 0.0
+            
+            if m_type == 'SALIDA':
+                local_exits[sku] += abs(qty)
+            elif m_type == 'ENTRADA':
+                local_exits[sku] -= abs(qty)
+                
+        return local_exits
+    except Exception as e:
+        print(f"Error fetching movements for {company.get('name')}: {e}")
+        return {}
+
+def calculate_inventory_game(token_ignored=None): 
+    # Token argument is ignored as we use config for all companies now.
+    
+    # 1. Fetch Sheet Data
     sheet_data = fetch_sheet_data()
     
-    # 2. Fetch Dynamic Data (Exits = FV - NC) for Current Month
-    start_date, end_date = get_current_month_dates()
-    
-    # We ask for "invoices" (FV) and "credit-notes" (NC)
-    # Mapping in movements.py: 
-    # invoices -> FV
-    # credit-notes -> NC
-    
-    # Note: get_consolidated_movements fetches everything if selected_types is None.
-    # It's better to filter inside or pass selected_types if the function supports it. 
-    # Looking at previous file view of `movements.py`, `get_consolidated_movements` DOES support `selected_types`.
-    
-    movements = get_consolidated_movements(
-        token=token, 
-        start_date=start_date, 
-        end_date=end_date, 
-        selected_types=['FV', 'NC']
-    )
-    
-    # 3. Process Exits
-    exits_map = {}
-    
-    for mov in movements:
-        # SKU check
-        sku = mov.get('code')
-        if not sku:
-            # Fallback to product_code if available
-            sku = mov.get('product_code')
-        if not sku: continue
-        
-        sku = str(sku).strip()
-        
-        qty = float(mov.get('quantity', 0))
-        doc_type = mov.get('doc_type')
-        
-        if sku not in exits_map:
-            exits_map[sku] = 0.0
-            
-        # Logic: Exits = FV - NC
-        # In movements list:
-        # FV is usually "SALIDA" (quantity is negative or positive? In movements.py logic, 
-        # normally Sales are Salidas. Let's verify signs in `movements.py` logic)
-        
-        # Re-reading movements.py snippet from memory/artifacts:
-        # invoices -> mov_type="SALIDA"
-        # credit-notes -> mov_type="ENTRADA"
-        
-        # When `get_consolidated_movements` processes data, it might normalize signs.
-        # But usually "quantity" comes raw from API.
-        # Let's assume standard behavior:
-        # If I sell 10, it's a Salida.
-        # If I get a return of 2, it's an Entrada.
-        # Net Exit = Salida - Entrada.
-        
-        # Let's check `mov_type`.
-        m_type = mov.get('type') # 'ENTRADA' or 'SALIDA'
-        
-        # If we want "Total Salidas Netas":
-        if m_type == 'SALIDA':
-            exits_map[sku] += abs(qty)
-        elif m_type == 'ENTRADA':
-            exits_map[sku] -= abs(qty)
-            
-    # 4. Merge Data (Base Calculation)
-    # We iterate over sheet_data primarily as it defines the "Game" scope.
-    # Should we include items that are NOT in sheet but HAVE sales? 
-    # Usually Inventory Game implies checking against a planned list. 
-    # But usually creating a complete report is better.
-    # For now, let's prioritize Sheet Data SKUs + Any Extra SKU found in Sales.
-    
-    all_skus = set(sheet_data.keys()) | set(exits_map.keys())
-    results = [] # Define results here
-
-    for sku in all_skus:
-        sheet_item = sheet_data.get(sku, {
-            "name": "N/A",
-            "initial_balance": 0.0,
-            "entries": 0.0
-        })
-        
-        # Hack: Validar nombre desde movimientos si no está en sheet
-        if sheet_item["name"] == "N/A" and sku in exits_map:
-             # Find a name from movements 
-             # (This is inefficient O(N) lookup, but simplified for now. 
-             # Optimization: Build name_map during movement loop)
-             pass 
-             
-        initial = sheet_item["initial_balance"]
-        entries = sheet_item["entries"]
-        exits = exits_map.get(sku, 0.0)
-        
-        # Logic: Final = Initial + Entries - Exits
-        final = initial + entries - exits
-        
-        results.append({
-            "sku": sku,
-            "name": sheet_item["name"],
-            "initial_balance": initial,
-            "entries": entries,
-            "exits": exits,
-            "final_balance": final
-        })
-
-    # 5. Fetch Current Siigo Stock (Bodega Principal + Comercio Exterior)
-    # We need to simulate a user to call get_consolidated_inventory or call the underlying logic directly.
-    # Calling router function is fine as it handles parallelization and caching.
+    # 2. Fetch Consolidated Inventory (For Names & Current Stock)
+    print("Fetching Consolidated Inventory for Names & Stock...")
     from app.routers.inventory_router import get_consolidated_inventory
-    
-    # We simulate an admin user to get full access
     admin_user = {"role": "admin", "username": "system_juego"}
     
     try:
-        current_inv_response = get_consolidated_inventory(user=admin_user, force_refresh=False)
-        current_inv_data = current_inv_response.get("data", [])
+        # Note: This is cached, so it's fast.
+        inv_result = get_consolidated_inventory(user=admin_user, force_refresh=False)
+        inv_data = inv_result.get("data", [])
     except Exception as e:
-        print(f"Error fetching current inventory: {e}")
-        current_inv_data = []
-
-    # Map SKU -> Stock in Target Warehouses
-    current_stock_map = {}
-    target_warehouses = ["bodega principal", "bodega de comercio exterior"]
-
-    for item in current_inv_data:
+        print(f"Error fetching inventory: {e}")
+        inv_data = []
+        
+    # Build Map: SKU -> Name and SKU -> Current Stock (Target Warehouses)
+    sku_name_map = {}
+    sku_current_stock = {}
+    target_warehouses = ["bodega principal", "bodega de comercio exterior"] # and "bodega libre"? User said "princip + com ext"
+    
+    for item in inv_data:
         code = str(item.get("code", "")).strip()
+        name = item.get("name", "Sin Nombre")
         wh_name = str(item.get("warehouse_name", "")).strip().lower()
         
-        # Check if warehouse matches target (flexible matching)
+        if code and name != "Sin Nombre":
+            sku_name_map[code] = name
+            
         if any(target in wh_name for target in target_warehouses):
-            if code not in current_stock_map:
-                current_stock_map[code] = 0.0
-            current_stock_map[code] += float(item.get("quantity", 0))
-
-    # 6. Final Data Construction with Alerts
-    final_results = []
+            if code not in sku_current_stock: sku_current_stock[code] = 0.0
+            sku_current_stock[code] += float(item.get("quantity", 0))
+            
+    # 3. Fetch Movements from ALL Companies (Parallel)
+    start_date, end_date = get_current_month_dates()
+    companies = get_config()
+    global_exits = {}
     
-    for row in results:
-        sku = row["sku"]
-        final_calculated = row["final_balance"]
-        
-        # Current Stock from Siigo (Selected Warehouses)
-        current_siigo = current_stock_map.get(sku, 0.0)
-        
-        # Difference = Final Calculated (Theoretical) - Current Siigo (Actual)
-        # Or usually: Difference = Actual - Theoretical? 
-        # User said: "compare ese resultado (Calculated) con el saldo actual (Siigo) ... generar alertas"
-        # Let's show Difference = Calculated - Siigo. 
-        # If Calculated is 100 and Siigo is 90, Difference is 10 (Missing 10).
-        difference = final_calculated - current_siigo
-        
-        # Alert Logic
-        alert = "OK"
-        if abs(difference) > 0.01: # Tolerance for float
-            alert = "DIFFERENCE"
+    print(f"Fetching movements from {len(companies)} companies...")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 1) as executor:
+        future_to_company = {executor.submit(fetch_company_movements, c, start_date, end_date): c for c in companies}
+        for future in concurrent.futures.as_completed(future_to_company):
+            c_exits = future.result()
+            # Merge exits
+            for sku, qty in c_exits.items():
+                if sku not in global_exits: global_exits[sku] = 0.0
+                global_exits[sku] += qty
 
-        row["current_siigo_stock"] = current_siigo
-        row["difference"] = difference
-        row["alert"] = alert
+    # 4. Consolidate Results
+    # Scope: Union of Sheet SKUs + Global Exits SKUs + Current Stock SKUs?
+    # User said: "los codigos para la venta". Usually this means codes that exist in Siigo.
+    # We will iterate over the union of all known active SKUs to be safe.
+    
+    all_skus = set(sheet_data.keys()) | set(global_exits.keys()) | set(sku_current_stock.keys())
+    results = []
+    
+    for sku in all_skus:
+        # Sheet Info
+        sheet_item = sheet_data.get(sku, {"initial_balance": 0.0, "entries": 0.0})
         
-        final_results.append(row)
+        # Name Resolution
+        name = sku_name_map.get(sku, "Sin Nombre (Siigo)")
+        if name == "Sin Nombre (Siigo)":
+             # Try to keep sheet name if available or leave as generic
+             # But our fetch_sheet_data doesn't capture name anymore based on instruction 
+             # "RELAICONALO AUTOMATICAMENTE CON LOS DATOS DE SIIGO"
+             pass
+
+        initial = sheet_item["initial_balance"]
+        entries = sheet_item["entries"]
+        exits = global_exits.get(sku, 0.0)
         
-    return final_results
+        final_calculated = initial + entries - exits
+        
+        curr_stock = sku_current_stock.get(sku, 0.0)
+        diff = final_calculated - curr_stock
+        
+        alert = "OK"
+        if abs(diff) > 0.01:
+            alert = "DIFFERENCE"
+            
+        results.append({
+            "sku": sku,
+            "name": name,
+            "initial_balance": initial,
+            "entries": entries,
+            "exits": exits,
+            "final_balance": final_calculated,
+            "current_siigo_stock": curr_stock,
+            "difference": diff,
+            "alert": alert
+        })
+        
+    # Sort by alert status (Differences first)
+    results.sort(key=lambda x: (x["alert"] != "DIFFERENCE", x["sku"]))
+        
+    return results
