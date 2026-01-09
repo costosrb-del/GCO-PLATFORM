@@ -1,6 +1,7 @@
+```javascript
 "use client";
 
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, Fragment, useRef } from "react";
 import axios from "axios";
 import {
   Loader2, Search, Filter, RefreshCcw, Calendar,
@@ -74,8 +75,8 @@ export default function MovementsPage() {
         const token = localStorage.getItem("gco_token");
         if (!token) return;
         if (!token) return;
-        const res = await axios.get(`${API_URL}/config/companies`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await axios.get(`${ API_URL } /config/companies`, {
+          headers: { Authorization: `Bearer ${ token } ` }
         });
         if (res.data) setAvailableCompanies(res.data);
       } catch (e) {
@@ -85,6 +86,8 @@ export default function MovementsPage() {
     fetchConfig();
   }, []);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // -- FETCH DATA (CHUNKED) --
   const fetchMovements = async () => {
     const token = localStorage.getItem("gco_token");
@@ -92,6 +95,13 @@ export default function MovementsPage() {
       alert("No se encontró sesión. Por favor inicia sesión nuevamente.");
       return;
     }
+
+    // Cancel previous requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
     setIsLoading(true);
     setHasSearched(true);
@@ -138,29 +148,24 @@ export default function MovementsPage() {
       return chunks;
     }
 
-    let chunks = getChunks(startDate, endDate);
-
-    // FAILSAFE: If logic returns empty but dates seem valid, just try the whole range.
+    const chunks = getChunks(startDate, endDate);
     if (chunks.length === 0) {
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      if (s > e) {
-        alert("⚠️ La fecha 'Desde' no puede ser mayor que 'Hasta'.");
+      if (startDate <= endDate) {
+        // Fallback if logic returns empty but valid dates
+        chunks.push({ start: startDate, end: endDate });
+      } else {
+        alert("Fecha inicial debe ser menor a fecha final.");
         setIsLoading(false);
         return;
-      } else {
-        console.warn("Chunk logic returned 0. Using fallback.");
-        chunks.push({ start: startDate, end: endDate });
       }
     }
 
     const totalChunks = chunks.length;
-
-    console.log(`Searching from ${startDate} to ${endDate} in ${totalChunks} chunks...`, chunks);
+    console.log(`Searching from ${ startDate } to ${ endDate } in ${ totalChunks } chunks...`, chunks);
 
     // Warn user if heavy
     if (totalChunks > 12) {
-      if (!confirm(`⚠️ Estás a punto de solicitar ${totalChunks} trimestres de datos. Esto puede tardar. ¿Continuar?`)) {
+      if (!confirm(`⚠️ Estás a punto de solicitar ${ totalChunks } trimestres de datos.Esto puede tardar. ¿Continuar ? `)) {
         setIsLoading(false);
         return;
       }
@@ -169,56 +174,65 @@ export default function MovementsPage() {
     let allData: any[] = [];
     let hasError = false;
 
+    // Helper for De-duplication
+    const generateKey = (item: any) => {
+      // Create a unique hash for the row
+      return `${ item.company || '' } -${ item.doc_type || '' } -${ item.doc_number || '' } -${ item.code || '' } -${ item.quantity || '' } -${ item.date || '' } `;
+    };
+
     // Process Chunks Sequentially
     for (let i = 0; i < totalChunks; i++) {
-      const { start, end } = chunks[i];
-      let url = `${API_URL}/movements/?start_date=${start}&end_date=${end}&force_refresh=${forceRefresh}`;
+      if (signal.aborted) break;
 
-      console.log(`[Chunk ${i + 1}/${totalChunks}] Fetching: ${url}`);
+      const { start, end } = chunks[i];
+      let url = `${ API_URL } /movements/ ? start_date = ${ start }& end_date=${ end }& force_refresh=${ forceRefresh } `;
+
+      console.log(`[Chunk ${ i + 1 }/${totalChunks}]Fetching: ${ url } `);
 
       // Append filters to URL
       if (selectedCompanies.length > 0) {
-        selectedCompanies.forEach(c => url += `&companies=${encodeURIComponent(c)}`);
+        selectedCompanies.forEach(c => url += `& companies=${ encodeURIComponent(c) } `);
       }
       if (selectedDocTypes.length > 0) {
-        selectedDocTypes.forEach(t => url += `&doc_types=${encodeURIComponent(t)}`);
+        selectedDocTypes.forEach(t => url += `& doc_types=${ encodeURIComponent(t) } `);
       }
 
       try {
-        // Update Loading status with progress
-        // We can't easily update a text state inside the loop unless we use a ref or simplified state, 
-        // but isLoading is bool. Maybe specific state?
-        // For now, implicit wait. loading=true.
-
         const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 300000
+          headers: { Authorization: `Bearer ${ token } ` },
+          timeout: 300000,
+          signal
         });
 
         if (response.data.errors && response.data.errors.length > 0) {
-          // Log but don't stop?
           console.warn("Chunk warnings:", response.data.errors);
         }
 
         if (response.data.data) {
-          // progressive rendering: update state immediately?
-          // Yes, let's append!
           const newData = response.data.data;
+
+          // Progressive Update with De-duplication
+          setData(prev => {
+            const existingKeys = new Set(prev.map(p => generateKey(p)));
+            const uniqueNew = newData.filter((n: any) => !existingKeys.has(generateKey(n)));
+            return [...prev, ...uniqueNew];
+          });
+
           allData = [...allData, ...newData];
-          // Update UI progressively
-          setData(prev => [...prev, ...newData]);
         }
 
       } catch (error: any) {
-        console.error(`Error fetching chunk ${start}-${end}:`, error);
+        if (axios.isCancel(error)) {
+          console.log("Request cancelled");
+          return;
+        }
+
+        console.error(`Error fetching chunk ${ start } -${ end }: `, error);
         hasError = true;
 
         if (error.code === 'ECONNABORTED') {
-          alert(`⏱️ Timeout en el rango ${start} a ${end}.`);
-        } else {
-          // Maybe break? Or continue to try getting other chunks?
-          // Usually if network is dead, break.
-          // If 500, maybe break.
+          // alert(`⏱️ Timeout en el rango ${ start } a ${ end }.`);
+          // Don't alert per chunk, just log
         }
       }
     }
@@ -227,7 +241,7 @@ export default function MovementsPage() {
 
     if (hasError && allData.length > 0) {
       alert("⚠️ Ocurrieron errores en algunos rangos, pero se cargaron datos parciales.");
-    } else if (hasError && allData.length === 0) {
+    } else if (hasError && allData.length === 0 && !signal.aborted) {
       alert("❌ Error: No se pudieron cargar datos. Intenta un rango mas pequeño o verifica tu conexión.");
     }
   };
@@ -403,7 +417,7 @@ export default function MovementsPage() {
     worksheet["!cols"] = wscols;
 
     // Generate Excel file
-    XLSX.writeFile(workbook, `Movimientos_${startDate}_${endDate}.xlsx`);
+    XLSX.writeFile(workbook, `Movimientos_${ startDate }_${ endDate }.xlsx`);
   };
 
   // Toggle Selection Helper
@@ -421,12 +435,12 @@ export default function MovementsPage() {
     const hasValue = colFilters[colKey]?.length > 0;
 
     return (
-      <th className={`px-6 py-4 font-bold relative group ${align === "right" ? "text-right" : "text-left"}`}>
-        <div className={`flex items-center gap-2 ${align === "right" ? "justify-end" : "justify-start"}`}>
+      <th className={`px - 6 py - 4 font - bold relative group ${ align === "right" ? "text-right" : "text-left" } `}>
+        <div className={`flex items - center gap - 2 ${ align === "right" ? "justify-end" : "justify-start" } `}>
           <span>{label}</span>
           <button
             onClick={(e) => { e.stopPropagation(); setActiveColFilter(isActive ? null : colKey); }}
-            className={`p-1 rounded-full transition-colors ${hasValue ? "bg-green-100 text-green-700" : "text-gray-300 group-hover:text-gray-500 hover:bg-gray-100"}`}
+            className={`p - 1 rounded - full transition - colors ${ hasValue ? "bg-green-100 text-green-700" : "text-gray-300 group-hover:text-gray-500 hover:bg-gray-100" } `}
           >
             <Search className="h-3 w-3" />
           </button>
@@ -437,7 +451,7 @@ export default function MovementsPage() {
             <input
               autoFocus
               type="text"
-              placeholder={`Filtrar ${label}...`}
+              placeholder={`Filtrar ${ label }...`}
               className="w-full text-xs p-1.5 border border-gray-300 rounded focus:border-[#183C30] outline-none text-gray-700 font-normal"
               value={colFilters[colKey] || ""}
               onChange={e => setColFilters(prev => ({ ...prev, [colKey]: e.target.value }))}
@@ -501,7 +515,7 @@ export default function MovementsPage() {
                 <div className="relative">
                   <Listbox.Button className="relative w-48 cursor-pointer rounded-lg bg-white py-2 pl-3 pr-10 text-left border border-gray-200 focus:outline-none focus:ring-1 focus:ring-green-500 sm:text-xs">
                     <span className="block truncate text-gray-600">
-                      {selectedCompanies.length === 0 ? "Todas las empresas" : `${selectedCompanies.length} Empresas`}
+                      {selectedCompanies.length === 0 ? "Todas las empresas" : `${ selectedCompanies.length } Empresas`}
                     </span>
                     <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                       <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -519,14 +533,15 @@ export default function MovementsPage() {
                         <Listbox.Option
                           key={idx}
                           className={({ active }) =>
-                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? "bg-green-50 text-green-900" : "text-gray-900"
-                            }`
+                            `relative cursor -default select - none py - 2 pl - 10 pr - 4 ${
+  active ? "bg-green-50 text-green-900" : "text-gray-900"
+} `
                           }
                           value={c}
                         >
                           {({ selected }) => (
                             <>
-                              <span className={`block truncate ${selected ? "font-medium" : "font-normal"}`}>
+                              <span className={`block truncate ${ selected ? "font-medium" : "font-normal" } `}>
                                 {c}
                               </span>
                               {selected ? (
@@ -567,8 +582,9 @@ export default function MovementsPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2.5 rounded-xl border flex items-center space-x-2 text-sm font-medium transition-all ${showFilters ? 'bg-[#183C30] text-white border-[#183C30]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}
+              className={`px - 4 py - 2.5 rounded - xl border flex items - center space - x - 2 text - sm font - medium transition - all ${
+  showFilters ? 'bg-[#183C30] text-white border-[#183C30]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+} `}
             >
               <SlidersHorizontal className="h-4 w-4" />
               <span>Filtros</span>
@@ -621,10 +637,11 @@ export default function MovementsPage() {
                   <button
                     key={t}
                     onClick={() => toggleSelection(selectedDocTypes, setSelectedDocTypes, t)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors notranslate ${selectedDocTypes.includes(t)
-                      ? 'bg-[#183C30] text-white border-[#183C30]'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                      }`}
+                    className={`px - 3 py - 1 rounded - full text - xs font - medium border transition - colors notranslate ${
+  selectedDocTypes.includes(t)
+  ? 'bg-[#183C30] text-white border-[#183C30]'
+  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+} `}
                     translate="no"
                   >
                     {t}
@@ -643,10 +660,11 @@ export default function MovementsPage() {
                   <button
                     key={type}
                     onClick={() => toggleSelection(selectedMovTypes, setSelectedMovTypes, type)}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center justify-center gap-2 ${selectedMovTypes.includes(type)
-                      ? (type === 'ENTRADA' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200')
-                      : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                      }`}
+                    className={`flex - 1 px - 3 py - 2 rounded - lg text - xs font - bold border transition - colors flex items - center justify - center gap - 2 ${
+  selectedMovTypes.includes(type)
+  ? (type === 'ENTRADA' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200')
+  : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+} `}
                   >
                     {type === 'ENTRADA' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                     {type}
@@ -801,10 +819,11 @@ export default function MovementsPage() {
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <div className="flex items-center space-x-2">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border notranslate ${item.type === 'ENTRADA' ? 'bg-green-50 text-green-600 border-green-100' :
-                            item.type === 'TRANSFORMACION' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                              'bg-red-50 text-red-600 border-red-100'
-                          }`} translate="no">
+                        <span className={`text - [10px] font - bold px - 1.5 py - 0.5 rounded border notranslate ${
+  item.type === 'ENTRADA' ? 'bg-green-50 text-green-600 border-green-100' :
+  item.type === 'TRANSFORMACION' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+    'bg-red-50 text-red-600 border-red-100'
+} `} translate="no">
                           {item.doc_type}
                         </span>
                         <span className="font-medium text-gray-900">{item.doc_number}</span>
@@ -844,7 +863,7 @@ export default function MovementsPage() {
                   </td>
 
                   {/* Quantity */}
-                  <td className={`px-6 py-4 text-right font-bold ${item.quantity > 0 ? "text-green-600" : "text-red-600"}`}>
+                  <td className={`px - 6 py - 4 text - right font - bold ${ item.quantity > 0 ? "text-green-600" : "text-red-600" } `}>
                     {item.quantity > 0 ? "+" : ""}{item.quantity.toLocaleString()}
                   </td>
 
