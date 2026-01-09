@@ -13,6 +13,9 @@ interface JuegoItem {
     entries: number;
     exits: number;
     final_balance: number;
+    current_siigo_stock?: number;
+    difference?: number;
+    alert?: string;
 }
 
 export default function JuegoInventariosPage() {
@@ -29,8 +32,6 @@ export default function JuegoInventariosPage() {
                 return;
             }
 
-            // Defaulting to company 0 for now as per previous logic assumptions
-            // If user needs to select company, we can add a selector later.
             const response = await axios.get(`${API_URL}/juego-inventario/?company_index=0`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -60,12 +61,15 @@ export default function JuegoInventariosPage() {
             "Saldo Inicial": item.initial_balance,
             "Entradas": item.entries,
             "Salidas (Fact - NC)": item.exits,
-            "Saldo Final": item.final_balance
+            "Saldo Final (Teorico)": item.final_balance,
+            "Stock Siigo (Actual)": item.current_siigo_stock || 0,
+            "Diferencia": item.difference || 0,
+            "Alerta": item.alert || "OK"
         })));
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Juego Inventarios");
-        XLSX.writeFile(workbook, `Juego_Inventarios_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(workbook, `Juego_Inventarios_Comparativo_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     const formatNumber = (val: number) => {
@@ -80,10 +84,10 @@ export default function JuegoInventariosPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#183C30]">Juego de Inventarios (Mes Actual)</h1>
+                    <h1 className="text-2xl font-bold text-[#183C30]">Juego de Inventarios (Comparativo)</h1>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm text-gray-500">
-                            Datos combinados: Google Sheet (Inicial/Entradas) + Siigo (Salidas Netas)
+                            Comparando: Saldo Teórico vs Stock Siigo (Bodega Principal + Comercio Exterior)
                         </span>
                         {lastUpdated && (
                             <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100">
@@ -119,8 +123,8 @@ export default function JuegoInventariosPage() {
                 {isLoading && data.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-gray-400">
                         <Loader2 className="h-10 w-10 animate-spin mb-4 text-[#183C30]" />
-                        <p>Cargando datos de inventario...</p>
-                        <p className="text-xs mt-2">Esto puede tomar unos momentos al consultar Siigo.</p>
+                        <p>Cargando datos comparativos...</p>
+                        <p className="text-xs mt-2">Puede tardar un momento en consolidar inventarios.</p>
                     </div>
                 ) : data.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-gray-400">
@@ -133,23 +137,34 @@ export default function JuegoInventariosPage() {
                                 <tr>
                                     <th className="px-6 py-4 font-semibold">SKU</th>
                                     <th className="px-6 py-4 font-semibold">Nombre</th>
-                                    <th className="px-6 py-4 font-semibold text-right text-blue-600 bg-blue-50/30">Saldo Inicial</th>
-                                    <th className="px-6 py-4 font-semibold text-right text-green-600 bg-green-50/30">Entradas</th>
-                                    <th className="px-6 py-4 font-semibold text-right text-red-600 bg-red-50/30">Salidas (Fact - NC)</th>
-                                    <th className="px-6 py-4 font-semibold text-right text-[#183C30] bg-gray-100">Saldo Final</th>
+                                    <th className="px-6 py-4 font-semibold text-right text-gray-500">Saldo Inicial</th>
+                                    <th className="px-6 py-4 font-semibold text-right text-gray-500">Entradas</th>
+                                    <th className="px-6 py-4 font-semibold text-right text-gray-500">Salidas</th>
+                                    <th className="px-6 py-4 font-semibold text-right text-[#183C30] bg-gray-100">Saldo Final (Teorico)</th>
+                                    <th className="px-6 py-4 font-semibold text-right text-blue-800 bg-blue-50">Stock Siigo</th>
+                                    <th className="px-6 py-4 font-semibold text-right">Diferencia</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {data.map((item, idx) => (
-                                    <tr key={`${item.sku}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-gray-900">{item.sku}</td>
-                                        <td className="px-6 py-4 text-gray-600 max-w-[300px] truncate" title={item.name}>{item.name}</td>
-                                        <td className="px-6 py-4 text-right font-medium bg-blue-50/10">{formatNumber(item.initial_balance)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-green-600 bg-green-50/10">+{formatNumber(item.entries)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-red-600 bg-red-50/10">-{formatNumber(item.exits)}</td>
-                                        <td className="px-6 py-4 text-right font-bold text-[#183C30] bg-gray-50">{formatNumber(item.final_balance)}</td>
-                                    </tr>
-                                ))}
+                                {data.map((item, idx) => {
+                                    const hasDiff = item.alert === "DIFFERENCE";
+                                    return (
+                                        <tr key={`${item.sku}-${idx}`} className={`hover:bg-gray-50/50 transition-colors ${hasDiff ? 'bg-red-50/30' : ''}`}>
+                                            <td className="px-6 py-4 font-medium text-gray-900">{item.sku}</td>
+                                            <td className="px-6 py-4 text-gray-600 max-w-[200px] truncate" title={item.name}>{item.name}</td>
+                                            <td className="px-6 py-4 text-right text-gray-400">{formatNumber(item.initial_balance)}</td>
+                                            <td className="px-6 py-4 text-right text-gray-400">+{formatNumber(item.entries)}</td>
+                                            <td className="px-6 py-4 text-right text-gray-400">-{formatNumber(item.exits)}</td>
+                                            <td className="px-6 py-4 text-right font-medium text-[#183C30] bg-gray-50">{formatNumber(item.final_balance)}</td>
+                                            <td className="px-6 py-4 text-right font-bold text-blue-700 bg-blue-50/30">
+                                                {formatNumber(item.current_siigo_stock || 0)}
+                                            </td>
+                                            <td className={`px-6 py-4 text-right font-bold ${hasDiff ? 'text-red-600' : 'text-gray-300'}`}>
+                                                {formatNumber(item.difference || 0)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

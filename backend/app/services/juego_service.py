@@ -156,9 +156,7 @@ def calculate_inventory_game(token):
         elif m_type == 'ENTRADA':
             exits_map[sku] -= abs(qty)
             
-    # 4. Merge and Calculate Final
-    results = []
-    
+    # 4. Merge Data (Base Calculation)
     # We iterate over sheet_data primarily as it defines the "Game" scope.
     # Should we include items that are NOT in sheet but HAVE sales? 
     # Usually Inventory Game implies checking against a planned list. 
@@ -166,7 +164,8 @@ def calculate_inventory_game(token):
     # For now, let's prioritize Sheet Data SKUs + Any Extra SKU found in Sales.
     
     all_skus = set(sheet_data.keys()) | set(exits_map.keys())
-    
+    results = [] # Define results here
+
     for sku in all_skus:
         sheet_item = sheet_data.get(sku, {
             "name": "N/A",
@@ -196,5 +195,62 @@ def calculate_inventory_game(token):
             "exits": exits,
             "final_balance": final
         })
+
+    # 5. Fetch Current Siigo Stock (Bodega Principal + Comercio Exterior)
+    # We need to simulate a user to call get_consolidated_inventory or call the underlying logic directly.
+    # Calling router function is fine as it handles parallelization and caching.
+    from app.routers.inventory_router import get_consolidated_inventory
+    
+    # We simulate an admin user to get full access
+    admin_user = {"role": "admin", "username": "system_juego"}
+    
+    try:
+        current_inv_response = get_consolidated_inventory(user=admin_user, force_refresh=False)
+        current_inv_data = current_inv_response.get("data", [])
+    except Exception as e:
+        print(f"Error fetching current inventory: {e}")
+        current_inv_data = []
+
+    # Map SKU -> Stock in Target Warehouses
+    current_stock_map = {}
+    target_warehouses = ["bodega principal", "bodega de comercio exterior"]
+
+    for item in current_inv_data:
+        code = str(item.get("code", "")).strip()
+        wh_name = str(item.get("warehouse_name", "")).strip().lower()
         
-    return results
+        # Check if warehouse matches target (flexible matching)
+        if any(target in wh_name for target in target_warehouses):
+            if code not in current_stock_map:
+                current_stock_map[code] = 0.0
+            current_stock_map[code] += float(item.get("quantity", 0))
+
+    # 6. Final Data Construction with Alerts
+    final_results = []
+    
+    for row in results:
+        sku = row["sku"]
+        final_calculated = row["final_balance"]
+        
+        # Current Stock from Siigo (Selected Warehouses)
+        current_siigo = current_stock_map.get(sku, 0.0)
+        
+        # Difference = Final Calculated (Theoretical) - Current Siigo (Actual)
+        # Or usually: Difference = Actual - Theoretical? 
+        # User said: "compare ese resultado (Calculated) con el saldo actual (Siigo) ... generar alertas"
+        # Let's show Difference = Calculated - Siigo. 
+        # If Calculated is 100 and Siigo is 90, Difference is 10 (Missing 10).
+        difference = final_calculated - current_siigo
+        
+        # Alert Logic
+        alert = "OK"
+        if abs(difference) > 0.01: # Tolerance for float
+            alert = "DIFFERENCE"
+
+        row["current_siigo_stock"] = current_siigo
+        row["difference"] = difference
+        row["alert"] = alert
+        
+        final_results.append(row)
+        
+    return final_results
