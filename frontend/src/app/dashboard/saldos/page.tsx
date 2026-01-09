@@ -604,10 +604,9 @@ export default function SaldosPage() {
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Estado Stock</label>
                   <select
-                    className={`w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20 ${role === 'viewer' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20"
                     value={stockStatus}
                     onChange={(e) => setStockStatus(e.target.value)}
-                    disabled={role === 'viewer'}
                   >
                     <option>Todos</option>
                     <option>Con Stock ({">"}0)</option>
