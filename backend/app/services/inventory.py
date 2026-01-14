@@ -17,13 +17,13 @@ def get_products(token, partner_id="SiigoApi", page=1, page_size=25):
         "page_size": page_size
     }
     
-    max_retries = 5
-    retry_delay = 2
+    max_retries = 2
+    retry_delay = 1
 
     for attempt in range(max_retries):
         try:
-            # Added timeout=30s to prevent infinite hanging
-            response = requests.get(PRODUCTS_URL, headers=headers, params=params, timeout=30)
+            # Timeout 10s: Fail fast rather than hang
+            response = requests.get(PRODUCTS_URL, headers=headers, params=params, timeout=10)
             
             # Handle rate limiting
             if response.status_code == 429:
@@ -78,7 +78,10 @@ def get_all_products(token, partner_id="SiigoApi", progress_callback=None):
         
     data = get_products(token, partner_id, page=1, page_size=100) # Increased page_size
     
-    if not data or "results" not in data:
+    if data is None:
+        raise Exception("Error crítico: Falló la conexión inicial con Siigo al obtener productos.")
+        
+    if "results" not in data:
         return []
         
     results = data["results"]
@@ -95,19 +98,25 @@ def get_all_products(token, partner_id="SiigoApi", progress_callback=None):
         def fetch_page(p):
             # if progress_callback: progress_callback(f"Cargando página {p}/{total_pages}...")
             p_data = get_products(token, partner_id, page=p, page_size=page_size)
-            return p_data["results"] if p_data and "results" in p_data else []
+            if not p_data or "results" not in p_data:
+                raise Exception(f"Failed to fetch page {p}")
+            return p_data["results"]
 
         # Fetch remaining pages in parallel
-        # Reduced max_workers from 10 to 5 to avoid triggering rate limits or overwhelming the network
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # Balanced: 4 workers gives speed without overwhelming API
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             pages_to_fetch = range(2, total_pages + 1)
             future_to_page = {executor.submit(fetch_page, p): p for p in pages_to_fetch}
             
             completed_pages = 0
             for future in concurrent.futures.as_completed(future_to_page):
-                page_res = future.result()
-                all_products.extend(page_res)
-                completed_pages += 1
+                try:
+                    page_res = future.result()
+                    all_products.extend(page_res)
+                    completed_pages += 1
+                except Exception as e:
+                    print(f"Detailed fetch error in page: {e}")
+                    raise e # Propagate to fail the whole company fetch
                 if progress_callback:
                     progress_callback(f"Cargando inventario: {len(all_products)}/{total_results} productos...")
                     

@@ -126,7 +126,8 @@ def get_consolidated_inventory(
                  print("Global cache expired. Refreshing...")
 
     # 1. Fetch Siigo Data
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
+    # Limit concurrency to 5 workers to prevent API Rate Limiting (429) and network saturation
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_company = {executor.submit(process_company, c, force_refresh): c for c in companies}
         
         for future in concurrent.futures.as_completed(future_to_company):

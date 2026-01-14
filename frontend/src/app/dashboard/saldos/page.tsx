@@ -380,6 +380,7 @@ export default function SaldosPage() {
 
       if (stockStatus === "Con Stock (>0)" && item.quantity <= 0) return false;
       if (stockStatus === "Sin Stock (0)" && item.quantity !== 0) return false;
+      if (stockStatus === "Negativos (<0)" && item.quantity >= 0) return false;
 
       if (searchTerm) {
         const lowerTerm = searchTerm.toLowerCase();
@@ -611,6 +612,7 @@ export default function SaldosPage() {
                     <option>Todos</option>
                     <option>Con Stock ({">"}0)</option>
                     <option>Sin Stock (0)</option>
+                    <option>Negativos ({'<'}0)</option>
                   </select>
                 </div>
 
@@ -730,7 +732,9 @@ export default function SaldosPage() {
                       <td className="px-6 py-3 font-mono text-gray-500 group-hover:text-gray-900">{item.code}</td>
                       <td className="px-6 py-3 text-gray-800 font-medium">{item.name}</td>
                       <td className="px-6 py-3 text-gray-500 text-xs uppercase tracking-wide">{item.warehouse_name}</td>
-                      <td className={`px-6 py-3 text-right font-bold ${item.quantity > 0 ? "text-green-600 bg-green-50/50 rounded-lg" : "text-gray-300"}`}>
+                      <td className={`px-6 py-3 text-right font-bold ${item.quantity > 0 ? "text-green-600 bg-green-50/50 rounded-lg" :
+                        item.quantity < 0 ? "text-red-600 bg-red-50/50 rounded-lg" : "text-gray-300"
+                        }`}>
                         {item.quantity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -797,7 +801,9 @@ export default function SaldosPage() {
                           {conflictDate}
                         </td>
 
-                        <td className={`px-6 py-3 text-right font-bold text-lg ${item.quantity > 0 ? "text-blue-700" : "text-gray-400"}`}>
+                        <td className={`px-6 py-3 text-right font-bold text-lg ${item.quantity > 0 ? "text-blue-700" :
+                            item.quantity < 0 ? "text-red-600" : "text-gray-400"
+                          }`}>
                           {item.quantity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </td>
                       </tr>

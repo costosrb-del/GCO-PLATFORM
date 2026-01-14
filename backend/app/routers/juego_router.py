@@ -39,9 +39,9 @@ def get_inventory_game(token: str = Depends(verify_token), company_index: int = 
              raise HTTPException(status_code=401, detail="Failed to authenticate with Siigo")
              
         # 3. Calculate
-        data = calculate_inventory_game(siigo_token)
+        data, errors = calculate_inventory_game(siigo_token)
         
-        return {"data": data}
+        return {"data": data, "errors": errors}
         
     except Exception as e:
         logger.error(f"Error in juego-inventario: {e}")
