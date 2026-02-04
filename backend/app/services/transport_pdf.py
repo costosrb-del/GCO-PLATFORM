@@ -8,14 +8,16 @@ class TransportPDF(FPDF):
         self.set_fill_color(24, 60, 48) # #183C30 Deep Green
         self.rect(0, 0, 210, 5, 'F')
         
-        self.ln(10)
+        self.ln(8) # Reduced top margin slightly
         
         # Brand Title
+        self.set_y(10)
         self.set_font('Arial', 'B', 18)
         self.set_text_color(24, 60, 48)
         self.cell(0, 8, 'GCO - Origen Botánico', 0, 1, 'L')
         
         # Subtitle
+        self.set_y(18)
         self.set_font('Arial', '', 10)
         self.set_text_color(100, 100, 100)
         self.cell(0, 5, 'Solicitud de Servicio de Transporte de Carga', 0, 1, 'L')
@@ -23,7 +25,7 @@ class TransportPDF(FPDF):
         # Divider Line
         self.set_draw_color(24, 60, 48)
         self.set_line_width(0.5)
-        self.line(10, 30, 200, 30)
+        self.line(10, 26, 200, 26)
         self.ln(5)
 
     def footer(self):
@@ -95,7 +97,7 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.add_page()
     
     # --- HEADER OVERLAY ---
-    pdf.set_y(15)
+    pdf.set_y(10) # Aligned with Title
     pdf.set_x(120)
     pdf.set_font('Arial', 'B', 12)
     pdf.set_text_color(24, 60, 48)
@@ -109,7 +111,7 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.cell(80, 5, f'Fecha: {str(request_date_raw)[:10] if request_date_raw else "N/A"}', 0, 1, 'R')
     
     # --- LAYOUT ---
-    y_start = 40
+    y_start = 35 # Moved up slightly since header is compact
     
     # HELPER Draw Field
     def field_row(pdf_obj, label, value, w, ln=1):
@@ -120,7 +122,7 @@ def generate_transport_pdf_bytes(data: dict):
         pdf_obj.set_text_color(0, 0, 0)
         # Handle long text
         val_str = safe_str(value, "-") 
-        if len(val_str) > 30:
+        if len(val_str) > 28: # Slightly stricter length check
             pdf_obj.multi_cell(w - 30, 5, val_str, 0, 'L')
         else:
             pdf_obj.cell(w - 30, 5, val_str, 0, ln, 'L')
@@ -158,8 +160,10 @@ def generate_transport_pdf_bytes(data: dict):
 
     pdf.draw_section_box("Detalles del Servicio", 110, y_start, 90, 35, draw_details)
 
-    # SECTION 3: ORIGEN
+    # SECTION 3: ORIGEN (Increased Height)
     y_loc = y_start + 45
+    box_h = 50 # Increased from 40 to 50
+    
     def draw_origin(x, y, w):
         pdf.set_xy(x, y)
         pdf.set_font('Arial', 'B', 10)
@@ -172,14 +176,14 @@ def generate_transport_pdf_bytes(data: dict):
         # Address logic
         addr = safe_str(data.get("origin_address"), "")
         if not addr:
-             # Fallback if origin itself looks like address or just repeat name
              addr = safe_str(data.get("origin"), "Sin dirección registrada")
         
+        pdf.set_x(x) # Ensure X aligns
         pdf.multi_cell(w, 4, f"Dirección:\n{addr}", 0, 'L')
 
-    pdf.draw_section_box("Origen / Cargue", 10, y_loc, 90, 40, draw_origin)
+    pdf.draw_section_box("Origen / Cargue", 10, y_loc, 90, box_h, draw_origin)
 
-    # SECTION 4: DESTINO
+    # SECTION 4: DESTINO (Increased Height)
     def draw_destination(x, y, w):
         pdf.set_xy(x, y)
         pdf.set_font('Arial', 'B', 10)
@@ -192,13 +196,14 @@ def generate_transport_pdf_bytes(data: dict):
         addr = safe_str(data.get("destination_address"), "")
         if not addr:
              addr = safe_str(data.get("destination"), "Sin dirección registrada")
-             
+        
+        pdf.set_x(x) # Ensure X aligns
         pdf.multi_cell(w, 4, f"Dirección:\n{addr}", 0, 'L')
 
-    pdf.draw_section_box("Destino / Entrega", 110, y_loc, 90, 40, draw_destination)
+    pdf.draw_section_box("Destino / Entrega", 110, y_loc, 90, box_h, draw_destination)
     
     # SECTION 5: OBSERVACIONES
-    y_obs = y_loc + 50
+    y_obs = y_loc + box_h + 10 # Adjusted for new box height
     def draw_obs(x, y, w):
         pdf.set_xy(x, y)
         obs = safe_str(data.get("observations"), "Ninguna")
