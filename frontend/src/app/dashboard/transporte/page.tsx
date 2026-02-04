@@ -23,7 +23,10 @@ import {
     Eye,
     PackageCheck,
     Filter,
-    FilePenLine
+    FilePenLine,
+    AlertTriangle,
+    TrendingUp,
+    Award
 } from "lucide-react";
 import {
     Dialog,
@@ -50,8 +53,9 @@ export default function TransportPage() {
 
     // Action Modal State (Receive / Invoice)
     const [actionModal, setActionModal] = useState<{ type: 'receive' | 'invoice' | null, item: any }>({ type: null, item: null });
-    // Stats
+    // Stats & KPIs
     const [stats, setStats] = useState({ total: 0, active: 0 });
+    const [kpis, setKpis] = useState({ monthSpend: 0, avgCost: 0, topCarrier: "N/A" });
     const [dbStatus, setDbStatus] = useState<any>(null);
 
     useEffect(() => {
@@ -76,8 +80,32 @@ export default function TransportPage() {
             setData(res.data);
 
             // Calc stats
+            // Calc stats
             const active = res.data.filter((d: any) => d.status !== 'Entregado y Facturado' && d.status !== 'Cancelado').length;
             setStats({ total: res.data.length, active });
+
+            // Calc KPIs (Current Month)
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const monthData = res.data.filter((d: any) => {
+                const dateDate = new Date(d.request_date || d.created_at);
+                return dateDate.getMonth() === currentMonth && dateDate.getFullYear() === currentYear;
+            });
+
+            const monthSpend = monthData.reduce((acc: number, curr: any) => acc + (Number(curr.transport_cost) || 0), 0);
+            const avgCost = monthData.length ? (monthSpend / monthData.length) : 0;
+
+            // Top Carrier
+            const carrierCounts: any = {};
+            monthData.forEach((d: any) => {
+                const c = d.carrier || "Sin asignar";
+                carrierCounts[c] = (carrierCounts[c] || 0) + 1;
+            });
+            const topCarrier = Object.entries(carrierCounts).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || "N/A";
+
+            setKpis({ monthSpend, avgCost, topCarrier });
 
         } catch (e) {
             console.error("Error fetching transport data", e);
@@ -176,10 +204,24 @@ export default function TransportPage() {
     const saferLower = (s: any) => (s ? String(s).toLowerCase() : "");
 
     const [statusFilter, setStatusFilter] = useState("all");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [limit, setLimit] = useState(20);
 
     const filteredData = data.filter(item => {
         const term = searchTerm.toLowerCase();
+
+        // Date Range
+        if (startDate || endDate) {
+            const itemDate = new Date(item.request_date || item.created_at).getTime();
+            if (startDate && itemDate < new Date(startDate).getTime()) return false;
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // End of day
+                if (itemDate > end.getTime()) return false;
+            }
+        }
+
         const matchesSearch = !term || (
             saferLower(item.carrier).includes(term) ||
             saferLower(item.origin).includes(term) ||
@@ -267,23 +309,38 @@ export default function TransportPage() {
             </div>
 
             {/* KPI CARDS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Visibles / Total Global</p>
-                        <div className="flex items-baseline gap-1 mt-1">
-                            <p className="text-3xl font-bold text-gray-800">{filteredData.length}</p>
-                            <span className="text-sm text-gray-400 font-medium">/ {stats.total}</span>
-                        </div>
+                        <p className="text-xs text-blue-400 uppercase font-bold tracking-wider">Total del Mes</p>
+                        <p className="text-2xl font-bold text-blue-600 mt-1">${kpis.monthSpend.toLocaleString()}</p>
                     </div>
                     <div className="h-10 w-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
-                        <FileText className="h-5 w-5" />
+                        <DollarSign className="h-5 w-5" />
                     </div>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-xs text-orange-400 uppercase font-bold tracking-wider">En Tránsito / Pendientes</p>
-                        <p className="text-3xl font-bold text-orange-600 mt-1">{stats.active}</p>
+                        <p className="text-xs text-green-400 uppercase font-bold tracking-wider">Costo Promedio</p>
+                        <p className="text-2xl font-bold text-green-600 mt-1">${Math.round(kpis.avgCost).toLocaleString()}</p>
+                    </div>
+                    <div className="h-10 w-10 bg-green-50 text-green-600 rounded-full flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5" />
+                    </div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-xs text-purple-400 uppercase font-bold tracking-wider">Top Transportador</p>
+                        <p className="text-lg font-bold text-purple-600 mt-1 truncate max-w-[150px]" title={kpis.topCarrier}>{kpis.topCarrier}</p>
+                    </div>
+                    <div className="h-10 w-10 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center">
+                        <Award className="h-5 w-5" />
+                    </div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-xs text-orange-400 uppercase font-bold tracking-wider">En Tránsito / Pend.</p>
+                        <p className="text-2xl font-bold text-orange-600 mt-1">{stats.active}</p>
                     </div>
                     <div className="h-10 w-10 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center">
                         <Truck className="h-5 w-5" />
@@ -295,7 +352,7 @@ export default function TransportPage() {
             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4 items-center justify-between">
 
                 {/* Search & Status Filter Group */}
-                <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+                <div className="flex flex-col xl:flex-row items-center gap-4 w-full xl:w-auto">
                     {/* Search Input Moved Here */}
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -306,6 +363,28 @@ export default function TransportPage() {
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
+                    </div>
+
+                    {/* Date Filters */}
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <span className="absolute left-3 top-2 text-xs text-gray-400">Desde:</span>
+                            <input
+                                type="date"
+                                className="pl-12 pr-2 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#183C30]"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="relative">
+                            <span className="absolute left-3 top-2 text-xs text-gray-400">Hasta:</span>
+                            <input
+                                type="date"
+                                className="pl-12 pr-2 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#183C30]"
+                                value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     {/* Status Filter */}
@@ -373,131 +452,143 @@ export default function TransportPage() {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredData.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="font-mono text-xs text-gray-500">{item.legacy_id || ("#" + item.id.substring(0, 6))}</span>
-                                                <span className="font-medium text-gray-900">{item.request_date?.split('T')[0] || item.created_at?.split('T')[0] || "Hoy"}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1 min-w-[150px]">
-                                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                                                    {item.origin || "N/A"}
-                                                </div>
-                                                <div className="h-4 border-l border-dashed border-gray-300 ml-[3px]"></div>
-                                                <div className="flex items-center gap-1 text-xs text-gray-900 font-medium">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                                                    {item.destination || "N/A"}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-gray-800 text-xs">{item.carrier || "Sin asignar"}</span>
-                                                <span className="text-xs text-gray-500">{item.vehicle_type || "N/A"}</span>
-                                            </div>
-                                        </td>
+                                filteredData.map((item) => {
+                                    const isDelayed = item.status === 'Solicitado' && item.scheduled_load_date && new Date(item.scheduled_load_date).getTime() < new Date().setHours(0, 0, 0, 0);
 
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
-                                                {item.merchandise_value ? (
-                                                    <div className="flex items-center gap-1 text-green-700 font-medium text-xs">
-                                                        <span className="text-green-800/60 font-normal">Aseg:</span>
-                                                        ${Number(item.merchandise_value).toLocaleString()}
+                                    return (
+                                        <tr key={item.id} className={`transition-colors group ${isDelayed ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-xs text-gray-500">{item.legacy_id || ("#" + item.id.substring(0, 6))}</span>
+                                                        {isDelayed && (
+                                                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-bold border border-red-200" title="Retraso en Cargue">
+                                                                <AlertTriangle className="h-3 w-3" />
+                                                                <span>RETRASO</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ) : <span className="text-gray-300 text-xs">-</span>}
-
-                                                <div className="flex items-center gap-1 text-gray-600 font-medium text-xs">
-                                                    <span className="text-gray-400 font-normal">Costo:</span>
-                                                    {item.transport_cost ? `$${Number(item.transport_cost).toLocaleString()}` : "--"}
+                                                    <span className="font-medium text-gray-900">{item.request_date?.split('T')[0] || item.created_at?.split('T')[0] || "Hoy"}</span>
                                                 </div>
-                                            </div>
-                                        </td>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col gap-1 min-w-[150px]">
+                                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                                        {item.origin || "N/A"}
+                                                    </div>
+                                                    <div className="h-4 border-l border-dashed border-gray-300 ml-[3px]"></div>
+                                                    <div className="flex items-center gap-1 text-xs text-gray-900 font-medium">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                                        {item.destination || "N/A"}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-gray-800 text-xs">{item.carrier || "Sin asignar"}</span>
+                                                    <span className="text-xs text-gray-500">{item.vehicle_type || "N/A"}</span>
+                                                </div>
+                                            </td>
 
-                                        <td className="px-6 py-4 text-center">
-                                            <button
-                                                onClick={() => openTimeline(item)}
-                                                className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs rounded-md border border-gray-200 transition-colors"
-                                            >
-                                                <Eye className="h-3 w-3" />
-                                                Ver
-                                            </button>
-                                        </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col gap-1">
+                                                    {item.merchandise_value ? (
+                                                        <div className="flex items-center gap-1 text-green-700 font-medium text-xs">
+                                                            <span className="text-green-800/60 font-normal">Aseg:</span>
+                                                            ${Number(item.merchandise_value).toLocaleString()}
+                                                        </div>
+                                                    ) : <span className="text-gray-300 text-xs">-</span>}
 
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
-                                                {item.status || "Solicitado"}
-                                            </span>
-                                        </td>
+                                                    <div className="flex items-center gap-1 text-gray-600 font-medium text-xs">
+                                                        <span className="text-gray-400 font-normal">Costo:</span>
+                                                        {item.transport_cost ? `$${Number(item.transport_cost).toLocaleString()}` : "--"}
+                                                    </div>
+                                                </div>
+                                            </td>
 
-
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <td className="px-6 py-4 text-center">
                                                 <button
-                                                    onClick={() => {
-                                                        const url = `${API_URL}/transport/${item.id}/pdf`;
-                                                        window.open(url, '_blank');
-                                                    }}
-                                                    className="p-2 hover:bg-green-50 rounded-lg text-gray-400 hover:text-green-700 transition-colors"
-                                                    title="Descargar PDF"
+                                                    onClick={() => openTimeline(item)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs rounded-md border border-gray-200 transition-colors"
                                                 >
-                                                    <Printer className="h-4 w-4" />
+                                                    <Eye className="h-3 w-3" />
+                                                    Ver
                                                 </button>
+                                            </td>
 
-                                                {(item.status === 'Solicitado') && (
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
+                                                    {item.status || "Solicitado"}
+                                                </span>
+                                            </td>
+
+
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
                                                     <button
-                                                        onClick={() => handleLoadConfirm(item)}
+                                                        onClick={() => {
+                                                            const url = `${API_URL}/transport/${item.id}/pdf`;
+                                                            window.open(url, '_blank');
+                                                        }}
+                                                        className="p-2 hover:bg-green-50 rounded-lg text-gray-400 hover:text-green-700 transition-colors"
+                                                        title="Descargar PDF"
+                                                    >
+                                                        <Printer className="h-4 w-4" />
+                                                    </button>
+
+                                                    {(item.status === 'Solicitado') && (
+                                                        <button
+                                                            onClick={() => handleLoadConfirm(item)}
+                                                            className="p-2 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
+                                                            title="Confirmar Cargue (Vehículo en sitio)"
+                                                        >
+                                                            <Truck className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+
+                                                    {(item.status === 'Solicitado' || item.status === 'En Tránsito' || !item.status) && (
+                                                        <button
+                                                            onClick={() => handleReceive(item)}
+                                                            className="p-2 hover:bg-orange-50 rounded-lg text-gray-400 hover:text-orange-600 transition-colors"
+                                                            title="Confirmar Recepción (RM)"
+                                                        >
+                                                            <PackageCheck className="h-4 w-4" />
+                                                        </button>
+                                                    )
+                                                    }
+
+                                                    <button
+                                                        onClick={() => handleAddInvoice(item)}
                                                         className="p-2 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
-                                                        title="Confirmar Cargue (Vehículo en sitio)"
+                                                        title="Radicar Factura"
                                                     >
-                                                        <Truck className="h-4 w-4" />
+                                                        <FileSignature className="h-4 w-4" />
                                                     </button>
-                                                )}
 
-                                                {(item.status === 'Solicitado' || item.status === 'En Tránsito' || !item.status) && (
                                                     <button
-                                                        onClick={() => handleReceive(item)}
-                                                        className="p-2 hover:bg-orange-50 rounded-lg text-gray-400 hover:text-orange-600 transition-colors"
-                                                        title="Confirmar Recepción (RM)"
+                                                        onClick={() => {
+                                                            setEditingRequest(item);
+                                                            setIsNewRequestOpen(true);
+                                                        }}
+                                                        className="p-2 hover:bg-yellow-50 rounded-lg text-gray-400 hover:text-yellow-600 transition-colors"
+                                                        title="Editar Solicitud"
                                                     >
-                                                        <PackageCheck className="h-4 w-4" />
+                                                        <FilePenLine className="h-4 w-4" />
                                                     </button>
-                                                )
-                                                }
 
-                                                <button
-                                                    onClick={() => handleAddInvoice(item)}
-                                                    className="p-2 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
-                                                    title="Radicar Factura"
-                                                >
-                                                    <FileSignature className="h-4 w-4" />
-                                                </button>
-
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingRequest(item);
-                                                        setIsNewRequestOpen(true);
-                                                    }}
-                                                    className="p-2 hover:bg-yellow-50 rounded-lg text-gray-400 hover:text-yellow-600 transition-colors"
-                                                    title="Editar Solicitud"
-                                                >
-                                                    <FilePenLine className="h-4 w-4" />
-                                                </button>
-
-                                                <button
-                                                    onClick={() => handleDelete(item.id)}
-                                                    className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-                                                    title="Eliminar Solicitud"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div >
-                                        </td >
-                                    </tr >
-                                ))
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                                                        title="Eliminar Solicitud"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div >
+                                            </td >
+                                        </tr >
+                                    );
+                                })
                             )
                             }
                         </tbody >
