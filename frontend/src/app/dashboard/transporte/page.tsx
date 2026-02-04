@@ -255,7 +255,10 @@ export default function TransportPage() {
                     </button>
 
                     <button
-                        onClick={() => setIsNewRequestOpen(true)}
+                        onClick={() => {
+                            setEditingRequest(null);
+                            setIsNewRequestOpen(true);
+                        }}
                         className="px-5 py-2 bg-[#183C30] text-white rounded-xl text-sm font-medium hover:bg-[#122e24] transition-colors flex items-center gap-2 shadow-lg shadow-green-900/10">
                         <Plus className="h-4 w-4" />
                         Nueva Solicitud
@@ -474,6 +477,17 @@ export default function TransportPage() {
                                                 </button>
 
                                                 <button
+                                                    onClick={() => {
+                                                        setEditingRequest(item);
+                                                        setIsNewRequestOpen(true);
+                                                    }}
+                                                    className="p-2 hover:bg-yellow-50 rounded-lg text-gray-400 hover:text-yellow-600 transition-colors"
+                                                    title="Editar Solicitud"
+                                                >
+                                                    <FilePenLine className="h-4 w-4" />
+                                                </button>
+
+                                                <button
                                                     onClick={() => handleDelete(item.id)}
                                                     className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                                                     title="Eliminar Solicitud"
@@ -567,9 +581,14 @@ export default function TransportPage() {
             {/* NEW REQUEST MODAL */}
             < CreateRequestModal
                 isOpen={isNewRequestOpen}
-                onClose={() => setIsNewRequestOpen(false)}
+                editingItem={editingRequest}
+                onClose={() => {
+                    setIsNewRequestOpen(false);
+                    setEditingRequest(null);
+                }}
                 onSuccess={() => {
                     setIsNewRequestOpen(false);
+                    setEditingRequest(null);
                     fetchData();
                 }}
             />
