@@ -51,6 +51,10 @@ app.include_router(config_router.router)
 app.include_router(report_router.router)
 app.include_router(juego_router.router)
 
+
 from app.routers import distribution_router
 app.include_router(distribution_router.router)
+
+from app.routers import transport_router
+app.include_router(transport_router.router)
 

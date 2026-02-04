@@ -1,0 +1,32 @@
+{
+  "carriers": [
+    {
+      "id": "c1",
+      "name": "LEONARDO SABOGAL",
+      "nit": "9999999",
+      "contact": "LEONARDO DAVOGAL",
+      "phone": "350 6214346",
+      "status": "Activo"
+    },
+    {
+      "id": "c2",
+      "name": "GRUPO LOGISTICO ESPECIALIZADO",
+      "nit": "900614022",
+      "contact": "DAVID MOLINA",
+      "phone": "31695363",
+      "status": "Activo"
+    }
+  ],
+  "locations": [
+    {
+      "id": "l1",
+      "name": "Instins Humans Bogot\u00e1",
+      "address": "CL 17A 68D - 38 Bogot\u00e1 D.C, barrio monteviedo zona industrial"
+    },
+    {
+      "id": "l2",
+      "name": "Bodega Rionegro",
+      "address": "ZN E CENTRO LOGISTICO BG 16 DEL CRUCE DEL TABLAZO 900 MTS VIA ZONA FRANCA"
+    }
+  ]
+}

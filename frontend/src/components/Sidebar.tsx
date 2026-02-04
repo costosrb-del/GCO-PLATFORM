@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_URL } from "@/lib/config";
@@ -179,6 +179,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                     {isCollapsed ? "Juego" : "Juego de Inventarios"}
                   </Link>
 
+
+
                   <Link
                     href="/dashboard/distribucion"
                     className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/distribucion"
@@ -194,6 +196,19 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Transport (New Top Level) */}
+        <Link
+          href="/dashboard/transporte"
+          className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard/transporte"
+            ? "bg-white/10 text-white font-medium"
+            : "text-gray-300 hover:bg-white/5 hover:text-white"
+            } ${isCollapsed ? "justify-center" : ""}`}
+          title={isCollapsed ? "Transporte" : ""}
+        >
+          <Truck className="h-5 w-5 shrink-0" />
+          {!isCollapsed && <span>Gestión Transporte</span>}
+        </Link>
       </nav>
 
       {/* Footer / User */}

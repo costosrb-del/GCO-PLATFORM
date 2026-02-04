@@ -11,3 +11,5 @@ google-cloud-storage
 
 pytest
 httpx
+
+python-multipart
