@@ -146,6 +146,33 @@ def create_request(data: dict):
     if "id" not in data or not data["id"]:
         data["id"] = str(uuid.uuid4())
     data["created_at"] = datetime.now().isoformat()
+    
+    # Generate Sequential ID (ST-XX)
+    try:
+        all_reqs = get_all_requests()
+        max_id = 88 # Default start point (next will be 89)
+        
+        for r in all_reqs:
+            # Check legacy_id first, then id
+            lid = r.get('legacy_id')
+            if not lid and r.get('id', '').startswith('ST-'):
+                lid = r.get('id')
+            
+            if lid and isinstance(lid, str) and lid.startswith('ST-'):
+                try:
+                    num_part = int(lid.split('-')[1])
+                    if num_part > max_id:
+                        max_id = num_part
+                except:
+                    pass
+        
+        new_seq_id = f"ST-{max_id + 1}"
+        data["legacy_id"] = new_seq_id
+    except Exception as e:
+        print(f"Error generating sequence ID: {e}")
+        # Fallback if algo fails
+        data["legacy_id"] = f"ST-{int(datetime.now().timestamp())}"
+
     # Default status if new
     if not data.get("status"):
         data["status"] = "Solicitado"

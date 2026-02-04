@@ -46,6 +46,12 @@ export default function TransportPage() {
     // New Request State
     const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
 
+<<<<<<< HEAD
+=======
+    // Action Modal State (Receive / Invoice)
+    const [actionModal, setActionModal] = useState<{ type: 'receive' | 'invoice' | null, item: any }>({ type: null, item: null });
+
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
     // Stats
     const [stats, setStats] = useState({ total: 0, active: 0 });
     const [dbStatus, setDbStatus] = useState<any>(null);
@@ -117,6 +123,7 @@ export default function TransportPage() {
         }
     };
 
+<<<<<<< HEAD
     const handleReceive = async (item: any) => {
         const rm = prompt("Ingrese el Número de Remisión (RM) para confirmar recepción:", item.rm_number || "");
         if (rm === null) return;
@@ -157,6 +164,28 @@ export default function TransportPage() {
             console.error("Error updating invoice", error);
             alert("Error al actualizar factura");
         }
+=======
+    const handleReceive = (item: any) => {
+        setActionModal({ type: 'receive', item });
+    };
+
+    const handleLoadConfirm = async (item: any) => {
+        if (!confirm("¿Confirmar que el vehículo ha cargado y está en tránsito?")) return;
+        try {
+            await axios.put(`${API_URL}/transport/${item.id}`, {
+                status: "En Tránsito",
+                actual_load_at: new Date().toISOString()
+            });
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert("Error al actualizar cargue");
+        }
+    };
+
+    const handleAddInvoice = (item: any) => {
+        setActionModal({ type: 'invoice', item });
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
     };
 
     const openTimeline = (item: any) => {
@@ -210,7 +239,30 @@ export default function TransportPage() {
             (statusFilter === 'invoiced' && item.status && item.status.toLowerCase().includes('facturado'));
 
         return matchesSearch && matchesStatus;
+<<<<<<< HEAD
     }).slice(0, limit);
+=======
+    })
+        .sort((a, b) => {
+            // Advanced Sort: PRIORITIZE ST-XXX Numeric Sort
+            const getSeq = (id: string) => {
+                if (typeof id === 'string' && id.startsWith('ST-')) {
+                    const num = parseInt(id.split('-')[1]);
+                    return isNaN(num) ? -1 : num;
+                }
+                return -1;
+            };
+
+            const seqA = getSeq(a.legacy_id || a.id);
+            const seqB = getSeq(b.legacy_id || b.id);
+
+            if (seqA > -1 && seqB > -1) return seqB - seqA; // Descending Numeric
+
+            // Fallback: Date Descending
+            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        })
+        .slice(0, limit);
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
 
     return (
         <div className="space-y-6 pb-20 p-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2">
@@ -283,6 +335,7 @@ export default function TransportPage() {
             </div>
 
             {/* FILTER SECTION */}
+<<<<<<< HEAD
             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex items-center gap-4 w-full md:w-auto">
                     <div className="flex items-center gap-2">
@@ -302,11 +355,51 @@ export default function TransportPage() {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+=======
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4 items-center justify-between">
+
+                {/* Search & Status Filter Group */}
+                <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+                    {/* Search Input Moved Here */}
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar..."
+                            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#183C30]/20 outline-none"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <Filter className="h-5 w-5 text-gray-500" />
+                        <span className="font-medium text-gray-700 text-sm whitespace-nowrap">Estado:</span>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-[#183C30] focus:border-[#183C30] block w-full md:w-48 p-2 outline-none"
+                        >
+                            <option value="all">Todos</option>
+                            <option value="pending">En Tránsito / Pendientes</option>
+                            <option value="delivered">Entregados (RM)</option>
+                            <option value="invoiced">Facturados</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full xl:w-auto justify-end">
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                     <span className="text-sm text-gray-500">Mostrar:</span>
                     <select
                         value={limit}
                         onChange={(e) => setLimit(Number(e.target.value))}
+<<<<<<< HEAD
                         className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-[#183C30] focus:border-[#183C30] block w-24 p-2.5 outline-none"
+=======
+                        className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-[#183C30] focus:border-[#183C30] block w-20 p-2 outline-none"
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                     >
                         <option value={20}>20</option>
                         <option value={50}>50</option>
@@ -318,6 +411,7 @@ export default function TransportPage() {
 
             {/* TABLE */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+<<<<<<< HEAD
                 {/* Search */}
                 <div className="p-4 border-b border-gray-100 flex items-center gap-4">
                     <div className="relative flex-1 max-w-md">
@@ -331,6 +425,9 @@ export default function TransportPage() {
                         />
                     </div>
                 </div>
+=======
+                {/* Data Grid */}
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
 
                 {/* Data Grid */}
                 <div className="overflow-x-auto flex-1">
@@ -435,7 +532,21 @@ export default function TransportPage() {
                                                     <Printer className="h-4 w-4" />
                                                 </button>
 
+<<<<<<< HEAD
                                                 {(item.status === 'Solicitado' || item.status === 'En Transito' || !item.status) && (
+=======
+                                                {(item.status === 'Solicitado') && (
+                                                    <button
+                                                        onClick={() => handleLoadConfirm(item)}
+                                                        className="p-2 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
+                                                        title="Confirmar Cargue (Vehículo en sitio)"
+                                                    >
+                                                        <Truck className="h-4 w-4" />
+                                                    </button>
+                                                )}
+
+                                                {(item.status === 'Solicitado' || item.status === 'En Tránsito' || !item.status) && (
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                                                     <button
                                                         onClick={() => handleReceive(item)}
                                                         className="p-2 hover:bg-orange-50 rounded-lg text-gray-400 hover:text-orange-600 transition-colors"
@@ -494,6 +605,23 @@ export default function TransportPage() {
                                 </div>
                             </div>
 
+<<<<<<< HEAD
+=======
+                            {/* STEP 1.5: CARGUE */}
+                            <div className="relative flex gap-4">
+                                <div className={`h-4 w-4 rounded-full ring-4 ring-white z-10 ${selectedRequest.actual_load_at ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                                <div className="flex-1">
+                                    <p className="font-semibold text-sm text-gray-900">Cargue y Despacho</p>
+                                    <p className="text-xs text-blue-700 font-medium">Programado: {selectedRequest.scheduled_load_date || "N/A"}</p>
+                                    {selectedRequest.actual_load_at ? (
+                                        <p className="text-xs text-gray-500">Cargó: {formatDate(selectedRequest.actual_load_at)}</p>
+                                    ) : (
+                                        <p className="text-xs text-gray-400 italic">Pendiente de cargue...</p>
+                                    )}
+                                </div>
+                            </div>
+
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                             {/* STEP 2: RECEPCION */}
                             <div className="relative flex gap-4">
                                 <div className={`h-4 w-4 rounded-full ring-4 ring-white z-10 ${selectedRequest.rm_number ? 'bg-green-600' : 'bg-gray-300'}`}></div>
@@ -539,18 +667,151 @@ export default function TransportPage() {
                     fetchData();
                 }}
             />
+<<<<<<< HEAD
+=======
+
+            {/* CONFIRMATION MODAL (RECEIVE / INVOICE) */}
+            <ConfirmationModal
+                isOpen={!!actionModal.type}
+                type={actionModal.type}
+                item={actionModal.item}
+                onClose={() => setActionModal({ type: null, item: null })}
+                onSuccess={() => {
+                    setActionModal({ type: null, item: null });
+                    fetchData();
+                }}
+            />
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
         </div>
     );
 }
 
+<<<<<<< HEAD
+=======
+// --- CONFIRMATION MODAL ---
+function ConfirmationModal({ isOpen, type, item, onClose, onSuccess }: any) {
+    const [value, setValue] = useState("");
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && item) {
+            // Pre-fill if editing? For now clean.
+            setValue(type === 'receive' ? item.rm_number || "" : item.invoice_number || "");
+        }
+    }, [isOpen, item, type]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!value) return alert("El campo es obligatorio");
+
+        setLoading(true);
+        try {
+            const payload: any = {};
+            if (type === 'receive') {
+                payload.rm_number = value;
+                payload.status = "Entregado";
+                payload.delivery_date = new Date().toISOString();
+            } else {
+                payload.invoice_number = value;
+                payload.status = "Entregado y Facturado";
+                payload.invoice_date = date; // User selected date for invoice
+            }
+
+            await axios.put(`${API_URL}/transport/${item.id}`, payload);
+            alert("Registro actualizado exitosamente");
+            onSuccess();
+        } catch (error) {
+            console.error(error);
+            alert("Error al actualizar");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const isReceive = type === 'receive';
+    const title = isReceive ? "Confirmar Recepción de Mercancía" : "Radicar Factura de Transporte";
+    const label = isReceive ? "Número de Remisión (RM)" : "Número de Factura";
+    const colorClass = isReceive ? "text-orange-600 bg-orange-50" : "text-purple-600 bg-purple-50";
+    const btnClass = isReceive ? "bg-orange-600 hover:bg-orange-700" : "bg-purple-600 hover:bg-purple-700";
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <div className={`p-3 w-fit rounded-full mb-2 ${colorClass}`}>
+                        {isReceive ? <PackageCheck className="h-6 w-6" /> : <FileSignature className="h-6 w-6" />}
+                    </div>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        Ingrese los detalles para registrar la {isReceive ? "entrega" : "facturación"} de la solicitud <b>{item.legacy_id || item.id}</b>.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{label} <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-opacity-50 focus:ring-gray-400"
+                            placeholder={isReceive ? "Ej: RM-12345" : "Ej: FE-9876"}
+                            value={value}
+                            onChange={e => setValue(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    {!isReceive && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Factura</label>
+                            <input
+                                type="date"
+                                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none"
+                                value={date}
+                                onChange={e => setDate(e.target.value)}
+                                required
+                            />
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`px-4 py-2 text-sm text-white rounded-lg transition-colors flex items-center gap-2 ${btnClass}`}
+                        >
+                            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                            {isReceive ? "Confirmar Entrega" : "Radicar Factura"}
+                        </button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
 // --- CREATE REQUEST MODAL COMPONENT ---
 function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess: () => void }) {
     const [formData, setFormData] = useState({
         origin: "",
+<<<<<<< HEAD
         destination: "",
         carrier: "",
         vehicle_type: "",
         merchandise_value: "",
+=======
+        origin_address: "",
+        destination: "",
+        destination_address: "",
+        carrier: "",
+        scheduled_load_date: "",
+        vehicle_type: "",
+        merchandise_value: "",
+        transport_cost: "",
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
         observations: ""
     });
     const [loading, setLoading] = useState(false);
@@ -571,9 +832,25 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
         }
     };
 
+<<<<<<< HEAD
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.origin || !formData.destination || !formData.carrier) {
+=======
+    const handleLocationChange = (field: 'origin' | 'destination', value: string) => {
+        const selectedLoc = config.locations.find((l: any) => l.name === value);
+        const address = selectedLoc ? selectedLoc.address : "";
+        setFormData(prev => ({
+            ...prev,
+            [field]: value,
+            [`${field}_address`]: address
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.origin || !formData.destination || !formData.carrier || !formData.scheduled_load_date) {
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
             alert("Por favor complete los campos obligatorios");
             return;
         }
@@ -586,10 +863,21 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
             // Reset form
             setFormData({
                 origin: "",
+<<<<<<< HEAD
                 destination: "",
                 carrier: "",
                 vehicle_type: "",
                 merchandise_value: "",
+=======
+                origin_address: "",
+                destination: "",
+                destination_address: "",
+                carrier: "",
+                scheduled_load_date: "",
+                vehicle_type: "",
+                merchandise_value: "",
+                transport_cost: "",
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                 observations: ""
             });
         } catch (error) {
@@ -602,7 +890,11 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
+<<<<<<< HEAD
             <DialogContent className="max-w-2xl">
+=======
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                 <DialogHeader>
                     <DialogTitle>Nueva Solicitud de Transporte</DialogTitle>
                     <DialogDescription>Diligencie la información para programar un despacho.</DialogDescription>
@@ -610,12 +902,20 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                     <div className="grid grid-cols-2 gap-4">
+<<<<<<< HEAD
+=======
+                        {/* ORIGIN */}
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Origen <span className="text-red-500">*</span></label>
                             <select
                                 className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
                                 value={formData.origin}
+<<<<<<< HEAD
                                 onChange={e => setFormData({ ...formData, origin: e.target.value })}
+=======
+                                onChange={e => handleLocationChange('origin', e.target.value)}
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                                 required
                             >
                                 <option value="">Seleccione Origen...</option>
@@ -625,6 +925,7 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
                                 <option value="Otro">Otro / Manual</option>
                             </select>
                             {formData.origin === 'Otro' && (
+<<<<<<< HEAD
                                 <input
                                     type="text"
                                     placeholder="Escriba el origen..."
@@ -644,6 +945,77 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
                                 onChange={e => setFormData({ ...formData, destination: e.target.value })}
                                 required
                             />
+=======
+                                <>
+                                    <input
+                                        type="text"
+                                        placeholder="Nombre del Origen"
+                                        className="mt-2 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        onChange={e => setFormData({ ...formData, origin: e.target.value })}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Dirección exacta"
+                                        className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        onChange={e => setFormData({ ...formData, origin_address: e.target.value })}
+                                    />
+                                </>
+                            )}
+                            {formData.origin !== 'Otro' && formData.origin && (
+                                <p className="text-xs text-gray-500 mt-1 truncate">{formData.origin_address}</p>
+                            )}
+                        </div>
+
+                        {/* DESTINATION */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Destino <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                value={formData.destination}
+                                onChange={e => handleLocationChange('destination', e.target.value)}
+                                required
+                            >
+                                <option value="">Seleccione Destino...</option>
+                                {config.locations.map((loc: any) => (
+                                    <option key={loc.id} value={loc.name}>{loc.name}</option>
+                                ))}
+                                <option value="Otro">Otro / Manual</option>
+                            </select>
+                            {formData.destination === 'Otro' && (
+                                <>
+                                    <input
+                                        type="text"
+                                        placeholder="Nombre del Destino"
+                                        className="mt-2 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Dirección exacta"
+                                        className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                        onChange={e => setFormData({ ...formData, destination_address: e.target.value })}
+                                    />
+                                </>
+                            )}
+                            {formData.destination !== 'Otro' && formData.destination && (
+                                <p className="text-xs text-gray-500 mt-1 truncate">{formData.destination_address}</p>
+                            )}
+                        </div>
+
+                        {/* SCHEDULED DATE */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">F. Programada Cargue <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                <input
+                                    type="date"
+                                    className="w-full pl-9 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                    value={formData.scheduled_load_date}
+                                    onChange={e => setFormData({ ...formData, scheduled_load_date: e.target.value })}
+                                    required
+                                />
+                            </div>
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                         </div>
 
                         <div>
@@ -678,6 +1050,10 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
                             </select>
                         </div>
 
+<<<<<<< HEAD
+=======
+                        {/* VALUES - SPLIT IN TWO */}
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Valor Mercancía</label>
                             <div className="relative">
@@ -691,6 +1067,23 @@ function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, o
                                 />
                             </div>
                         </div>
+<<<<<<< HEAD
+=======
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Costo Transporte</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-green-600" />
+                                <input
+                                    type="number"
+                                    className="w-full pl-9 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                    placeholder="Valor Flete"
+                                    value={formData.transport_cost}
+                                    onChange={e => setFormData({ ...formData, transport_cost: e.target.value })}
+                                />
+                            </div>
+                        </div>
+>>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
                     </div>
 
                     <div>

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Loader2, UserPlus, Shield, User } from "lucide-react";
+import { Loader2, UserPlus, Shield, User, Trash2 } from "lucide-react";
 import { API_URL } from "@/lib/config";
 
 export default function UsersPage() {
@@ -53,6 +53,22 @@ export default function UsersPage() {
             alert("Error: " + (error.response?.data?.detail || error.message));
         } finally {
             setIsCreating(false);
+        }
+    };
+
+    const handleDelete = async (userEmail: string) => {
+        if (!confirm(`¿Estás seguro de eliminar el usuario ${userEmail}?`)) return;
+
+        try {
+            const token = localStorage.getItem("gco_token");
+            await axios.delete(`${baseUrl}/auth/users/${userEmail}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            alert("Usuario eliminado correctamente.");
+            fetchUsers();
+        } catch (error: any) {
+            console.error(error);
+            alert("Error eliminando usuario: " + (error.response?.data?.detail || error.message));
         }
     };
 
@@ -142,9 +158,17 @@ export default function UsersPage() {
                                                     {u.role === 'admin' ? 'Administrador' : 'Visualizador'}
                                                 </span>
                                             </td>
-                                            <td className="p-3 text-sm text-green-600 flex items-center">
-                                                <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
-                                                Activo
+                                            <td className="p-3 text-sm text-green-600 flex items-center justify-between">
+                                                <div className="flex items-center">
+                                                    <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                                                    Activo
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDelete(u.email)}
+                                                    className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 bg-red-50 rounded"
+                                                >
+                                                    Eliminar
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

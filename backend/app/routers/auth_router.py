@@ -108,3 +108,23 @@ def create_user(req: CreateUserRequest, user: dict = Depends(verify_token)):
          raise HTTPException(status_code=500, detail="Failed to save role")
          
     return {"status": "success", "email": req.email, "role": req.role}
+
+@router.delete("/users/{email}")
+def delete_user(email: str, user: dict = Depends(verify_token)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # 1. Delete from Firebase Auth
+    try:
+        user_record = auth.get_user_by_email(email)
+        auth.delete_user(user_record.uid)
+    except Exception as e:
+        print(f"Error deleting firebase user {email}: {e}")
+        # We continue even if firebase delete fails (maybe user inconsistent state), 
+        # but for robustness we might want to handle user not found specifically.
+        # However, for this tool, primary goal is removing access.
+
+    # 2. Remove Role
+    role_service.remove_user_role(email)
+    
+    return {"status": "success", "message": f"User {email} deleted"}

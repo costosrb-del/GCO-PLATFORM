@@ -96,3 +96,5 @@ coverage.xml
 debug_output.txt
 test_movements_debug.py
 local_cache/
+
+backend/serviceAccountKey.json
