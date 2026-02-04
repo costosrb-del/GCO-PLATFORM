@@ -43,6 +43,9 @@ export default function TransportPage() {
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
 
+    // New Request State
+    const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
+
     // Stats
     const [stats, setStats] = useState({ total: 0, active: 0 });
     const [dbStatus, setDbStatus] = useState<any>(null);
@@ -245,7 +248,9 @@ export default function TransportPage() {
                         Importar Excel
                     </button>
 
-                    <button className="px-5 py-2 bg-[#183C30] text-white rounded-xl text-sm font-medium hover:bg-[#122e24] transition-colors flex items-center gap-2 shadow-lg shadow-green-900/10">
+                    <button
+                        onClick={() => setIsNewRequestOpen(true)}
+                        className="px-5 py-2 bg-[#183C30] text-white rounded-xl text-sm font-medium hover:bg-[#122e24] transition-colors flex items-center gap-2 shadow-lg shadow-green-900/10">
                         <Plus className="h-4 w-4" />
                         Nueva Solicitud
                     </button>
@@ -525,6 +530,198 @@ export default function TransportPage() {
                 </DialogContent>
             </Dialog>
 
+            {/* NEW REQUEST MODAL */}
+            <CreateRequestModal
+                isOpen={isNewRequestOpen}
+                onClose={() => setIsNewRequestOpen(false)}
+                onSuccess={() => {
+                    setIsNewRequestOpen(false);
+                    fetchData();
+                }}
+            />
         </div>
+    );
+}
+
+// --- CREATE REQUEST MODAL COMPONENT ---
+function CreateRequestModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess: () => void }) {
+    const [formData, setFormData] = useState({
+        origin: "",
+        destination: "",
+        carrier: "",
+        vehicle_type: "",
+        merchandise_value: "",
+        observations: ""
+    });
+    const [loading, setLoading] = useState(false);
+    const [config, setConfig] = useState<{ carriers: any[], locations: any[] }>({ carriers: [], locations: [] });
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchConfig();
+        }
+    }, [isOpen]);
+
+    const fetchConfig = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/transport/config`);
+            setConfig(res.data);
+        } catch (e) {
+            console.error("Config fetch error", e);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.origin || !formData.destination || !formData.carrier) {
+            alert("Por favor complete los campos obligatorios");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await axios.post(`${API_URL}/transport/`, formData);
+            alert("Solicitud creada exitosamente");
+            onSuccess();
+            // Reset form
+            setFormData({
+                origin: "",
+                destination: "",
+                carrier: "",
+                vehicle_type: "",
+                merchandise_value: "",
+                observations: ""
+            });
+        } catch (error) {
+            console.error("Create error", error);
+            alert("Error al crear solicitud");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Nueva Solicitud de Transporte</DialogTitle>
+                    <DialogDescription>Diligencie la información para programar un despacho.</DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Origen <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                value={formData.origin}
+                                onChange={e => setFormData({ ...formData, origin: e.target.value })}
+                                required
+                            >
+                                <option value="">Seleccione Origen...</option>
+                                {config.locations.map((loc: any) => (
+                                    <option key={loc.id} value={loc.name}>{loc.name}</option>
+                                ))}
+                                <option value="Otro">Otro / Manual</option>
+                            </select>
+                            {formData.origin === 'Otro' && (
+                                <input
+                                    type="text"
+                                    placeholder="Escriba el origen..."
+                                    className="mt-2 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                                    onChange={e => setFormData({ ...formData, origin: e.target.value })}
+                                />
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Destino <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                placeholder="Ciudad, Dirección o Cliente"
+                                value={formData.destination}
+                                onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Transportadora <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                value={formData.carrier}
+                                onChange={e => setFormData({ ...formData, carrier: e.target.value })}
+                                required
+                            >
+                                <option value="">Seleccione...</option>
+                                {config.carriers.map((c: any) => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Vehículo</label>
+                            <select
+                                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                value={formData.vehicle_type}
+                                onChange={e => setFormData({ ...formData, vehicle_type: e.target.value })}
+                            >
+                                <option value="">Seleccione...</option>
+                                <option value="Turbo">Turbo</option>
+                                <option value="Sencillo">Sencillo</option>
+                                <option value="Dobletroque">Dobletroque</option>
+                                <option value="Mula">Mula</option>
+                                <option value="Furgon">Furgon</option>
+                                <option value="Particular">Particular</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Valor Mercancía</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                <input
+                                    type="number"
+                                    className="w-full pl-9 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                    placeholder="0"
+                                    value={formData.merchandise_value}
+                                    onChange={e => setFormData({ ...formData, merchandise_value: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                        <textarea
+                            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none h-20 resize-none"
+                            placeholder="Instrucciones adicionales..."
+                            value={formData.observations}
+                            onChange={e => setFormData({ ...formData, observations: e.target.value })}
+                        ></textarea>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="px-4 py-2 bg-[#183C30] text-white hover:bg-[#122e24] rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Crear Solicitud
+                        </button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

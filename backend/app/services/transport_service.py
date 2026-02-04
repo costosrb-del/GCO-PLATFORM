@@ -130,8 +130,16 @@ def get_db_status():
     }
 
 def get_all_requests():
-    # Currently strictly using Local DB to preserve session data
-    # To switch to real Firebase: return [doc.to_dict() for doc in db.collection(COLLECTION_NAME).stream()] if db else local_db.get_all_requests()
+    # If using Firebase and connected
+    if db:
+        try:
+            docs = db.collection(COLLECTION_NAME).stream()
+            return [doc.to_dict() for doc in docs]
+        except Exception as e:
+            print(f"Error fetching from Firebase: {e}")
+            return local_db.get_all_requests()
+            
+    # Fallback to local
     return local_db.get_all_requests()
 
 def create_request(data: dict):
@@ -142,6 +150,16 @@ def create_request(data: dict):
     if not data.get("status"):
         data["status"] = "Solicitado"
     
+    # Save to Firebase if available
+    if db:
+        try:
+            db.collection(COLLECTION_NAME).document(data["id"]).set(data)
+            return data
+        except Exception as e:
+            print(f"Error saving to Firebase: {e}")
+            # Fallback save locally so data isn't lost
+            pass
+
     local_db.save_request(data["id"], data)
     return data
 
@@ -152,10 +170,24 @@ def update_request(req_id: str, data: dict):
          if data["invoice_number"] != "Pendiente":
              data["invoice_date"] = datetime.now().strftime("%Y-%m-%d") # Auto set date if not present
              data["status"] = "Entregado y Facturado"
-             
+    
+    # Update Firebase
+    if db:
+        try:
+            db.collection(COLLECTION_NAME).document(req_id).update(data)
+        except Exception as e:
+            print(f"Error updating Firebase: {e}")
+
     return local_db.update_request(req_id, data)
 
 def delete_request(req_id: str):
+    # Delete from Firebase
+    if db:
+        try:
+            db.collection(COLLECTION_NAME).document(req_id).delete()
+        except Exception as e:
+            print(f"Error deleting from Firebase: {e}")
+
     return local_db.delete_request(req_id)
 
 def bulk_import_from_excel(file_content: bytes):
