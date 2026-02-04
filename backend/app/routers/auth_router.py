@@ -17,12 +17,25 @@ try:
     firebase_admin.get_app()
 except ValueError:
     try:
-        # Check if credential file path is set
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        if cred_path and os.path.exists(cred_path):
-            cred = credentials.Certificate(cred_path)
+        # Check for serviceAccountKey.json explicitly (Local Dev)
+        # auth_router.py is in app/routers/ -> ../../serviceAccountKey.json is in backend root?
+        # File is backend/serviceAccountKey.json
+        # auth_router is at backend/app/routers/auth_router.py
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        json_key_path = os.path.join(base_dir, "serviceAccountKey.json")
+        
+        # Check ENV
+        env_cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        
+        if os.path.exists(json_key_path):
+             cred = credentials.Certificate(json_key_path)
+             print(f"Auth Router: Initializing Firebase with {json_key_path}")
+             firebase_admin.initialize_app(cred)
+        elif env_cred_path and os.path.exists(env_cred_path):
+            cred = credentials.Certificate(env_cred_path)
             firebase_admin.initialize_app(cred)
         else:
+            print("Auth Router: Initializing Firebase with Default Credentials")
             firebase_admin.initialize_app()
     except Exception as e:
         print(f"Warning: Firebase Admin init failed: {e}")
