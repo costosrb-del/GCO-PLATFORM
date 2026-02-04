@@ -4,172 +4,213 @@ from datetime import datetime
 
 class TransportPDF(FPDF):
     def header(self):
-        # Top Left: Brand
-        self.set_font('Arial', 'B', 16)
-        self.set_text_color(24, 60, 48) # #183C30
-        self.cell(100, 8, 'GCO - Origen Botánico', 0, 0, 'L')
+        # Decorative Top Bar
+        self.set_fill_color(24, 60, 48) # #183C30 Deep Green
+        self.rect(0, 0, 210, 5, 'F')
         
-        # Top Right: ID
-        self.set_font('Arial', 'B', 12)
-        self.set_text_color(100, 100, 100)
-        # Using a holder for ID, will vary per doc, but header is static usually. 
-        # We'll print ID in the body closely to header to avoid complication.
-        self.ln(8)
-        
-        self.set_font('Arial', '', 10)
-        self.set_text_color(128, 128, 128)
-        self.cell(0, 5, 'Solicitud de Servicio de Transporte', 0, 1, 'L')
-        
-        self.set_draw_color(230, 230, 230)
-        self.line(10, 25, 200, 25)
         self.ln(10)
+        
+        # Brand Title
+        self.set_font('Arial', 'B', 18)
+        self.set_text_color(24, 60, 48)
+        self.cell(0, 8, 'GCO - Origen Botánico', 0, 1, 'L')
+        
+        # Subtitle
+        self.set_font('Arial', '', 10)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 5, 'Solicitud de Servicio de Transporte de Carga', 0, 1, 'L')
+        
+        # Divider Line
+        self.set_draw_color(24, 60, 48)
+        self.set_line_width(0.5)
+        self.line(10, 30, 200, 30)
+        self.ln(5)
 
     def footer(self):
-        self.set_y(-25)
-        self.set_font('Arial', 'I', 8)
-        self.set_text_color(150, 150, 150)
+        # Professional Footer with Contact Info
+        self.set_y(-35)
+        self.set_fill_color(24, 60, 48) # #183C30 Deep Green
+        self.rect(0, 297-35, 210, 35, 'F')
         
-        # Authenticity
-        self.cell(0, 4, 'Autenticidad del Documento', 0, 1, 'C')
+        self.set_y(-28)
+        self.set_text_color(255, 255, 255)
         self.set_font('Arial', '', 7)
-        self.cell(0, 4, 'Este documento fue generado automáticamente por la plataforma GCO.', 0, 1, 'C')
-        self.cell(0, 4, f'Fecha de generación: {datetime.now().strftime("%Y-%m-%d %H:%M %p")}', 0, 1, 'C')
+        
+        # Column 1: Address
+        self.set_x(10)
+        self.multi_cell(60, 3.5, "Zona E, Centro Logístico, Bodega 16,\ndel cruce del Tablazo 900 mts\nVía Zona Franca. Rionegro, Ant.", 0, 'L')
+        
+        # Column 2: Social / Web
+        self.set_xy(80, 297-28)
+        self.cell(50, 4, "IG: @ritualbotanico.co", 0, 1, 'L')
+        self.set_x(80)
+        self.cell(50, 4, "WA: +57 318 4626877", 0, 1, 'L')
+        
+        # Column 3: Email / Web
+        self.set_xy(130, 297-28)
+        self.cell(60, 4, "sac@ritualbotanico.com", 0, 1, 'L')
+        self.set_x(130)
+        self.cell(60, 4, "www.ritualbotanico.com", 0, 1, 'L')
+        
+        # Column 4: Phone (Right aligned approx)
+        self.set_xy(170, 297-28)
+        self.set_font('Arial', 'B', 9)
+        self.cell(30, 8, "604 2966310", 0, 1, 'R')
+
+    def draw_section_box(self, title, x, y, w, h, content_callback):
+        # Draw a section with a header bar
+        self.set_xy(x, y)
+        self.set_fill_color(240, 240, 240)
+        # self.rect(x, y, w, h, 'F')
+        
+        # Header Box
+        self.set_fill_color(24, 60, 48)
+        self.rect(x, y, w, 7, 'F')
+        
+        # Title
+        self.set_xy(x + 2, y + 1.5)
+        self.set_font('Arial', 'B', 9)
+        self.set_text_color(255, 255, 255)
+        self.cell(w, 4, title.upper(), 0, 0, 'L')
+        
+        # Wrapper box border
+        self.set_draw_color(200, 200, 200)
+        self.rect(x, y, w, h, 'D')
+        
+        # Content content
+        self.set_xy(x + 2, y + 9)
+        self.set_text_color(0, 0, 0)
+        content_callback(x + 2, y + 9, w - 4)
 
 def generate_transport_pdf_bytes(data: dict):
     pdf = TransportPDF()
+    pdf.set_auto_page_break(auto=True, margin=40)
     pdf.add_page()
     
-    # --- HEADER OVERLAY (To put dynamic ID/Date aligned right) ---
-    pdf.set_y(10)
+    # --- HEADER OVERLAY ---
+    pdf.set_y(15)
     pdf.set_x(120)
     pdf.set_font('Arial', 'B', 12)
     pdf.set_text_color(24, 60, 48)
     req_id = str(data.get('legacy_id') or data.get('id', 'N/A'))[:8].upper()
-    pdf.cell(80, 8, f'ID: {req_id}', 0, 1, 'R')
+    pdf.cell(80, 8, f'SOLICITUD: {req_id}', 0, 1, 'R')
     
     pdf.set_x(120)
     pdf.set_font('Arial', '', 9)
     pdf.set_text_color(100, 100, 100)
-    pdf.cell(80, 5, f'Fecha Solicitud: {data.get("request_date", "N/A")}', 0, 1, 'R')
+    pdf.cell(80, 5, f'Fecha: {data.get("request_date", "N/A")[:10]}', 0, 1, 'R')
     
-    pdf.set_y(35) # Start Body
+    # --- LAYOUT ---
+    y_start = 40
     
-    # --- HELPER FOR SECTIONS ---
-    def draw_section_title(title):
-        pdf.set_font('Arial', 'B', 10)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 8, title, 'B', 1, 'L') # Bottom border
-        pdf.ln(2)
+    # HELPER Draw Field
+    def field_row(pdf_obj, label, value, w, ln=1):
+        pdf_obj.set_font('Arial', 'B', 8)
+        pdf_obj.set_text_color(80, 80, 80)
+        pdf_obj.cell(30, 5, f"{label}:", 0, 0, 'L')
+        pdf_obj.set_font('Arial', '', 9)
+        pdf_obj.set_text_color(0, 0, 0)
+        # Handle long text
+        if len(str(value)) > 30:
+            pdf_obj.multi_cell(w - 30, 5, str(value), 0, 'L')
+        else:
+            pdf_obj.cell(w - 30, 5, str(value), 0, ln, 'L')
 
-    def draw_field(label, value, w=90, ln=0):
-        pdf.set_font('Arial', 'B', 9)
-        pdf.set_text_color(50, 50, 50)
-        pdf.cell(35, 6, f"{label}:", 0, 0, 'L')
+    # SECTION 1: TRANSPORTISTA
+    def draw_carrier(x, y, w):
+        pdf.set_xy(x, y)
+        field_row(pdf, "Nombre", data.get("carrier", "N/A"), w)
+        pdf.set_x(x)
+        field_row(pdf, "Vehículo", data.get("vehicle_type", "N/A"), w)
+        pdf.set_x(x)
+        field_row(pdf, "Conductor", data.get("driver_name", "---"), w)
+        pdf.set_x(x)
+        field_row(pdf, "Placa", data.get("vehicle_plate", "---"), w)
+
+    pdf.draw_section_box("Transportista", 10, y_start, 90, 35, draw_carrier)
+
+    # SECTION 2: DETALLES LOGISTICOS
+    def draw_details(x, y, w):
+        pdf.set_xy(x, y)
+        sched_date = data.get("scheduled_load_date") or data.get("pickup_date", "N/A")
+        field_row(pdf, "F. Cargue", sched_date, w)
+        pdf.set_x(x)
         
+        val = data.get("merchandise_value", 0)
+        try: val_str = f"${float(val):,.0f}" if val else "$0"
+        except: val_str = str(val)
+        field_row(pdf, "Valor Merca.", val_str, w)
+        pdf.set_x(x)
+        
+        cost = data.get("transport_cost", 0)
+        try: cost_str = f"${float(cost):,.0f}" if cost else "---"
+        except: cost_str = str(cost)
+        field_row(pdf, "Costo Flete", cost_str, w)
+
+    pdf.draw_section_box("Detalles del Servicio", 110, y_start, 90, 35, draw_details)
+
+    # SECTION 3: ORIGEN
+    y_loc = y_start + 45
+    def draw_origin(x, y, w):
+        pdf.set_xy(x, y)
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(w, 5, data.get("origin_name", data.get("origin", "N/A")), 0, 1, 'L')
+        pdf.ln(2)
+        pdf.set_font('Arial', '', 8)
+        pdf.set_text_color(50, 50, 50)
+        pdf.multi_cell(w, 4, f"Dirección:\n{data.get('origin_address', data.get('origin', 'Sin dirección registrada'))}", 0, 'L')
+
+    pdf.draw_section_box("Origen / Cargue", 10, y_loc, 90, 40, draw_origin)
+
+    # SECTION 4: DESTINO
+    def draw_destination(x, y, w):
+        pdf.set_xy(x, y)
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(w, 5, data.get("destination_name", data.get("destination", "N/A")), 0, 1, 'L')
+        pdf.ln(2)
+        pdf.set_font('Arial', '', 8)
+        pdf.set_text_color(50, 50, 50)
+        pdf.multi_cell(w, 4, f"Dirección:\n{data.get('destination_address', data.get('destination', 'Sin dirección registrada'))}", 0, 'L')
+
+    pdf.draw_section_box("Destino / Entrega", 110, y_loc, 90, 40, draw_destination)
+    
+    # SECTION 5: OBSERVACIONES
+    y_obs = y_loc + 50
+    def draw_obs(x, y, w):
+        pdf.set_xy(x, y)
+        obs = data.get("observations", "Ninguna")
         pdf.set_font('Arial', '', 9)
-        pdf.set_text_color(0, 0, 0)
-        pdf.cell(w-35, 6, str(value), 0, ln, 'L')
+        pdf.multi_cell(w, 4, obs, 0, 'L')
 
-    # --- GRID LAYOUT ---
-    # ROW 1: Transportista (Left) - Detalles (Right)
-    y_start = pdf.get_y()
-    
-    # Col 1
-    pdf.set_left_margin(10)
-    pdf.set_right_margin(110)
-    draw_section_title("Información del Transportista")
-    draw_field("Nombre", data.get("carrier", "N/A"), 90, 1)
-    draw_field("Contacto", data.get("carrier_contact", "-"), 90, 1)
-    draw_field("Teléfono", data.get("carrier_phone", "-"), 90, 1)
-    
-    # Col 2
-    pdf.set_y(y_start)
-    pdf.set_left_margin(110)
-    pdf.set_right_margin(10)
-    draw_section_title("Detalles del Servicio")
-    
-    # Scheduled Date
-    sched_date = data.get("scheduled_load_date") or data.get("pickup_date", "N/A")
-    draw_field("F. Cargue", sched_date, 90, 1)
-    
-    draw_field("Vehículo", data.get("vehicle_type", "N/A"), 90, 1)
-    
-    # Values
-    val = data.get("merchandise_value", 0)
-    try: val_str = f"${float(val):,.0f}"
-    except: val_str = str(val)
-    draw_field("Vlr. Merca.", val_str, 90, 1)
+    pdf.draw_section_box("Observaciones / Instrucciones", 10, y_obs, 190, 25, draw_obs)
 
-    cost = data.get("transport_cost", 0)
-    try: cost_str = f"${float(cost):,.0f}"
-    except: cost_str = str(cost) if cost else "---"
-    draw_field("Costo Flete", cost_str, 90, 1)
-
-    pdf.ln(10)
+    # SIGNATURES AREA
+    y_sig = y_obs + 45
     
-    # Reset Margins
-    pdf.set_left_margin(10)
-    pdf.set_right_margin(10)
-    pdf.set_y(pdf.get_y() + 10) # Formatting spacing
+    pdf.set_y(y_sig)
+    pdf.set_draw_color(150, 150, 150)
     
-    # ROW 2: Recogida vs Destino
-    y_mid = pdf.get_y()
+    # Left Box
+    pdf.rect(20, y_sig, 70, 25, 'D')
+    pdf.set_xy(20, y_sig + 18)
+    pdf.set_font('Arial', '', 7)
+    pdf.cell(70, 4, "Firma del Conductor / Transportista", 0, 0, 'C')
     
-    # Col 1
-    pdf.set_left_margin(10)
-    pdf.set_right_margin(110)
-    draw_section_title("Lugar de Recogida")
-    draw_field("Ubicación", data.get("origin_name", data.get("origin", "N/A")), 90, 1)
-    
-    # Multi-cell for address
-    pdf.set_font('Arial', 'B', 9) 
-    pdf.cell(35, 6, "Dirección:", 0, 0, 'L')
-    pdf.set_font('Arial', '', 9)
-    pdf.multi_cell(55, 6, data.get("origin_address", data.get("origin", "")), 0, 'L')
-    
-    # Col 2
-    pdf.set_y(y_mid)
-    pdf.set_left_margin(110)
-    pdf.set_right_margin(10)
-    draw_section_title("Lugar de Destino")
-    draw_field("Ubicación", data.get("destination_name", data.get("destination", "N/A")), 90, 1)
-    
-    # Multi-cell for address
-    pdf.set_font('Arial', 'B', 9) 
-    pdf.cell(35, 6, "Dirección:", 0, 0, 'L')
-    pdf.set_font('Arial', '', 9)
-    pdf.multi_cell(55, 6, data.get("destination_address", data.get("destination", "")), 0, 'L')
-    
-    # Reset
-    pdf.set_left_margin(10)
-    pdf.set_right_margin(10)
-    pdf.set_y(pdf.get_y() + 20)
-
-    # --- SIGNATURES ---
-    pdf.ln(20)
-    y_sig = pdf.get_y()
-    
-    # Left Sig
-    pdf.line(20, y_sig, 90, y_sig)
-    pdf.set_xy(20, y_sig + 2)
-    pdf.set_font('Arial', '', 8)
-    pdf.cell(70, 5, "Firma Transportista", 0, 0, 'C')
-    
-    # Right Sig
-    pdf.line(120, y_sig, 190, y_sig)
-    pdf.set_xy(120, y_sig + 2)
-    pdf.set_font('Arial', 'B', 8)
+    # Right Box
+    pdf.rect(120, y_sig, 70, 25, 'D')
+    pdf.set_xy(120, y_sig + 5)
+    pdf.set_font('Arial', 'B', 9)
     pdf.cell(70, 5, "Santiago Alvarez Lopez", 0, 1, 'C')
     pdf.set_x(120)
     pdf.set_font('Arial', '', 7)
-    pdf.cell(70, 4, "(Coordinador de Costos)", 0, 1, 'C')
+    pdf.cell(70, 4, "Coordinador de Costos", 0, 1, 'C')
 
-    # UUID at bottom
-    pdf.set_y(-35)
+    # UUID
+    pdf.set_y(-45)
     uuid_code = data.get("id", "---")
     pdf.set_font('Courier', '', 8)
-    pdf.set_fill_color(245, 245, 245)
-    pdf.cell(0, 6, uuid_code, 0, 1, 'C', 1)
+    pdf.set_text_color(150, 150, 150)
+    pdf.cell(0, 5, f"UUID: {uuid_code}", 0, 1, 'C')
 
     try:
         return pdf.output(dest='S').encode('latin-1')
