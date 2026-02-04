@@ -181,7 +181,7 @@ export default function TransportPage() {
 
     const handleAddInvoice = (item: any) => {
         setActionModal({ type: 'invoice', item });
->>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
+
     };
 
     const openTimeline = (item: any) => {
