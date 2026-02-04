@@ -120,46 +120,6 @@ export default function TransportPage() {
     };
 
 
-    const handleReceive = async (item: any) => {
-        const rm = prompt("Ingrese el Número de Remisión (RM) para confirmar recepción:", item.rm_number || "");
-        if (rm === null) return;
-        if (!rm) {
-            alert("El número de RM es obligatorio para recibir.");
-            return;
-        }
-
-        try {
-            await axios.put(`${API_URL}/transport/${item.id}`, {
-                rm_number: rm,
-                status: "Entregado",
-                delivery_date: new Date().toISOString()
-            });
-            fetchData();
-        } catch (error) {
-            console.error("Error receiving", error);
-            alert("Error al confirmar recepción");
-        }
-    };
-
-    const handleAddInvoice = async (item: any) => {
-        const invoice = prompt("Ingrese el número de Factura de Proveedor:", item.invoice_number || "");
-        if (invoice === null) return; // Cancelled
-        if (!invoice) {
-            alert("El número de factura es obligatorio.");
-            return;
-        }
-
-        try {
-            await axios.put(`${API_URL}/transport/${item.id}`, {
-                invoice_number: invoice,
-                status: "Entregado y Facturado",
-                invoice_date: new Date().toISOString()
-            });
-            fetchData();
-        } catch (error) {
-            console.error("Error updating invoice", error);
-            alert("Error al actualizar factura");
-        }
 
         const handleReceive = (item: any) => {
             setActionModal({ type: 'receive', item });
