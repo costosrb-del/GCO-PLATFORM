@@ -82,6 +82,13 @@ class TransportPDF(FPDF):
         self.set_text_color(0, 0, 0)
         content_callback(x + 2, y + 9, w - 4)
 
+def safe_str(val, default=""):
+    """Safely convert value to string, returning default if None or empty."""
+    if val is None:
+        return default
+    s = str(val).strip()
+    return s if s else default
+
 def generate_transport_pdf_bytes(data: dict):
     pdf = TransportPDF()
     pdf.set_auto_page_break(auto=True, margin=40)
@@ -92,13 +99,14 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.set_x(120)
     pdf.set_font('Arial', 'B', 12)
     pdf.set_text_color(24, 60, 48)
-    req_id = str(data.get('legacy_id') or data.get('id', 'N/A'))[:8].upper()
+    req_id = safe_str(data.get('legacy_id') or data.get('id', 'N/A'))[:8].upper()
     pdf.cell(80, 8, f'SOLICITUD: {req_id}', 0, 1, 'R')
     
     pdf.set_x(120)
     pdf.set_font('Arial', '', 9)
     pdf.set_text_color(100, 100, 100)
-    pdf.cell(80, 5, f'Fecha: {data.get("request_date", "N/A")[:10]}', 0, 1, 'R')
+    request_date_raw = data.get("request_date")
+    pdf.cell(80, 5, f'Fecha: {str(request_date_raw)[:10] if request_date_raw else "N/A"}', 0, 1, 'R')
     
     # --- LAYOUT ---
     y_start = 40
@@ -111,40 +119,41 @@ def generate_transport_pdf_bytes(data: dict):
         pdf_obj.set_font('Arial', '', 9)
         pdf_obj.set_text_color(0, 0, 0)
         # Handle long text
-        if len(str(value)) > 30:
-            pdf_obj.multi_cell(w - 30, 5, str(value), 0, 'L')
+        val_str = safe_str(value, "-") 
+        if len(val_str) > 30:
+            pdf_obj.multi_cell(w - 30, 5, val_str, 0, 'L')
         else:
-            pdf_obj.cell(w - 30, 5, str(value), 0, ln, 'L')
+            pdf_obj.cell(w - 30, 5, val_str, 0, ln, 'L')
 
     # SECTION 1: TRANSPORTISTA
     def draw_carrier(x, y, w):
         pdf.set_xy(x, y)
-        field_row(pdf, "Nombre", data.get("carrier", "N/A"), w)
+        field_row(pdf, "Nombre", data.get("carrier"), w)
         pdf.set_x(x)
-        field_row(pdf, "Vehículo", data.get("vehicle_type", "N/A"), w)
+        field_row(pdf, "Vehículo", data.get("vehicle_type"), w)
         pdf.set_x(x)
-        field_row(pdf, "Conductor", data.get("driver_name", "---"), w)
+        field_row(pdf, "Conductor", data.get("driver_name"), w)
         pdf.set_x(x)
-        field_row(pdf, "Placa", data.get("vehicle_plate", "---"), w)
+        field_row(pdf, "Placa", data.get("vehicle_plate"), w)
 
     pdf.draw_section_box("Transportista", 10, y_start, 90, 35, draw_carrier)
 
     # SECTION 2: DETALLES LOGISTICOS
     def draw_details(x, y, w):
         pdf.set_xy(x, y)
-        sched_date = data.get("scheduled_load_date") or data.get("pickup_date", "N/A")
+        sched_date = data.get("scheduled_load_date") or data.get("pickup_date")
         field_row(pdf, "F. Cargue", sched_date, w)
         pdf.set_x(x)
         
-        val = data.get("merchandise_value", 0)
+        val = data.get("merchandise_value")
         try: val_str = f"${float(val):,.0f}" if val else "$0"
-        except: val_str = str(val)
+        except: val_str = safe_str(val, "$0")
         field_row(pdf, "Valor Merca.", val_str, w)
         pdf.set_x(x)
         
-        cost = data.get("transport_cost", 0)
+        cost = data.get("transport_cost")
         try: cost_str = f"${float(cost):,.0f}" if cost else "---"
-        except: cost_str = str(cost)
+        except: cost_str = safe_str(cost, "---")
         field_row(pdf, "Costo Flete", cost_str, w)
 
     pdf.draw_section_box("Detalles del Servicio", 110, y_start, 90, 35, draw_details)
@@ -154,11 +163,19 @@ def generate_transport_pdf_bytes(data: dict):
     def draw_origin(x, y, w):
         pdf.set_xy(x, y)
         pdf.set_font('Arial', 'B', 10)
-        pdf.cell(w, 5, data.get("origin_name", data.get("origin", "N/A")), 0, 1, 'L')
+        origin_name = safe_str(data.get("origin_name") or data.get("origin"), "N/A")
+        pdf.cell(w, 5, origin_name, 0, 1, 'L')
         pdf.ln(2)
         pdf.set_font('Arial', '', 8)
         pdf.set_text_color(50, 50, 50)
-        pdf.multi_cell(w, 4, f"Dirección:\n{data.get('origin_address', data.get('origin', 'Sin dirección registrada'))}", 0, 'L')
+        
+        # Address logic
+        addr = safe_str(data.get("origin_address"), "")
+        if not addr:
+             # Fallback if origin itself looks like address or just repeat name
+             addr = safe_str(data.get("origin"), "Sin dirección registrada")
+        
+        pdf.multi_cell(w, 4, f"Dirección:\n{addr}", 0, 'L')
 
     pdf.draw_section_box("Origen / Cargue", 10, y_loc, 90, 40, draw_origin)
 
@@ -166,11 +183,17 @@ def generate_transport_pdf_bytes(data: dict):
     def draw_destination(x, y, w):
         pdf.set_xy(x, y)
         pdf.set_font('Arial', 'B', 10)
-        pdf.cell(w, 5, data.get("destination_name", data.get("destination", "N/A")), 0, 1, 'L')
+        dest_name = safe_str(data.get("destination_name") or data.get("destination"), "N/A")
+        pdf.cell(w, 5, dest_name, 0, 1, 'L')
         pdf.ln(2)
         pdf.set_font('Arial', '', 8)
         pdf.set_text_color(50, 50, 50)
-        pdf.multi_cell(w, 4, f"Dirección:\n{data.get('destination_address', data.get('destination', 'Sin dirección registrada'))}", 0, 'L')
+        
+        addr = safe_str(data.get("destination_address"), "")
+        if not addr:
+             addr = safe_str(data.get("destination"), "Sin dirección registrada")
+             
+        pdf.multi_cell(w, 4, f"Dirección:\n{addr}", 0, 'L')
 
     pdf.draw_section_box("Destino / Entrega", 110, y_loc, 90, 40, draw_destination)
     
@@ -178,7 +201,7 @@ def generate_transport_pdf_bytes(data: dict):
     y_obs = y_loc + 50
     def draw_obs(x, y, w):
         pdf.set_xy(x, y)
-        obs = data.get("observations", "Ninguna")
+        obs = safe_str(data.get("observations"), "Ninguna")
         pdf.set_font('Arial', '', 9)
         pdf.multi_cell(w, 4, obs, 0, 'L')
 
@@ -207,7 +230,7 @@ def generate_transport_pdf_bytes(data: dict):
 
     # UUID
     pdf.set_y(-45)
-    uuid_code = data.get("id", "---")
+    uuid_code = safe_str(data.get("id"), "---")
     pdf.set_font('Courier', '', 8)
     pdf.set_text_color(150, 150, 150)
     pdf.cell(0, 5, f"UUID: {uuid_code}", 0, 1, 'C')
