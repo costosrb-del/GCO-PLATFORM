@@ -87,16 +87,6 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.set_left_margin(110)
     pdf.set_right_margin(10)
     draw_section_title("Detalles del Servicio")
-<<<<<<< HEAD
-    draw_field("Recolección", data.get("pickup_date", "N/A"), 90, 1)
-    draw_field("Hora", data.get("pickup_time", "--:--"), 90, 1)
-    draw_field("Vehículo", data.get("vehicle_type", "N/A"), 90, 1)
-    
-    val = data.get("merchandise_value", 0)
-    try: val_str = f"${float(val):,.0f}"
-    except: val_str = str(val)
-    draw_field("Valor Est.", val_str, 90, 1)
-=======
     
     # Scheduled Date
     sched_date = data.get("scheduled_load_date") or data.get("pickup_date", "N/A")
@@ -114,7 +104,6 @@ def generate_transport_pdf_bytes(data: dict):
     try: cost_str = f"${float(cost):,.0f}"
     except: cost_str = str(cost) if cost else "---"
     draw_field("Costo Flete", cost_str, 90, 1)
->>>>>>> 1e2892e (feat: transport module improvements (filters, modal, firebase, pdf))
 
     pdf.ln(10)
     
