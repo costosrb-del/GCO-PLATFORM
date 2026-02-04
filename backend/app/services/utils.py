@@ -2,6 +2,43 @@
 import pandas as pd
 import requests
 import io
+import re
+
+def normalize_sku(code):
+    """
+    Normalizes SKU to extract the main numeric code.
+    Groups variations like 7007EX, EVO-7701, 7007EXENTO, etc. into their base numeric ID.
+    """
+    if not code: return "N/A"
+    code = str(code).strip().upper()
+    
+    # Keep INSUMO products as is
+    if "INSUMO" in code: 
+        return code
+
+    # Remove common prefixes
+    code = code.replace("EVO-", "").replace("EVO", "").replace("E-", "")
+    
+    # Remove common suffixes (order matters: longest first)
+    # Removing "EXENTO" first avoids leaving "ENTO" if we removed "EX"
+    suffixes = ["EXENTO", "EX", ".1", "-1"]
+    for s in suffixes:
+        if code.endswith(s):
+             code = code[:-len(s)]
+             break
+
+    # 1. Try to find a 4+ digit sequence (Main standard products)
+    # This captures 7701 from 'EVO-7701', '7701EXENTO', '7701.1', etc.
+    match_long = re.search(r"(\d{4,})", code) # Find first sequence anywhere
+    if match_long:
+        return match_long.group(1)
+        
+    # 2. Fallback: Try to find any digit sequence (Shorter products)
+    match_any = re.search(r"(\d+)", code)
+    if match_any:
+        return match_any.group(1)
+        
+    return code
 
 def fetch_google_sheet_inventory(sheet_url):
     try:
@@ -58,7 +95,7 @@ def fetch_google_sheet_inventory(sheet_url):
 
                 external_data.append({
                     "company_name": "Inventario Externo",
-                    "code": code,
+                    "code": normalize_sku(code),
                     "name": name, 
                     "warehouse_name": "Sin Ingresar", # Google Sheets = Bodega Libre -> Renamed to Sin Ingresar
                     "quantity": qty

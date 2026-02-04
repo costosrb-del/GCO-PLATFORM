@@ -178,6 +178,17 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   >
                     {isCollapsed ? "Juego" : "Juego de Inventarios"}
                   </Link>
+
+                  <Link
+                    href="/dashboard/distribucion"
+                    className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/distribucion"
+                      ? "bg-white text-[#183C30] font-medium shadow-md"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                      } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                    title={isCollapsed ? "Distribución" : ""}
+                  >
+                    {isCollapsed ? "Distr." : "Distribución Inteligente"}
+                  </Link>
                 </div>
               </motion.div>
             )}

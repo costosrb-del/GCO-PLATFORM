@@ -14,7 +14,7 @@ export const useInventory = () => {
             const token = localStorage.getItem("gco_token");
             if (!token) throw new Error("No authenticated");
 
-            const { data } = await axios.get(`${getBaseUrl()}/inventory/`, {
+            const { data } = await axios.get(`${getBaseUrl()}/inventory?force_refresh=true`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             return data.data; // The API returns { data: [...], count: N, errors: [] }
@@ -31,7 +31,7 @@ export const useSalesAverages = (enabled: boolean = false) => {
             const token = localStorage.getItem("gco_token");
             if (!token) throw new Error("No authenticated");
 
-            const { data } = await axios.get(`${getBaseUrl()}/inventory/analysis/sales-averages?days=7`, {
+            const { data } = await axios.get(`${getBaseUrl()}/inventory/analysis/sales-averages?days=16`, {
                 headers: { Authorization: `Bearer ${token}` },
                 timeout: 300000
             });
@@ -50,7 +50,7 @@ export const useRefreshSalesAverages = () => {
             if (!token) throw new Error("No authenticated");
 
             // Request refresh and wait (timeout 5 minutes)
-            await axios.get(`${getBaseUrl()}/inventory/analysis/sales-averages?days=7&force_refresh=true`, {
+            await axios.get(`${getBaseUrl()}/inventory/analysis/sales-averages?days=16&force_refresh=true`, {
                 headers: { Authorization: `Bearer ${token}` },
                 timeout: 300000
             });

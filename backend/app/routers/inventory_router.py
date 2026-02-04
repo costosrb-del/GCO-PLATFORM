@@ -9,7 +9,7 @@ import os
 from app.services.inventory import get_all_products
 from app.services.auth import get_auth_token
 from app.services.config import get_config, get_google_sheet_url
-from app.services.utils import fetch_google_sheet_inventory
+from app.services.utils import fetch_google_sheet_inventory, normalize_sku
 from app.services.cache import cache
 from app.routers.auth_router import verify_token
 # Import analytics service
@@ -48,7 +48,7 @@ def process_company(company, force_refresh=False):
         if products:
             for p in products:
                 p_base = {
-                    "code": p.get("code", "N/A"),
+                    "code": normalize_sku(p.get("code", "N/A")),
                     "name": p.get("name", "Sin Nombre"),
                     "company_name": company["name"],
                     "quantity": 0.0,
@@ -259,10 +259,24 @@ def get_sales_averages(
              return cached
 
     try:
-        averages, audit = calculate_average_sales(days=days)
+        # Fetch granular data (Split by company)
+        split_averages, trends, audit = calculate_average_sales(days=days, split_by_company=True)
+        
+        # Derive Global Averages from Split Data (avoiding double DB hit)
+        global_averages = {}
+        for company_name, sku_dict in split_averages.items():
+            for sku, avg_val in sku_dict.items():
+                global_averages[sku] = global_averages.get(sku, 0) + avg_val
+                
+        # Round global values
+        for sku in global_averages:
+            global_averages[sku] = round(global_averages[sku], 4)
+
         result = {
             "days": days,
-            "averages": averages,
+            "averages": global_averages, # Legacy/Default Global
+            "averages_by_company": split_averages, # New Granular Data
+            "trends_by_company": trends,
             "audit": audit,
             "timestamp": time.time()
         }
@@ -301,3 +315,70 @@ def export_inventory_pdf(
     except Exception as e:
         print(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+
+# --- HISTORY ANALYSIS ---
+from datetime import datetime, timedelta
+from app.services.movements import get_all_documents
+from app.services.stock_history import get_product_history
+
+@router.get("/analysis/history")
+def get_inventory_history(
+    sku: str,
+    days: int = 30,
+    current_stock: float = 0.0,
+    user: dict = Depends(verify_token)
+):
+    """
+    Returns daily stock levels vs sales for a specific SKU.
+    Reconstructs history backwards from current_stock.
+    """
+    try:
+        # Calculate Date Range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days + 5) # Buffer
+        
+        s_str = start_date.strftime("%Y-%m-%d")
+        e_str = end_date.strftime("%Y-%m-%d")
+        
+        # REAL IMPLEMENTATION
+        # Fetch Sales (FV) from all companies to build the sales chart
+        # Note: We rely on current_stock passed by Frontend to anchor the red line.
+        
+        companies = get_config()
+        all_movements = []
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_c = {}
+            for c in companies:
+                if not c.get("valid", False): continue
+                
+                token = get_auth_token(c["username"], c["access_key"])
+                if not token: continue
+                
+                # Fetch Invoices (Sales)
+                future_to_c[executor.submit(get_all_documents, token, "invoices", s_str, e_str)] = c.get("name")
+                
+            for future in concurrent.futures.as_completed(future_to_c):
+                try:
+                    docs = future.result()
+                    if docs:
+                        for d in docs:
+                            for item in d.get("items", []):
+                                all_movements.append({
+                                    "date": d.get("date"),
+                                    "code": item.get("code"),
+                                    "product_code": item.get("code"), # Fallback
+                                    "quantity": item.get("quantity"),
+                                    "type": "SALIDA", 
+                                    "doc_type": "FV"
+                                })
+                except Exception as e:
+                    print(f"Error fetching history: {e}")
+
+        # Now processing
+        history = get_product_history(sku, days, current_stock, all_movements)
+        return history
+        
+    except Exception as e:
+        print(f"History Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -2,7 +2,7 @@
 
 import { useState, Fragment, useEffect, useMemo } from "react";
 import axios from "axios";
-import { Loader2, Search, Filter, RefreshCcw, Download, FileSpreadsheet, FileText, Check, ChevronDown, TrendingUp, ArrowUpDown, MessageCircle } from "lucide-react";
+import { Loader2, Search, Filter, RefreshCcw, Download, FileSpreadsheet, FileText, Check, ChevronDown, TrendingUp, TrendingDown, ArrowUpDown, MessageCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Listbox, Transition } from "@headlessui/react";
 import { clsx } from "clsx";
@@ -12,6 +12,7 @@ import { useInventory, useSalesAverages, useRefreshSalesAverages } from "@/hooks
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { SalesHistoryModal } from "@/components/dashboard/SalesHistoryModal";
 
 // Types
 interface InventoryItem {
@@ -35,6 +36,7 @@ interface ConsolidatedItem {
   warehouses: Set<string>;
   dailyAverage: number;
   daysSupply: number;
+  trend?: 'up' | 'down' | 'stable';
 }
 
 export default function SaldosPage() {
@@ -56,13 +58,19 @@ export default function SaldosPage() {
   const [stockStatus, setStockStatus] = useState("Todos");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [filterSales, setFilterSales] = useState(true);
+  const [filterSales, setFilterSales] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   const salesCodes = ["7007", "7008", "7009", "7957", "7901", "7101", "7210", "3005", "3001", "7416", "EVO-7701", "EVO-7702", "EVO-7703", "3012", "7299"];
 
   // View State
   const [viewMode, setViewMode] = useState<"detail" | "consolidated">("detail");
+  const [historyModal, setHistoryModal] = useState<{ isOpen: boolean, sku: string, name: string, stock: number }>({
+    isOpen: false,
+    sku: "",
+    name: "",
+    stock: 0
+  });
 
   // Derived Lists
   const companiesList = Array.from(new Set(data.map(item => item.company_name))).sort();
@@ -414,13 +422,53 @@ export default function SaldosPage() {
     }, {} as Record<string, ConsolidatedItem>));
 
     // Enrich with averages
+    // Enrich with averages
     consolidated = consolidated.map((item: ConsolidatedItem) => {
-      const avg = averagesData?.averages?.[item.code] || 0;
+      let avg = 0;
+
+      // If specific companies are selected, sum their specific averages
+      let trend: 'up' | 'down' | 'stable' = 'stable';
+
+      if (selectedCompanies.length > 0 && averagesData?.averages_by_company) {
+        selectedCompanies.forEach(companyName => {
+          // Robust Match: Try exact match first, then robust
+          let compAvg = averagesData.averages_by_company[companyName]?.[item.code];
+
+          if (compAvg === undefined) {
+            // Try finding key case-insensitive
+            const key = Object.keys(averagesData.averages_by_company).find(k => k.toLowerCase() === companyName.toLowerCase());
+            if (key) compAvg = averagesData.averages_by_company[key]?.[item.code];
+          }
+
+          avg += (compAvg || 0);
+
+          // Trend logic...
+          const t = averagesData.trends_by_company?.[companyName]?.[item.code];
+          if (t === 'down') trend = 'down';
+          else if (t === 'up' && trend !== 'down') trend = 'up';
+        });
+      } else {
+        // Default to Global Average
+        avg = averagesData?.averages?.[item.code] || 0;
+
+        // Global trend derivation
+        if (averagesData?.trends_by_company) {
+          let hasDown = false;
+          let hasUp = false;
+          Object.values(averagesData.trends_by_company).forEach((cTrends: any) => {
+            if (cTrends[item.code] === 'down') hasDown = true;
+            if (cTrends[item.code] === 'up') hasUp = true;
+          });
+          if (hasDown) trend = 'down';
+          else if (hasUp) trend = 'up';
+        }
+      }
+
       let days = 0;
       if (avg > 0) {
         days = item.quantity / avg;
       }
-      return { ...item, dailyAverage: avg, daysSupply: days };
+      return { ...item, dailyAverage: avg, daysSupply: days, trend };
     });
 
     // Sort Consolidated Data
@@ -484,7 +532,7 @@ export default function SaldosPage() {
             >
               {isRefreshingAverages ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
               <span className="text-sm font-medium hidden md:inline">
-                {isRefreshingAverages ? "Calculando..." : "Actualizar Promedios (7d)"}
+                {isRefreshingAverages ? "Calculando..." : "Actualizar Promedios (16d)"}
               </span>
             </button>
           )}
@@ -706,7 +754,7 @@ export default function SaldosPage() {
                     <th className="px-6 py-4 font-medium">Producto</th>
                     {/* <th className="px-6 py-4 font-medium">Resumen Empresas</th> Removed */}
                     {/* Always visible columns for averages */}
-                    <th className="px-6 py-4 font-medium text-center">Promedio (7d)</th>
+                    <th className="px-6 py-4 font-medium text-center">Promedio (16d)</th>
                     <th
                       className="px-6 py-4 font-medium text-center cursor-pointer hover:bg-gray-100 group"
                       onClick={() => handleSort('daysSupply')}
@@ -760,7 +808,16 @@ export default function SaldosPage() {
 
                     return (
                       <tr key={item.code} className="hover:bg-blue-50/30 transition-colors group">
-                        <td className="px-6 py-3 font-mono text-gray-500 font-bold group-hover:text-gray-900">{item.code}</td>
+                        <td className="px-6 py-3 font-mono text-gray-500 font-bold group-hover:text-gray-900">
+                          <button
+                            onClick={() => setHistoryModal({ isOpen: true, sku: item.code, name: item.name, stock: item.quantity })}
+                            className="hover:text-blue-600 hover:underline flex items-center gap-2 decoration-dotted underline-offset-2"
+                            title="Ver Análisis Gráfico"
+                          >
+                            {item.code}
+                            <TrendingUp className="h-3 w-3 text-gray-300 group-hover:text-blue-400" />
+                          </button>
+                        </td>
                         <td className="px-6 py-3 text-gray-800 font-medium">{item.name}</td>
                         {/* <td className="px-6 py-3 text-xs text-gray-500">
                         {Array.from(item.companies).join(", ")}
@@ -770,7 +827,15 @@ export default function SaldosPage() {
                           {isAveragesFetching && !item.dailyAverage ? (
                             <span className="text-gray-400 text-xs animate-pulse">Calc...</span>
                           ) : (
-                            item.dailyAverage > 0 ? item.dailyAverage.toFixed(2) : "-"
+                            <div className="flex flex-col items-center">
+                              <div className="flex items-center gap-1">
+                                <span className="font-bold text-gray-700">{item.dailyAverage > 0 ? item.dailyAverage.toFixed(2) : "-"}</span>
+                                {/* Trend Indicator */}
+                                {item.trend === 'up' && <TrendingUp className="h-3 w-3 text-green-500" />}
+                                {item.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-500" />}
+                                {item.trend === 'stable' && <span className="text-gray-300 text-[10px]">=</span>}
+                              </div>
+                            </div>
                           )}
                         </td>
                         <td className="px-6 py-3 text-center">
@@ -778,18 +843,12 @@ export default function SaldosPage() {
                             <span className="text-gray-400 text-xs animate-pulse">...</span>
                           ) : (
                             item.dailyAverage > 0 ? (
-                              <div className="flex flex-col items-center">
-                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${item.daysSupply < 15 ? "bg-red-100 text-red-700" :
-                                  item.daysSupply < 45 ? "bg-yellow-100 text-yellow-800" :
-                                    "bg-green-100 text-green-700"
+                              <div className="flex flex-col items-center justify-center h-full">
+                                <span className={`px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm ${item.daysSupply < 15 ? "bg-red-50 text-red-700 border border-red-200" :
+                                  item.daysSupply < 45 ? "bg-yellow-50 text-yellow-800 border border-yellow-200" :
+                                    "bg-green-50 text-green-700 border border-green-200"
                                   }`}>
                                   {item.daysSupply.toFixed(1)} días
-                                </span>
-                                <span className="text-[10px] text-gray-400 mt-1 font-mono">
-                                  {item.quantity.toFixed(0)} / {item.dailyAverage.toFixed(1)}
-                                </span>
-                                <span className="text-[8px] text-gray-300">
-                                  {Array.from(item.warehouses).join(", ").substring(0, 20)}
                                 </span>
                               </div>
                             ) : (
@@ -802,7 +861,7 @@ export default function SaldosPage() {
                         </td>
 
                         <td className={`px-6 py-3 text-right font-bold text-lg ${item.quantity > 0 ? "text-blue-700" :
-                            item.quantity < 0 ? "text-red-600" : "text-gray-400"
+                          item.quantity < 0 ? "text-red-600" : "text-gray-400"
                           }`}>
                           {item.quantity.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </td>
@@ -817,6 +876,14 @@ export default function SaldosPage() {
           </table>
         </div>
       </div>
+      <SalesHistoryModal
+        isOpen={historyModal.isOpen}
+        onClose={() => setHistoryModal({ ...historyModal, isOpen: false })}
+        sku={historyModal.sku}
+        productName={historyModal.name}
+        currentStock={historyModal.stock}
+        days={30}
+      />
     </div>
   );
 }

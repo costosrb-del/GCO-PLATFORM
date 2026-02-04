@@ -4,11 +4,15 @@ import concurrent.futures
 from app.services.config import get_config
 from app.services.auth import get_auth_token
 from app.services.movements import get_consolidated_movements
+from app.services.utils import normalize_sku
 
-def calculate_average_sales(days=30):
+def calculate_average_sales(days=30, split_by_company=False):
     """
     Calculates the average daily sales for each product (SKU) over the last 'days'.
     Sources data from "FV" (Factura de Venta) documents across all companies.
+    
+    If split_by_company=True, returns { "Company Name": { "SKU": avg }, ... }
+    Else returns { "SKU": global_avg }
     """
     # Calculate window: 20 days starting from YESTERDAY.
     # Exclude today to avoid partial data affecting the average.
@@ -16,9 +20,6 @@ def calculate_average_sales(days=30):
     end_date = today - timedelta(days=1)
     
     # FIXED: Subtract (days - 1) because the range [start, end] is inclusive.
-    # Example: End=16. Days=7. Start should be 10. (10,11,12,13,14,15,16 = 7 days).
-    # 16 - (7-1) = 16 - 6 = 10. Correct.
-    # Previous: 16 - 7 = 9. (9..16 = 8 days).
     start_date = end_date - timedelta(days=days - 1)
     
     start_str = start_date.strftime("%Y-%m-%d")
@@ -28,12 +29,9 @@ def calculate_average_sales(days=30):
     selected_types = ["FV"] 
     
     companies = get_config()
-    all_movements = []
     
-    print(f"[DEBUG] Calculating averages from {start_str} to {end_str}") # DEBUG
+    print(f"[DEBUG] Calculating averages from {start_str} to {end_str} (Split: {split_by_company})") # DEBUG
     
-    # 1. Fetch Movements from all companies
-    # ...
     # Audit Metadata
     audit_report = {
         "start_date": start_str,
@@ -44,8 +42,13 @@ def calculate_average_sales(days=30):
         "total_movements": 0
     }
 
-    # 1. Fetch Movements from all companies
-    # ...
+    # Data structure to hold raw totals:
+    # Global: { "SKU": total_qty }
+    # Split: { "Company A": { "SKU": total_qty }, ... }
+    
+    global_totals = {}
+    split_totals = {} # { "Company": { "SKU": qty } }
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(companies) + 2) as executor:
         future_to_company = {}
         
@@ -73,7 +76,31 @@ def calculate_average_sales(days=30):
                 
                 if movements:
                     print(f"[DEBUG] {company_name}: Fetched {count} movements.") # DEBUG
-                    all_movements.extend(movements)
+                    audit_report["total_movements"] += count
+                    
+                    # Aggregate
+                     # Aggregate
+                    if split_by_company:
+                        if company_name not in split_totals:
+                            split_totals[company_name] = {}
+                        
+                        for mov in movements:
+                            sku = normalize_sku(mov.get("code"))
+                            if not sku: continue
+                            qty = abs(float(mov.get("quantity", 0)))
+                            m_date = mov.get("date", "") # Expecting YYYY-MM-DD
+                            
+                            if sku not in split_totals[company_name]:
+                                split_totals[company_name][sku] = {"total": 0.0, "history": []}
+                                
+                            split_totals[company_name][sku]["total"] += qty
+                            split_totals[company_name][sku]["history"].append({"d": m_date, "q": qty})
+                    else:
+                        for mov in movements:
+                            sku = normalize_sku(mov.get("code"))
+                            if not sku: continue
+                            qty = abs(float(mov.get("quantity", 0)))
+                            global_totals[sku] = global_totals.get(sku, 0.0) + qty
                 else:
                      print(f"[DEBUG] {company_name}: No movements found.") # DEBUG
             except Exception as e:
@@ -81,33 +108,54 @@ def calculate_average_sales(days=30):
                 print(f"Error calculating averages for {company_name}: {msg}")
                 audit_report["companies"][company_name] = msg
 
-    audit_report["total_movements"] = len(all_movements)
-    print(f"[DEBUG] Total movements fetched: {len(all_movements)}") # DEBUG
-    
-    # 2. Aggregate by SKU
-    sku_totals = {}
-    
-    for mov in all_movements:
-        sku = mov.get("code")
-        if not sku:
-            continue
-            
-        qty = abs(mov.get("quantity", 0))
-        # print(f"[DEBUG] SKU: {sku}, Qty: {qty}") # Optional: Verbose
+    # 3. Final Averages Calculation
+    # 3. Final Averages & Trends Calculation
+    if split_by_company:
+        final_averages = {}
+        final_trends = {} # { "Company": { "SKU": "up" | "down" | "stable" } }
         
-        if sku not in sku_totals:
-            sku_totals[sku] = 0.0
-        sku_totals[sku] += qty
-        
-    # 3. Calculate Average
-    sku_averages = {}
-    for sku, total_qty in sku_totals.items():
-        if total_qty > 0:
-            sku_averages[sku] = round(total_qty / days, 4)
+        midpoint_date = (start_date + (end_date - start_date) / 2).strftime("%Y-%m-%d")
+
+        for c_name, c_skus in split_totals.items():
+            final_averages[c_name] = {}
+            final_trends[c_name] = {}
             
-    print(f"[DEBUG] Calculated averages for {len(sku_averages)} SKUs.") # DEBUG
-            
-    return sku_averages, audit_report
+            for sku, data_obj in c_skus.items():
+                total = data_obj["total"]
+                if total > 0:
+                    final_averages[c_name][sku] = round(total / days, 4)
+                    
+                    # Trend Calc: Split buckets by date
+                    first_half = 0.0
+                    second_half = 0.0
+                    
+                    for h_item in data_obj["history"]:
+                        if h_item["d"] <= midpoint_date:
+                            first_half += h_item["q"]
+                        else:
+                            second_half += h_item["q"]
+                            
+                    # Debug Print
+                    if total > 5:
+                        print(f"TREND DEBUG: {c_name} {sku} [1st: {first_half:.1f} vs 2nd: {second_half:.1f}]")
+
+                    # Determine Trend
+                    if second_half > first_half * 1.1:
+                        final_trends[c_name][sku] = "up"
+                    elif second_half < first_half * 0.9:
+                        final_trends[c_name][sku] = "down"
+                    else:
+                        final_trends[c_name][sku] = "stable"
+
+        return final_averages, final_trends, audit_report
+    else:
+        # Global
+        sku_averages = {}
+        for sku, total_qty in global_totals.items():
+            if total_qty > 0:
+                sku_averages[sku] = round(total_qty / days, 4)
+        print(f"[DEBUG] Calculated averages for {len(sku_averages)} SKUs.")
+        return sku_averages, {}, audit_report
 
 def _fetch_company_sales(company, start_str, end_str, selected_types):
     token = get_auth_token(company["username"], company["access_key"])
