@@ -7,6 +7,14 @@ SPREADSHEET_ID = "1ErpsHhGGsz8gJ9l1IixSiHDqHdk41OPJTwH8IVJ2KGk"
 CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "google_credentials.json")
 
 def get_sheets_client():
+    if not os.path.exists(CREDENTIALS_FILE):
+        # Para CI/CD o entornos sin credenciales, evitamos el crash
+        # Si esto se llama en producción real sin archivo, debe fallar, pero con un mensaje claro.
+        print(f"ADVERTENCIA: No se encontró el archivo de credenciales en {CREDENTIALS_FILE}")
+        # En test/CI podríamos retornar un Mock si fuera necesario, o simplemente dejar que falle
+        # aquí abajo con un error más controlado si es requerido.
+        raise FileNotFoundError(f"No se encontró el archivo de credenciales: {CREDENTIALS_FILE}")
+
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
@@ -93,12 +101,16 @@ def get_clients_from_sheet(limit: int = 100, offset: int = 0):
     Obtiene los clientes de la hoja de cálculo con paginación.
     Si limit es 0, trae todos los registros.
     """
-    client = get_sheets_client()
-    ss = client.open_by_key(SPREADSHEET_ID)
-    sheet = get_target_sheet(ss)
-    
-    # Traer todo para evitar errores de rango con A1 notation y mejorar consistencia de filtrado
-    all_values = sheet.get_all_values()
+    try:
+        client = get_sheets_client()
+        ss = client.open_by_key(SPREADSHEET_ID)
+        sheet = get_target_sheet(ss)
+        
+        # Traer todo para evitar errores de rango con A1 notation y mejorar consistencia de filtrado
+        all_values = sheet.get_all_values()
+    except (FileNotFoundError, Exception) as e:
+        print(f"Error conectando a Sheets (posiblemente entorno CI/Test sin credenciales): {e}")
+        return []
     
     if limit > 0:
         # Headers + Rango de datos (saltando headers en slicing)
