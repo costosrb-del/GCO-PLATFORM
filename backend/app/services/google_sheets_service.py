@@ -1,26 +1,67 @@
 import gspread
 from google.oauth2.service_account import Credentials
 import os
+import json
+import tempfile
 
 # Configuración de Google Sheets
 SPREADSHEET_ID = "1ErpsHhGGsz8gJ9l1IixSiHDqHdk41OPJTwH8IVJ2KGk"
 CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "google_credentials.json")
 
 def get_sheets_client():
-    if not os.path.exists(CREDENTIALS_FILE):
-        # Para CI/CD o entornos sin credenciales, evitamos el crash
-        # Si esto se llama en producción real sin archivo, debe fallar, pero con un mensaje claro.
-        print(f"ADVERTENCIA: No se encontró el archivo de credenciales en {CREDENTIALS_FILE}")
-        # En test/CI podríamos retornar un Mock si fuera necesario, o simplemente dejar que falle
-        # aquí abajo con un error más controlado si es requerido.
-        raise FileNotFoundError(f"No se encontró el archivo de credenciales: {CREDENTIALS_FILE}")
-
+    """
+    Obtiene el cliente de Google Sheets usando credenciales de archivo local
+    o de variable de entorno (para producción/despliegue).
+    """
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scopes)
-    return gspread.authorize(creds)
+    
+    # Opción 1: Variable de entorno (PARA PRODUCCIÓN EN CLOUD RUN)
+    credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    
+    if credentials_json:
+        # Usar credenciales de variable de entorno (Cloud Run)
+        print("✓ Variable GOOGLE_CREDENTIALS_JSON detectada.")
+        try:
+            # Limpieza robusta del string JSON (por si al copiar/pegar quedan caracteres extraños)
+            clean_json = credentials_json.strip()
+            # En caso de que se hayan escapado comillas extras o saltos de línea mal formados
+            if clean_json.startswith("'") and clean_json.endswith("'"):
+                clean_json = clean_json[1:-1]
+            if clean_json.startswith('"') and clean_json.endswith('"'):
+                clean_json = clean_json[1:-1]
+            
+            # Intentar decodificar
+            credentials_info = json.loads(clean_json)
+            creds = Credentials.from_service_account_info(credentials_info, scopes=scopes)
+            return gspread.authorize(creds)
+        except json.JSONDecodeError as e:
+            print(f"❌ Error de formato JSON en GOOGLE_CREDENTIALS_JSON: {e}")
+            print(f"   Primeros 20 chars: {credentials_json[:20]}...")
+            # IMPORTANTE: No imprimir toda la credencial por seguridad en logs, pero sí el error
+            raise ValueError(f"El JSON de credenciales está mal formado: {str(e)}")
+        except Exception as e:
+            print(f"❌ Error desconocido al cargar credenciales desde variable: {e}")
+            raise
+    
+    # Opción 2: Archivo local (PARA DESARROLLO LOCAL)
+    if os.path.exists(CREDENTIALS_FILE):
+        print(f"✓ Usando credenciales de archivo local: {CREDENTIALS_FILE}")
+        creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scopes)
+        return gspread.authorize(creds)
+    
+    # Si no hay ninguna opción disponible
+    error_msg = (
+        "❌ NO SE ENCONTRARON CREDENCIALES DE GOOGLE SHEETS.\n"
+        f"   - Archivo local: {CREDENTIALS_FILE} (no existe)\n"
+        "   - Variable de entorno: GOOGLE_CREDENTIALS_JSON (no definida)\n"
+        "   Para producción, configure GOOGLE_CREDENTIALS_JSON en Google Cloud Run.\n"
+        "   Para desarrollo local, asegúrese de tener google_credentials.json en la raíz del backend."
+    )
+    print(error_msg)
+    raise FileNotFoundError(error_msg)
 
 def get_target_sheet(ss):
     """
