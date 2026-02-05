@@ -9,13 +9,20 @@ import { useRouter } from "next/navigation";
 
 export default function DashboardHome() {
   const router = useRouter();
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const role = localStorage.getItem("gco_role");
-    if (role === "asesora") {
-      router.push("/dashboard/asesoras");
+    const storedRole = localStorage.getItem("gco_role");
+    setRole(storedRole);
+
+    if (storedRole === "asesora") {
+      router.replace("/dashboard/asesoras"); // 'replace' es mejor que 'push' para redirecciones forzadas
     }
   }, [router]);
+
+  // Si es asesora, retornamos null (o un loader) para que NO vea el menú mientras redirige
+  if (role === "asesora") return null;
+
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       {/* Header */}

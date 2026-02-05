@@ -32,20 +32,35 @@ export default function LoginPage() {
       localStorage.setItem("gco_token", token);
       localStorage.setItem("gco_user", user.email || "");
 
-      // 3b. Fetch Role from Backend
-      // In Production, ensure NEXT_PUBLIC_API_URL is set!
-      const baseUrl = API_URL;
+      // 3. Obtener rol real del backend
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-      // 3b. Optimistic Role Assignment (to avoid Cloud Run Cold Start)
-      if (user.email === "costos@origenbotanico.com") {
-        localStorage.setItem("gco_role", "admin");
-        console.log("Optimistic role: admin");
-      } else {
+        if (res.ok) {
+          const data = await res.json();
+          const realRole = data.role || "viewer";
+          localStorage.setItem("gco_role", realRole);
+          console.log(`Rol autenticado: ${realRole}`);
+
+          // 4. Redirección inteligente según rol
+          if (realRole === "asesora") {
+            window.location.href = "/dashboard/asesoras";
+          } else {
+            window.location.href = "/dashboard";
+          }
+          return; // Detener ejecución para esperar redirección
+        } else {
+          console.warn("No se pudo obtener el rol, usando fallback");
+          localStorage.setItem("gco_role", "viewer");
+        }
+      } catch (roleError) {
+        console.error("Error fetching role:", roleError);
+        // Fallback seguro si falla el backend
         localStorage.setItem("gco_role", "viewer");
-        console.log("Optimistic role: viewer");
       }
 
-      // 4. Redirect
       window.location.href = "/dashboard";
     } catch (err: any) {
       console.error("Login failed", err);

@@ -16,12 +16,15 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const [isInventoryOpen, setIsInventoryOpen] = useState(true);
   const [role, setRole] = useState("");
+  const [userEmail, setUserEmail] = useState("Usuario");
   // Local state removed in favor of props
 
   useEffect(() => {
     // 1. Initial Load from LocalStorage (Optimistic)
     const storedRole = localStorage.getItem("gco_role");
+    const storedUser = localStorage.getItem("gco_user");
     if (storedRole) setRole(storedRole);
+    if (storedUser) setUserEmail(storedUser);
 
     // 2. Background Verification (Correctness Check)
     const verifyRole = async () => {
@@ -240,8 +243,10 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <User className="h-4 w-4 text-green-200" />
               </div>
               <div className="text-sm overflow-hidden">
-                <p className="font-medium text-white truncate">Admin User</p>
-                <p className="text-xs text-gray-400">En línea</p>
+                <p className="font-medium text-white truncate" title={userEmail}>
+                  {userEmail.split('@')[0]}
+                </p>
+                <p className="text-xs text-gray-400 capitalize">{role || "Usuario"}</p>
               </div>
             </div>
           </div>

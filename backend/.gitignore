@@ -1,3 +1,6 @@
 .env
 __pycache__/
 venv/
+google_credentials.json
+serviceAccountKey.json
+*.log

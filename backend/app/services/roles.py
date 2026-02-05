@@ -18,7 +18,19 @@ def get_all_roles():
 
 def get_user_role(email):
     roles = get_all_roles()
-    return roles.get(email, "viewer") # Default to viewer
+    
+    # Check explicit rules first
+    if email in roles:
+        return roles[email]
+        
+    # Implicit rules (Robustness for Cloud Run / Ephemeral FS)
+    email_lower = email.lower()
+    if "asesora" in email_lower:
+        return "asesora"
+    if "admin" in email_lower and "costos" not in email_lower: # 'costos' is already in default but good for others
+        return "admin"
+        
+    return "viewer" # Default to viewer
 
 def set_user_role(email, role):
     roles = get_all_roles()
