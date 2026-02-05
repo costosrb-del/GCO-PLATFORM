@@ -76,7 +76,7 @@ import ColombiaMap from "@/components/ColombiaMap";
 
 export default function AsesorasPage() {
     // UI State
-    const [viewMode, setViewMode] = useState<"list" | "create" | "map">("list");
+    const [viewMode, setViewMode] = useState<"list" | "create" | "map">("map");
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
 

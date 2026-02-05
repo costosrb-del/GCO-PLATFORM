@@ -274,11 +274,37 @@ export default function ColombiaMap({ onDeptClick, clientCounts, onRefresh, isRe
                         {Object.values(clientCounts).reduce((a, b) => a + b, 0)} <span className="text-sm text-green-600">CLIENTES</span>
                     </span>
                     <div className="mt-1 flex items-center justify-end gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-[9px] font-black text-gray-400">MAPA ACTUALIZADO</span>
+                        <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400' : 'bg-green-500'} animate-pulse`} />
+                        <span className="text-[9px] font-black text-gray-400">{isRefreshing ? 'ACTUALIZANDO...' : 'MAPA ACTUALIZADO'}</span>
                     </div>
                 </div>
             </div>
+
+            {/* Loading Overlay */}
+            <AnimatePresence>
+                {isRefreshing && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/40 backdrop-blur-sm rounded-[2.5rem]"
+                    >
+                        <div className="p-8 bg-white rounded-3xl shadow-2xl flex flex-col items-center border border-gray-100">
+                            <RefreshCcw className="h-10 w-10 text-[#183C30] animate-spin mb-4" />
+                            <h3 className="text-lg font-black text-[#183C30]">Analizando Territorio</h3>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Sincronizando Base de Datos</p>
+                            <div className="mt-4 w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-green-500 rounded-full"
+                                    initial={{ width: "0%" }}
+                                    animate={{ width: "100%" }}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {hoveredDept && (
