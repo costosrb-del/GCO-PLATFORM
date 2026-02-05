@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck, UserPlus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_URL } from "@/lib/config";
@@ -91,17 +91,33 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-2 overflow-y-auto overflow-x-hidden">
-        <Link
-          href="/dashboard"
-          className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard"
-            ? "bg-white/10 text-white font-medium"
-            : "text-gray-300 hover:bg-white/5 hover:text-white"
-            } ${isCollapsed ? "justify-center" : ""}`}
-          title={isCollapsed ? "Inicio" : ""}
-        >
-          <LayoutDashboard className="h-5 w-5 shrink-0" />
-          {!isCollapsed && <span>Inicio</span>}
-        </Link>
+        {(role === "admin" || role === "viewer") && (
+          <Link
+            href="/dashboard"
+            className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard"
+              ? "bg-white/10 text-white font-medium"
+              : "text-gray-300 hover:bg-white/5 hover:text-white"
+              } ${isCollapsed ? "justify-center" : ""}`}
+            title={isCollapsed ? "Inicio" : ""}
+          >
+            <LayoutDashboard className="h-5 w-5 shrink-0" />
+            {!isCollapsed && <span>Inicio</span>}
+          </Link>
+        )}
+
+        {(role === "admin" || role === "asesora") && (
+          <Link
+            href="/dashboard/asesoras"
+            className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard/asesoras"
+              ? "bg-white/10 text-white font-medium"
+              : "text-gray-300 hover:bg-white/5 hover:text-white"
+              } ${isCollapsed ? "justify-center" : ""}`}
+            title={isCollapsed ? "Gestión Clientes" : ""}
+          >
+            <UserPlus className="h-5 w-5 shrink-0" />
+            {!isCollapsed && <span>Gestión Clientes</span>}
+          </Link>
+        )}
 
         {role === "admin" && (
           <Link
@@ -118,97 +134,101 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         )}
 
         {/* Inventory Group */}
-        <div className="space-y-1">
-          <button
-            onClick={() => !isCollapsed && setIsInventoryOpen(!isInventoryOpen)}
-            className={`flex items-center justify-between w-full px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition-all ${isCollapsed ? "justify-center cursor-default" : ""}`}
-            title={isCollapsed ? "Inventarios" : ""}
-          >
-            <div className="flex items-center space-x-3">
-              <Package className="h-5 w-5 shrink-0" />
-              {!isCollapsed && <span>Inventarios</span>}
-            </div>
-            {!isCollapsed && (
-              <ChevronDown
-                className={`h-4 w-4 transition-transform duration-200 ${isInventoryOpen ? "rotate-180" : ""}`}
-              />
-            )}
-          </button>
+        {(role === "admin" || role === "viewer") && (
+          <div className="space-y-1">
+            <button
+              onClick={() => !isCollapsed && setIsInventoryOpen(!isInventoryOpen)}
+              className={`flex items-center justify-between w-full px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition-all ${isCollapsed ? "justify-center cursor-default" : ""}`}
+              title={isCollapsed ? "Inventarios" : ""}
+            >
+              <div className="flex items-center space-x-3">
+                <Package className="h-5 w-5 shrink-0" />
+                {!isCollapsed && <span>Inventarios</span>}
+              </div>
+              {!isCollapsed && (
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${isInventoryOpen ? "rotate-180" : ""}`}
+                />
+              )}
+            </button>
 
-          <AnimatePresence>
-            {(isInventoryOpen || isCollapsed) && (
-              <motion.div
-                initial={!isCollapsed ? { height: 0, opacity: 0 } : {}}
-                animate={!isCollapsed ? { height: "auto", opacity: 1 } : {}}
-                exit={!isCollapsed ? { height: 0, opacity: 0 } : {}}
-                className="overflow-hidden"
-              >
-                <div className={`${!isCollapsed ? "ml-4 pl-4 border-l border-[#2A5E4D]" : "flex flex-col items-center"} space-y-1 pt-1`}>
-                  <Link
-                    href="/dashboard/saldos"
-                    className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/saldos"
-                      ? "bg-white text-[#183C30] font-medium shadow-md"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
-                      } ${isCollapsed ? "text-center text-[10px]" : ""}`}
-                    title={isCollapsed ? "Saldos Consolidados" : ""}
-                  >
-                    {isCollapsed ? "Saldos" : "Saldos Consolidados"}
-                  </Link>
-
-                  {role === "admin" && (
+            <AnimatePresence>
+              {(isInventoryOpen || isCollapsed) && (
+                <motion.div
+                  initial={!isCollapsed ? { height: 0, opacity: 0 } : {}}
+                  animate={!isCollapsed ? { height: "auto", opacity: 1 } : {}}
+                  exit={!isCollapsed ? { height: 0, opacity: 0 } : {}}
+                  className="overflow-hidden"
+                >
+                  <div className={`${!isCollapsed ? "ml-4 pl-4 border-l border-[#2A5E4D]" : "flex flex-col items-center"} space-y-1 pt-1`}>
                     <Link
-                      href="/dashboard/movements"
-                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/movements"
+                      href="/dashboard/saldos"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/saldos"
                         ? "bg-white text-[#183C30] font-medium shadow-md"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
                         } ${isCollapsed ? "text-center text-[10px]" : ""}`}
-                      title={isCollapsed ? "Auditoria Movimientos" : ""}
+                      title={isCollapsed ? "Saldos Consolidados" : ""}
                     >
-                      {isCollapsed ? "Audit." : "Auditoria Movimientos"}
+                      {isCollapsed ? "Saldos" : "Saldos Consolidados"}
                     </Link>
-                  )}
 
-                  <Link
-                    href="/dashboard/juego-inventarios"
-                    className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/juego-inventarios"
-                      ? "bg-white text-[#183C30] font-medium shadow-md"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
-                      } ${isCollapsed ? "text-center text-[10px]" : ""}`}
-                    title={isCollapsed ? "Juego de Inventarios" : ""}
-                  >
-                    {isCollapsed ? "Juego" : "Juego de Inventarios"}
-                  </Link>
+                    {role === "admin" && (
+                      <Link
+                        href="/dashboard/movements"
+                        className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/movements"
+                          ? "bg-white text-[#183C30] font-medium shadow-md"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                          } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                        title={isCollapsed ? "Auditoria Movimientos" : ""}
+                      >
+                        {isCollapsed ? "Audit." : "Auditoria Movimientos"}
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/dashboard/juego-inventarios"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/juego-inventarios"
+                        ? "bg-white text-[#183C30] font-medium shadow-md"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                      title={isCollapsed ? "Juego de Inventarios" : ""}
+                    >
+                      {isCollapsed ? "Juego" : "Juego de Inventarios"}
+                    </Link>
 
 
 
-                  <Link
-                    href="/dashboard/distribucion"
-                    className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/distribucion"
-                      ? "bg-white text-[#183C30] font-medium shadow-md"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
-                      } ${isCollapsed ? "text-center text-[10px]" : ""}`}
-                    title={isCollapsed ? "Distribución" : ""}
-                  >
-                    {isCollapsed ? "Distr." : "Distribución Inteligente"}
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                    <Link
+                      href="/dashboard/distribucion"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/distribucion"
+                        ? "bg-white text-[#183C30] font-medium shadow-md"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                      title={isCollapsed ? "Distribución" : ""}
+                    >
+                      {isCollapsed ? "Distr." : "Distribución Inteligente"}
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* Transport (New Top Level) */}
-        <Link
-          href="/dashboard/transporte"
-          className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard/transporte"
-            ? "bg-white/10 text-white font-medium"
-            : "text-gray-300 hover:bg-white/5 hover:text-white"
-            } ${isCollapsed ? "justify-center" : ""}`}
-          title={isCollapsed ? "Transporte" : ""}
-        >
-          <Truck className="h-5 w-5 shrink-0" />
-          {!isCollapsed && <span>Gestión Transporte</span>}
-        </Link>
+        {(role === "admin" || role === "viewer") && (
+          <Link
+            href="/dashboard/transporte"
+            className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard/transporte"
+              ? "bg-white/10 text-white font-medium"
+              : "text-gray-300 hover:bg-white/5 hover:text-white"
+              } ${isCollapsed ? "justify-center" : ""}`}
+            title={isCollapsed ? "Transporte" : ""}
+          >
+            <Truck className="h-5 w-5 shrink-0" />
+            {!isCollapsed && <span>Gestión Transporte</span>}
+          </Link>
+        )}
       </nav>
 
       {/* Footer / User */}

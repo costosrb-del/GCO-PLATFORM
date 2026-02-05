@@ -58,3 +58,6 @@ app.include_router(distribution_router.router)
 from app.routers import transport_router
 app.include_router(transport_router.router)
 
+from app.routers import clients_router
+app.include_router(clients_router.router)
+

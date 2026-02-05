@@ -13,3 +13,5 @@ pytest
 httpx
 
 python-multipart
+gspread
+google-auth

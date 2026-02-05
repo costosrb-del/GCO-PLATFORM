@@ -90,9 +90,11 @@ local_db = LocalDB()
 
 # --- FIRESTORE INIT ---
 # Check for serviceAccountKey.json in root
+# Check for serviceAccountKey.json in root
 CRED_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "serviceAccountKey.json")
 DB_MODE = "Local JSON"
 db = None
+CONNECTION_ERROR = None
 
 try:
     if os.path.exists(CRED_PATH):
@@ -103,15 +105,26 @@ try:
         DB_MODE = "Firebase (Connected)"
         print(f"🔥 FIREBASE CONNECTED: {CRED_PATH}")
     else:
-        # Check ENV
-        if not firebase_admin._apps:
-             try:
-                 firebase_admin.initialize_app()
-                 db = firestore.client()
-                 DB_MODE = "Firebase (Env Var)"
-             except:
-                 pass
+        # Try finding it in CWD if relative path fails
+        cwd_path = os.path.join(os.getcwd(), "serviceAccountKey.json")
+        if os.path.exists(cwd_path):
+             CRED_PATH = cwd_path
+             if not firebase_admin._apps:
+                cred = credentials.Certificate(CRED_PATH)
+                firebase_admin.initialize_app(cred)
+             db = firestore.client()
+             DB_MODE = "Firebase (Connected CWD)"
+        else:
+             # Check ENV
+             if not firebase_admin._apps:
+                  try:
+                      firebase_admin.initialize_app()
+                      db = firestore.client()
+                      DB_MODE = "Firebase (Env Var)"
+                  except:
+                      pass
 except Exception as e:
+    CONNECTION_ERROR = str(e)
     print(f"⚠️ Firebase Connection Failed: {e}")
     db = None
 
@@ -126,7 +139,9 @@ def get_db_status():
     return {
         "status": "connected" if db else "local_fallback", 
         "mode": DB_MODE, 
-        "path": CRED_PATH if os.path.exists(CRED_PATH) else "Not Found"
+        "path": CRED_PATH,
+        "exists": os.path.exists(CRED_PATH),
+        "error": CONNECTION_ERROR
     }
 
 def get_all_requests():

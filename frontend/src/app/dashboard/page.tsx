@@ -4,7 +4,18 @@
 import Link from "next/link";
 import { Package, Truck, FileBarChart, History } from "lucide-react";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function DashboardHome() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const role = localStorage.getItem("gco_role");
+    if (role === "asesora") {
+      router.push("/dashboard/asesoras");
+    }
+  }, [router]);
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       {/* Header */}

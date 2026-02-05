@@ -121,6 +121,7 @@ export default function UsersPage() {
                             >
                                 <option value="viewer">Visualizador (Restringido)</option>
                                 <option value="admin">Administrador (Total)</option>
+                                <option value="asesora">Asesora (Solo Registro Clientes)</option>
                             </select>
                         </div>
                         <button
@@ -154,8 +155,12 @@ export default function UsersPage() {
                                         <tr key={i} className="hover:bg-gray-50 transition-colors">
                                             <td className="p-3 font-medium text-gray-800">{u.email}</td>
                                             <td className="p-3">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                    {u.role === 'admin' ? 'Administrador' : 'Visualizador'}
+                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                                                        u.role === 'asesora' ? 'bg-green-100 text-green-700' :
+                                                            'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                    {u.role === 'admin' ? 'Administrador' :
+                                                        u.role === 'asesora' ? 'Asesora' : 'Visualizador'}
                                                 </span>
                                             </td>
                                             <td className="p-3 text-sm text-green-600 flex items-center justify-between">
