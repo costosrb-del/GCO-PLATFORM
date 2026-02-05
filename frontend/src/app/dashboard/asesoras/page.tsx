@@ -130,18 +130,15 @@ export default function AsesorasPage() {
 
     const handleMapDeptClick = (deptName: string) => {
         setFilters({ ...filters, departamento: deptName });
+        setPage(0);
         setViewMode("list");
-        // Scroll to table could be added here
     };
 
     const handleDepartmentChange = (dept: string) => {
         let suggestedCompany = DEPT_COMPANY_MAP[dept] || "";
-
-        // Regla especial: Antioquia y Chocó obligan a elegir entre dos opciones
         if (dept === "ANTIOQUIA" || dept === "CHOCÓ") {
-            suggestedCompany = ""; // Reset para obligar selección
+            suggestedCompany = "";
         }
-
         setFormData({
             ...formData,
             departamento: dept,
@@ -181,8 +178,6 @@ export default function AsesorasPage() {
                 params
             });
 
-            // Si hay filtros activos, verificamos si hay más resultados basados en si llegó el límite completo
-            // OJO: Si el backend filtra, devuelve 'limit' cantidad de items como máximo.
             if (res.data.length < limit) {
                 setHasMore(false);
             } else {
@@ -190,9 +185,6 @@ export default function AsesorasPage() {
             }
 
             setClients(res.data);
-            // Ya no es estrictamente necesario filtrar localmente si el backend lo hace, 
-            // pero lo mantenemos para resaltar coincidencia exacta si fuera necesario
-            // o simplemente actualizamos el estado filtrado directamente.
             setFilteredClients(res.data);
         } catch (err) {
             console.error("Error fetching clients", err);
@@ -201,12 +193,7 @@ export default function AsesorasPage() {
         }
     };
 
-    // Esta función ya no debería usarse para filtrado "duro", solo visual si acaso.
-    // La anulamos/simplificamos para que no interfiera o la dejamos que corra sobre 'clients'
-    // que ya viene filtrado.
     const applyFilters = (data?: any[]) => {
-        // Como el backend ya filtra, 'clients' TIENE la información correcta.
-        // Simplemente pasamos los datos a la vista.
         setFilteredClients(data || clients);
     };
 
@@ -242,7 +229,43 @@ export default function AsesorasPage() {
             }
         } catch (err: any) {
             console.error(err);
-            setError(err.response?.data?.detail || "Error al registrar el cliente.");
+            if (err.response?.status === 409) {
+                // NIT Duplicado
+                try {
+                    const detail = typeof err.response.data.detail === 'string'
+                        ? JSON.parse(err.response.data.detail)
+                        : err.response.data.detail;
+
+                    setError(`⚠️ ${detail.message}`);
+
+                    if (detail.client_data) {
+                        const existing = detail.client_data;
+                        // Populate form with existing data to show user
+                        // Normalizar keys mayusculas/minusculas
+                        const getV = (k: string) => {
+                            const found = Object.keys(existing).find(x => x.toLowerCase() === k.toLowerCase());
+                            return found ? String(existing[found]) : "";
+                        };
+
+                        setFormData({
+                            nit: getV("nit"),
+                            nombre: getV("nombre"),
+                            telefono: getV("telefono"),
+                            correo: getV("correo"),
+                            categoria: getV("categoria") || CATEGORIES[0],
+                            empresa: getV("empresa") || COMPANIES[0],
+                            ciudad: getV("ciudad"),
+                            departamento: getV("departamento")
+                        });
+                        // Opcional: Cambiar a modo vista de lista filtrada por ese NIT?
+                        // Mejor dejarlo en el form para que vea los datos.
+                    }
+                } catch (parseErr) {
+                    setError("El cliente ya existe (Error parseando detalles).");
+                }
+            } else {
+                setError(err.response?.data?.detail || "Error al registrar el cliente.");
+            }
         } finally {
             setLoading(false);
         }

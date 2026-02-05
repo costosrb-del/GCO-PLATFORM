@@ -150,8 +150,26 @@ async def register_client(client: ClientCreate, user: dict = Depends(verify_toke
         raise HTTPException(status_code=403, detail="No tiene permisos para registrar clientes")
         
     try:
+        # 1. Verificar duplicados (NIT)
+        from app.services.google_sheets_service import find_client_by_nit
+        existing_client = find_client_by_nit(client.nit)
+        
+        if existing_client:
+            # Serializar datos existentes para enviarlos al front
+            import json
+            raise HTTPException(
+                status_code=409, 
+                detail=json.dumps({
+                    "message": "El cliente con este NIT ya existe",
+                    "client_data": existing_client
+                })
+            )
+            
+        # 2. Guardar si no existe
         new_cuc = add_client_to_sheet(client.dict())
         return {"status": "success", "cuc": new_cuc, "message": "Cliente registrado correctamente"}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"Error registrando cliente: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -178,3 +178,25 @@ def get_clients_from_sheet(limit: int = 100, offset: int = 0):
         clients.append(client_obj)
         
     return clients
+
+def find_client_by_nit(target_nit: str):
+    """
+    Busca un cliente por NIT exacto en la hoja.
+    Retorna el diccionario del cliente si existe, o None.
+    """
+    try:
+        clients = get_clients_from_sheet(limit=0) # Traer todos
+        target_clean = "".join([c for c in str(target_nit) if c.isdigit()])
+        
+        for client in clients:
+            # Asumimos que la columna se llama 'nit' o similar (get_clients ya normaliza headers a lowercase)
+            c_nit = str(client.get("nit", ""))
+            c_nit_clean = "".join([c for c in c_nit if c.isdigit()])
+            
+            if c_nit_clean and c_nit_clean == target_clean:
+                return client
+                
+        return None
+    except Exception as e:
+        print(f"Error buscando cliente por NIT: {e}")
+        return None
