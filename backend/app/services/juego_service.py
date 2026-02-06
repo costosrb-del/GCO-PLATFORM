@@ -202,14 +202,14 @@ def calculate_inventory_game(token_ignored=None):
         wh_name = str(item.get("warehouse_name", "")).strip().lower()
         company_name = str(item.get("company_name", "Desconocida"))
         
-        # Deduplication Check
-        # If the backend is returning duplicate rows for the same entity + warehouse + SKU, 
-        # we mistakenly sum them up. We use a set to track unique combinations.
-        # We assume one entry per Company-Warehouse-SKU.
-        entry_key = (company_name, wh_name, raw_code)
-        if entry_key in processed_stock_entries:
-            continue
-        processed_stock_entries.add(entry_key)
+        # Deduplication Check REMOVED:
+        # We discovered that Siigo might return multiple products that normalize to the same code (e.g. 7701 and EVO-7701).
+        # Since they are distinct entries in the 'inv_data' list (coming from inventory_router), we MUST sum them up.
+        # Previously, we were skipping subsequent entries, which caused us to miss stock if a 0-quantity entry appeared before a positive-quantity entry.
+        # entry_key = (company_name, wh_name, raw_code)
+        # if entry_key in processed_stock_entries:
+        #    continue
+        # processed_stock_entries.add(entry_key)
         
         if raw_code and name != "Sin Nombre":
             if norm_code not in sku_name_map:
