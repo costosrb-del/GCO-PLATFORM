@@ -77,16 +77,34 @@ def get_target_sheet(ss):
                 return ws
         return ss.get_worksheet(0)
 
+import time
+
+# --- CACHE GLOBAL EN MEMORIA ---
+# Estructura: {'data': [lista_clientes], 'timestamp': 1234567890}
+_CLIENTS_CACHE = {
+    'data': [],
+    'timestamp': 0,
+    'ttl': 300  # 5 minutos de vida (tiempo que tarda en detectar cambios manuales de Sheets)
+}
+
+def invalidate_cache():
+    """Fuerza a recargar los datos de Sheets en la próxima consulta."""
+    _CLIENTS_CACHE['timestamp'] = 0
+    print("🔄 Caché invalidada: Se leerá de Google Sheets en la próxima petición.")
+
 def add_client_to_sheet(client_data: dict):
     """
     Agrega un nuevo cliente a la hoja de cálculo.
-    client_data debe contener: NIT, NOMBRE, TELEFONO, CORREO, CATEGORIA, EMPRESA, CIUDAD, DEPARTAMENTO
     """
     client = get_sheets_client()
     ss = client.open_by_key(SPREADSHEET_ID)
     sheet = get_target_sheet(ss)
     
-    # Mapeo de prefijos unificado con la base de datos
+    # ... (Lógica de prefijos y cálculo de CUC se mantiene igual, abreviada aquí por simplicidad) ...
+    # NOTA: Para no romper el código existente, repetimos la lógica de cálculo o asumimos que ya está.
+    # Dado que replace_file es por bloques, reinsertaré la lógica completa de add_client que ya tenías,
+    # pero añadiendo la gestión de caché al final.
+    
     PREFIX_MAP = {
         "ARMONIA C.": "AB",
         "HECHIZO DE BELLEZA": "HB",
@@ -99,10 +117,9 @@ def add_client_to_sheet(client_data: dict):
     selected_company = client_data.get("empresa", "ARMONIA C.")
     prefix = PREFIX_MAP.get(selected_company, "AB")
     
-    # Obtener todos los datos para encontrar el último CUC de ESA empresa
+    # IMPORTANTE: Usamos get_all_values directo de Sheet (no caché) para calcular CUC seguro
     all_values = sheet.get_all_values()
     
-    # Filtrar solo las filas que tengan el prefijo de la empresa seleccionada
     company_cucs = []
     if len(all_values) > 1:
         for row in all_values[1:]:
@@ -114,14 +131,12 @@ def add_client_to_sheet(client_data: dict):
                 except ValueError:
                     continue
     
-    # Calcular el siguiente número
-    next_num = 100 # Valor base si no hay registros
+    next_num = 100
     if company_cucs:
         next_num = max(company_cucs) + 1
     
     new_cuc = f"{prefix}{next_num:08d}"
         
-    # Preparar fila
     new_row = [
         new_cuc,
         client_data.get("nit", ""),
@@ -135,49 +150,71 @@ def add_client_to_sheet(client_data: dict):
     ]
     
     sheet.append_row(new_row)
+    
+    # --- ACTUALIZACIÓN INTELIGENTE DE CACHÉ ---
+    # En lugar de invalidar y obligar a leer todo (lento), agregamos el nuevo cliente a la memoria
+    if _CLIENTS_CACHE['data']:
+        # Convertimos la lista plana a diccionario (con headers conocidos o inferidos)
+        # Para ser seguros, mejor INVALIDAMOS para que la próxima lectura traiga todo limpio
+        # ya que manejar los headers en memoria es riesgoso si cambian.
+        invalidate_cache() 
+        # Si quisiéramos "append" en memoria, necesitaríamos conocer los headers exactos aquí.
+        # Invalidad es suficientemente rápido para el usuario que guarda (ya esperó el guardado).
+    
     return new_cuc
 
 def get_clients_from_sheet(limit: int = 100, offset: int = 0):
     """
-    Obtiene los clientes de la hoja de cálculo con paginación.
-    Si limit es 0, trae todos los registros.
+    Obtiene los clientes con CACHÉ.
     """
-    try:
-        client = get_sheets_client()
-        ss = client.open_by_key(SPREADSHEET_ID)
-        sheet = get_target_sheet(ss)
-        
-        # Traer todo para evitar errores de rango con A1 notation y mejorar consistencia de filtrado
-        all_values = sheet.get_all_values()
-    except (FileNotFoundError, Exception) as e:
-        print(f"Error conectando a Sheets (posiblemente entorno CI/Test sin credenciales): {e}")
-        return []
+    global _CLIENTS_CACHE
+    current_time = time.time()
     
+    # 1. Verificar Caché
+    if _CLIENTS_CACHE['data'] and (current_time - _CLIENTS_CACHE['timestamp'] < _CLIENTS_CACHE['ttl']):
+        # print("⚡ Usando Caché de Memoria") # Debug
+        all_clients = _CLIENTS_CACHE['data']
+    else:
+        # 2. Si expiró, leer de Google
+        try:
+            print("🌐 Leyendo de Google Sheets (Cache Miss)...")
+            client = get_sheets_client()
+            ss = client.open_by_key(SPREADSHEET_ID)
+            sheet = get_target_sheet(ss)
+            all_values = sheet.get_all_values()
+            
+            if not all_values or len(all_values) <= 1:
+                return []
+            
+            # Procesar headers
+            import unicodedata
+            def clean_header(h):
+                h = unicodedata.normalize('NFD', str(h))
+                h = "".join([c for c in h if not unicodedata.combining(c)])
+                return h.lower().strip()
+
+            headers = [clean_header(h) for h in all_values[0]]
+            parsed_clients = []
+            
+            for row in all_values[1:]:
+                padded_row = row + [""] * (len(headers) - len(row))
+                client_obj = dict(zip(headers, padded_row))
+                parsed_clients.append(client_obj)
+            
+            # Guardar en Caché
+            _CLIENTS_CACHE['data'] = parsed_clients
+            _CLIENTS_CACHE['timestamp'] = current_time
+            all_clients = parsed_clients
+            
+        except (FileNotFoundError, Exception) as e:
+            print(f"Error conectando a Sheets: {e}")
+            return []
+
+    # 3. Paginación sobre Memoria (Ultra rápido)
     if limit > 0:
-        # Headers + Rango de datos (saltando headers en slicing)
-        headers = all_values[0]
-        data = all_values[1 + offset : 1 + offset + limit]
-        all_values = [headers] + data
-
-    if not all_values or len(all_values) <= 1:
-        return []
+        return all_clients[offset : offset + limit]
         
-    # Limpieza robusta de encabezados (remover tildes y caracteres especiales)
-    import unicodedata
-    def clean_header(h):
-        h = unicodedata.normalize('NFD', str(h))
-        h = "".join([c for c in h if not unicodedata.combining(c)])
-        return h.lower().strip()
-
-    headers = [clean_header(h) for h in all_values[0]]
-    clients = []
-    
-    for row in all_values[1:]:
-        padded_row = row + [""] * (len(headers) - len(row))
-        client_obj = dict(zip(headers, padded_row))
-        clients.append(client_obj)
-        
-    return clients
+    return all_clients
 
 def find_client_by_nit(target_nit: str):
     """
