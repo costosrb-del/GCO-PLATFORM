@@ -108,15 +108,21 @@ export default function DistributionPage() {
             const decoder = new TextDecoder();
             if (!reader) throw new Error("No reader");
 
+            let buffer = "";
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value);
-                const lines = chunk.split("\n\n");
-                for (const line of lines) {
-                    if (line.startsWith("data: ")) {
-                        const jsonStr = line.replace("data: ", "");
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+
+                const parts = buffer.split("\n\n");
+                buffer = parts.pop() || "";
+
+                for (const part of parts) {
+                    if (part.startsWith("data: ")) {
+                        const jsonStr = part.replace("data: ", "");
                         try {
                             const event = JSON.parse(jsonStr);
 
