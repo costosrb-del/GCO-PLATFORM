@@ -22,11 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useMovements, Movement } from "@/hooks/useMovements";
+import { useMovements } from "@/hooks/useMovements";
 
 export default function MovementsPage() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 30)));
@@ -34,15 +34,17 @@ export default function MovementsPage() {
   const [selectedCompany, setSelectedCompany] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [auditMode, setAuditMode] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   // Convert Dates to YYYY-MM-DD
   const sStr = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const eStr = endDate ? format(endDate, "yyyy-MM-dd") : "";
 
-  const { data, isLoading, isError, refetch } = useMovements(
+  const { data, isLoading, isError } = useMovements(
     sStr,
     eStr,
-    selectedCompany === "all" ? [] : [selectedCompany]
+    selectedCompany === "all" ? [] : [selectedCompany],
+    refreshCount
   );
 
   const movements = data?.data || [];
@@ -117,9 +119,9 @@ export default function MovementsPage() {
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Auditoría de Movimientos</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Consulta de Movimientos</h1>
           <p className="text-gray-500">
-            Consulte y audite todos los movimientos (FC, FV, etc.) con detalle extendido.
+            Obtenga información consolidada de todas las empresas y documentos (FV, FC) con un solo clic.
           </p>
         </div>
         <div className="flex gap-2">
@@ -138,7 +140,7 @@ export default function MovementsPage() {
       </div>
 
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 border-b">
           <div className="flex flex-col md:flex-row gap-4 justify-between">
             <div className="flex flex-wrap gap-4 items-center">
               {/* Date Filters */}
@@ -162,6 +164,21 @@ export default function MovementsPage() {
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(d)} initialFocus /></PopoverContent>
                 </Popover>
+
+                <Button
+                  onClick={() => setRefreshCount(prev => prev + 1)}
+                  disabled={isLoading}
+                  className="bg-[#183C30] hover:bg-[#122e24] text-white min-w-[120px]"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Consolidando...</span>
+                    </div>
+                  ) : (
+                    "Consultar"
+                  )}
+                </Button>
               </div>
 
               {/* Company Filter */}
@@ -183,8 +200,8 @@ export default function MovementsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -195,11 +212,11 @@ export default function MovementsPage() {
                   <TableHead>Tercero</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead className="min-w-[200px]">Producto</TableHead>
-                  <TableHead>Cant</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead className="text-right">Cant</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   {auditMode && (
                     <>
-                      <TableHead className="bg-orange-50 text-orange-900">C. Costos</TableHead>
+                      <TableHead className="bg-orange-50 text-orange-900 border-l">C. Costos</TableHead>
                       <TableHead className="bg-orange-50 text-orange-900">Vendedor</TableHead>
                       <TableHead className="bg-orange-50 text-orange-900">Pago</TableHead>
                       <TableHead className="bg-orange-50 text-orange-900">Impuestos</TableHead>
@@ -210,32 +227,32 @@ export default function MovementsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={12} className="h-24 text-center">Cargando movimientos...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={auditMode ? 14 : 9} className="h-24 text-center">Cargando y consolidando movimientos desde las APIs...</TableCell></TableRow>
                 ) : filteredData.length === 0 ? (
-                  <TableRow><TableCell colSpan={12} className="h-24 text-center">No se encontraron movimientos.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={auditMode ? 14 : 9} className="h-24 text-center">No se encontraron movimientos. Use "Consultar" para buscar en el rango seleccionado.</TableCell></TableRow>
                 ) : (
                   filteredData.slice(0, 100).map((row, i) => (
-                    <TableRow key={i} className="hover:bg-muted/50">
-                      <TableCell className="whitespace-nowrap">{row.date}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{row.company}</TableCell>
-                      <TableCell><span className={cn("px-2 py-1 rounded text-xs font-bold", row.doc_type === "FV" ? "bg-green-100 text-green-800" : row.doc_type === "FC" ? "bg-blue-100 text-blue-800" : "bg-gray-100")}>{row.doc_type}</span></TableCell>
-                      <TableCell className="font-mono text-xs">{row.doc_number}</TableCell>
-                      <TableCell className="text-xs max-w-[150px] truncate" title={row.client}>{row.client}</TableCell>
-                      <TableCell className="font-mono text-xs">{row.code}</TableCell>
-                      <TableCell className="text-xs max-w-[250px] truncate" title={row.name}>{row.name}</TableCell>
-                      <TableCell className={cn("font-bold text-right", row.type === "ENTRADA" ? "text-green-600" : "text-red-600")}>
+                    <TableRow key={i} className="hover:bg-muted/50 border-b">
+                      <TableCell className="whitespace-nowrap text-xs">{row.date}</TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground uppercase">{row.company}</TableCell>
+                      <TableCell><span className={cn("px-2 py-0.5 rounded text-[10px] font-bold", row.doc_type === "FV" ? "bg-green-100 text-green-800" : row.doc_type === "FC" ? "bg-blue-100 text-blue-800" : "bg-gray-100")}>{row.doc_type}</span></TableCell>
+                      <TableCell className="font-mono text-[10px]">{row.doc_number}</TableCell>
+                      <TableCell className="text-[10px] max-w-[150px] truncate" title={row.client}>{row.client}</TableCell>
+                      <TableCell className="font-mono text-[10px]">{row.code}</TableCell>
+                      <TableCell className="text-[10px] max-w-[250px] truncate" title={row.name}>{row.name}</TableCell>
+                      <TableCell className={cn("font-bold text-right text-xs", row.type === "ENTRADA" ? "text-green-600" : "text-red-600")}>
                         {row.type === "ENTRADA" ? "+" : "-"}{row.quantity}
                       </TableCell>
-                      <TableCell className="text-right text-xs">
+                      <TableCell className="text-right text-xs font-medium">
                         ${row.total.toLocaleString()}
                       </TableCell>
                       {auditMode && (
                         <>
-                          <TableCell className="text-xs bg-orange-50/50">{row.cost_center}</TableCell>
-                          <TableCell className="text-xs bg-orange-50/50">{row.seller}</TableCell>
-                          <TableCell className="text-xs bg-orange-50/50 max-w-[100px] truncate" title={row.payment_forms}>{row.payment_forms}</TableCell>
-                          <TableCell className="text-xs bg-orange-50/50 max-w-[100px] truncate" title={row.taxes}>{row.taxes}</TableCell>
-                          <TableCell className="text-xs bg-orange-50/50 max-w-[100px] truncate" title={row.created_by}>{row.created_by?.split('@')[0]}</TableCell>
+                          <TableCell className="text-[10px] bg-orange-50/50 border-l">{row.cost_center}</TableCell>
+                          <TableCell className="text-[10px] bg-orange-50/50">{row.seller}</TableCell>
+                          <TableCell className="text-[10px] bg-orange-50/50 max-w-[100px] truncate" title={row.payment_forms}>{row.payment_forms}</TableCell>
+                          <TableCell className="text-[10px] bg-orange-50/50 max-w-[100px] truncate" title={row.taxes}>{row.taxes}</TableCell>
+                          <TableCell className="text-[10px] bg-orange-50/50 max-w-[100px] truncate" title={row.created_by}>{row.created_by?.split('@')[0]}</TableCell>
                         </>
                       )}
                     </TableRow>
@@ -244,8 +261,9 @@ export default function MovementsPage() {
               </TableBody>
             </Table>
           </div>
-          <div className="pt-4 text-xs text-muted-foreground text-center">
-            Mostrando {Math.min(100, filteredData.length)} de {filteredData.length} registros. (Use Exportar para ver todo)
+          <div className="p-4 text-xs text-muted-foreground text-center border-t">
+            {filteredData.length > 0 && `Mostrando ${Math.min(100, filteredData.length)} de ${filteredData.length} registros.`}
+            {filteredData.length > 100 && ' Use "Exportar CSV" para ver el detalle completo.'}
           </div>
         </CardContent>
       </Card>
