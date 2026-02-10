@@ -1,69 +1,61 @@
 import sys
 import os
-import re
-from dotenv import load_dotenv
+import json
 
-# Load env variables
-load_dotenv()
+# Add backend to path so we can import app modules
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-# Add current directory to path so 'app' module can be found
-sys.path.append(os.getcwd())
-
-from app.services.inventory import get_all_products
-from app.services.auth import get_auth_token
 from app.services.config import get_config
-from app.services.utils import normalize_sku
+from app.services.auth import get_auth_token
+from app.services.inventory import get_all_products
 
-def main():
-    print("Debug: Checking for 770 codes...")
-    
+def debug_770():
     companies = get_config()
-    target_company = None
-    # Just find one company to test, preferably one that likely has these
-    # Assuming 'GCO' or similar might have it, or iterate all
+    target_skus = ["770", "7701", "7702", "7703"]
     
-    for c in companies:
-        if c.get("valid", False):
-            print(f"Checking company: {c['name']}")
-            try:
-                token = get_auth_token(c["username"], c["access_key"])
-                if not token:
-                    print("  Failed to get token")
-                    continue
-                
-                # We can filter parameters in get_products, but get_all_products usually fetches ALL.
-                # However, for debugging strict "770" issues, we want to see RAW codes.
-                
-                # Fetch only page 1 first to be quick
-                from app.services.inventory import get_products
-                data = get_products(token, page=1, page_size=100)
-                
-                if not data:
-                    print("  No data returned")
-                    continue
-                    
-                total = data.get("pagination", {}).get("total_results", 0)
-                print(f"  Total products: {total}")
-                
-                # Now fetch ALL if specific code not found in first page?
-                # Actually, let's just search the first 100 first.
-                
-                found_770 = False
-                
-                for p in data.get("results", []):
-                    code = p.get("code", "")
-                    name = p.get("name", "")
-                    
-                    if "770" in code or "770" in name:
-                        norm = normalize_sku(code)
-                        print(f"  MATCH FOUND: Code='{code}' Name='{name}' -> Norm='{norm}'")
-                        found_770 = True
-                        
-                if not found_770:
-                    print("  No '770' matches in first 100 products. Checking further pages is expensive but can be done if needed.")
-                    
-            except Exception as e:
-                print(f"  Error: {e}")
+    print(f"Searching for SKUs: {target_skus} or 'KERATINA' in name in {len(companies)} companies...")
+    
+    found_count = 0
+    
+    for company in companies:
+        if not company.get("valid", True):
+            print(f"Skipping invalid company: {company['name']}")
+            continue
+            
+        print(f"\nScanning {company['name']}...")
+        token = get_auth_token(company['username'], company['access_key'])
+        
+        if not token:
+            print("  Failed to authenticate.")
+            continue
+            
+        products = get_all_products(token)
+        if not products:
+            print("  No products returned.")
+            continue
+            
+        print(f"  Fetched {len(products)} products total.")
+        
+        for p in products:
+            code = str(p.get("code", "")).strip()
+            name = str(p.get("name", "")).strip()
+            
+            # Check if any target is in code
+            is_match_code = any(t in code for t in target_skus)
+            is_match_name = "KERATINA" in name.upper()
+            
+            if is_match_code or is_match_name:
+                found_count += 1
+                print(f"  MATCH FOUND: Code='{code}', Name='{name}'")
+                if "warehouses" in p:
+                    for wh in p["warehouses"]:
+                        w_name = wh.get("name", "Unknown")
+                        w_qty = wh.get("quantity", 0)
+                        print(f"    - Warehouse: '{w_name}', Qty: {w_qty}")
+                else:
+                    print("    - No specific warehouse data.")
+
+    print(f"\nDone. Found {found_count} matching records.")
 
 if __name__ == "__main__":
-    main()
+    debug_770()

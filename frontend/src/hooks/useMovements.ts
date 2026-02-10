@@ -23,6 +23,17 @@ export interface Movement {
     type: string;
     observations: string;
     company?: string;
+
+    // Audit Fields (Optional)
+    cost_center?: string;
+    seller?: string;
+    payment_forms?: string;
+    taxes?: string;
+    currency?: string;
+    exchange_rate?: number;
+    created_at?: string;
+    created_by?: string;
+    doc_total_value?: number;
 }
 
 interface MovementsResponse {

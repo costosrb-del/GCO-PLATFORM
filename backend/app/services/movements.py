@@ -223,8 +223,66 @@ def extract_movements_from_doc(doc, doc_type):
     if not client_name:
         client_name = client_nit if client_nit != "N/A" else "Sin Tercero"
     
+    # ... (existing client extraction logic)
+    
     # Extract Observation
     observation = doc.get("observations", "")
+    
+    # --- AUDIT FIELDS EXTRACTION (Requested for FC/FV) ---
+    
+    # 1. Cost Center
+    cost_center = doc.get("cost_center")
+    cc_name = "N/A"
+    if isinstance(cost_center, dict):
+        cc_name = cost_center.get("name") or str(cost_center.get("code", ""))
+    elif cost_center:
+        cc_name = str(cost_center)
+        
+    # 2. Seller (Vendedor)
+    seller = doc.get("seller")
+    seller_name = "N/A"
+    if isinstance(seller, dict):
+        # Try full name composition
+        parts = [seller.get("first_name", ""), seller.get("last_name", "")]
+        seller_name = " ".join([p for p in parts if p]).strip()
+        if not seller_name:
+            seller_name = seller.get("username") or seller.get("id") or "N/A"
+    elif seller:
+        seller_name = str(seller)
+        
+    # 3. Payment Forms (Formas de Pago)
+    payments = doc.get("payments", [])
+    payment_list = []
+    if isinstance(payments, list):
+        for p in payments:
+            # Structure varies: might be direct 'name' or nested in 'payment_method'
+            p_name = p.get("name")
+            if not p_name:
+                pm = p.get("payment_method")
+                if isinstance(pm, dict):
+                    p_name = pm.get("name")
+            if p_name:
+                payment_list.append(p_name)
+    payment_str = ", ".join(payment_list) if payment_list else "Credito/Otro"
+    
+    # 4. Metadata (Created By/At)
+    metadata = doc.get("metadata", {})
+    created_at = metadata.get("created")
+    created_by = metadata.get("created_by") if isinstance(metadata.get("created_by"), (str, int)) else "System"
+    if isinstance(metadata.get("created_by"), dict):
+        created_by = metadata.get("created_by", {}).get("email", "System")
+
+    # 5. Currency
+    currency = doc.get("currency")
+    currency_code = "COP"
+    exchange_rate = 1.0
+    if isinstance(currency, dict):
+        currency_code = currency.get("code", "COP")
+        exchange_rate = currency.get("exchange_rate", 1.0)
+        
+    # 6. Global Values (Document Level)
+    # These will be repeated per line, which is acceptable for flat audit tables
+    doc_total = doc.get("total", 0)
     
     items = doc.get("items", [])
     # print(f"DEBUG: Processing document {doc_number} with {len(items)} items")
@@ -233,10 +291,10 @@ def extract_movements_from_doc(doc, doc_type):
         # In Siigo API, items might have code directly or nested in product
         code = item.get("code")
         if not code:
-             # Try nested product object
-             product = item.get("product")
-             if isinstance(product, dict):
-                 code = product.get("code")
+            # Try nested product object
+            product = item.get("product")
+            if isinstance(product, dict):
+                code = product.get("code")
         
         # STRICT FILTER: Only items with a valid code are considered "Products", UNLESS it is an Ensamble
         # Financial lines (services without SKU) usually lack a code in Siigo API responses.
@@ -257,10 +315,25 @@ def extract_movements_from_doc(doc, doc_type):
         price = item.get("price", 0)
         description = item.get("description", "")
         
+        # Discounts & Taxes (Line Level)
+        discount = item.get("discount", 0)
+        taxes = item.get("taxes", [])
+        tax_str = "0%"
+        if taxes and isinstance(taxes, list):
+            # Summarize taxes ex: "IVA 19%"
+            t_names = []
+            for t in taxes:
+                t_name = t.get("name") or t.get("type", "Tax")
+                t_percent = t.get("percentage", 0)
+                t_names.append(f"{t_name} {t_percent}%")
+            tax_str = ", ".join(t_names)
+        
         # Reverted Strict Filter: Allow items without warehouse (Financial/Services).
         # User requested to fetch ALL and filter in UI.
         warehouse = item.get("warehouse", {})
-        warehouse_name = warehouse.get("name", "Sin Bodega")
+        warehouse_name = "Sin Bodega"
+        if isinstance(warehouse, dict):
+             warehouse_name = warehouse.get("name", "Sin Bodega")
         
         movements.append({
             "date": doc_date,
@@ -275,12 +348,19 @@ def extract_movements_from_doc(doc, doc_type):
             "price": price,
             "total": qty * price,
             "type": mov_type,
-            "observations": observation
+            "observations": observation,
+            # Audit Fields
+            "cost_center": cc_name,
+            "seller": seller_name,
+            "payment_forms": payment_str,
+            "taxes": tax_str,
+            "currency": currency_code,
+            "exchange_rate": exchange_rate,
+            "created_at": created_at,
+            "created_by": created_by,
+            "doc_total_value": doc_total # Total of the whole document
         })
         
-    # print(f"DEBUG: Extracted {len(movements)} movements from document {doc_number}")
-    # if len(movements) > 0:
-    #     logging.info(f"Extracted {len(movements)} movements from {friendly_type} {doc_number}")
     return movements
 
 def get_consolidated_movements(token, start_date, end_date, progress_callback=None, selected_types=None):
