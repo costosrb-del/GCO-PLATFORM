@@ -63,7 +63,7 @@ export default function MovementsPage() {
   });
 
   // Unique Companies
-  const companies = Array.from(new Set(movements.map(m => m.company).filter(Boolean)));
+  const companies = Array.from(new Set(movements.map(m => m.company).filter(Boolean))) as string[];
 
   const handleExport = () => {
     if (!filteredData.length) return;
