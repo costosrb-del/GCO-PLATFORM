@@ -1,0 +1,2955 @@
+[
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "6969c536-013a-45ac-9d06-a8c8ed62f407",
+    "code": "EX-SERVICIOS",
+    "name": "Operaci\u00f3n log\u00edstica Keratina 120 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": -1.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "5576c6b9-6141-448a-a47c-b9b565fdd610",
+    "code": "EVO-7702-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 500.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "b4c346d9-29fb-4bfe-9037-3da4a9c19ec5",
+    "code": "EVO-7703-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "0ab6e379-c71c-416e-8017-be1c1c085bf0",
+    "code": "EVO-7701-exento",
+    "name": "KIT EVOLUCION DE LA KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "5e835281-6c6e-4a32-83cc-25e9e516cffd",
+    "code": "7703EX-EVO",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML PA 330520",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 124.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "c022df02-6706-4104-ad85-f3a05306f919",
+    "code": "7702EX-EVO",
+    "name": "KIT EVOLUCION DE LA KERATINA DE 250ML PA 330520",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 1024.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "b430646d-20c0-40d8-b248-227a5181f1c8",
+    "code": "7701EX-EVO",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML PA 330520",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "0d9d2815-efa2-4611-92cc-01a8f09aad24",
+    "code": "EVO-7701",
+    "name": "KIT EVOLUCION DE LA KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 1562.0
+      },
+      {
+        "id": 6,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 0.0
+      },
+      {
+        "id": 16,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 3.0
+      },
+      {
+        "id": 31,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 25.0
+      },
+      {
+        "id": 32,
+        "name": "BODEGA 2",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "4e4afa29-38be-4680-b16c-18f2e8534224",
+    "code": "EVO-7702",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 796.0
+      },
+      {
+        "id": 16,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 5.0
+      },
+      {
+        "id": 31,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 100.0
+      },
+      {
+        "id": 32,
+        "name": "BODEGA 2",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "3357788b-88df-41d0-8150-1f73f96779a1",
+    "code": "EVO-7703",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 5449.0
+      },
+      {
+        "id": 16,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 0.0
+      },
+      {
+        "id": 31,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 262.0
+      },
+      {
+        "id": 32,
+        "name": "BODEGA 2",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "8c9d958e-e64e-468f-b36d-4ea4b907f8de",
+    "code": "INS066",
+    "name": "CAJA KIT KERATINA DE 120ML X 100 UND",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 190.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "639ece67-3d55-4162-9f1b-fe18addc0cc9",
+    "code": "INS065",
+    "name": "CAJA KIT KERATINA 120ML X 150 UND",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 310.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "767543f4-8fb7-4755-a4f1-67de214fa350",
+    "code": "INS064",
+    "name": "CAJA KIT KERATINA 250 ML X 100 UND",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 370.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "c5c0b0b9-adae-4e3b-a2b1-b6771bb368d5",
+    "code": "INS062",
+    "name": "CAJA KIT KERATINA DE LITRO X 25 UND",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 340.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "7db27da3-f3fc-4184-aac3-1fc60e1e9a2d",
+    "code": "INS034",
+    "name": "ETQ KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -7823.4
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "cd7c92b9-c8c0-4afa-80d0-504ffbab9f55",
+    "code": "INS032",
+    "name": "ETQ KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -26737.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "b788d9ff-94d5-408e-bca2-f3e5aed2dbef",
+    "code": "INS031",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 20197.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "4a30d861-7bdc-4fbf-bfcc-e66fbd59a36e",
+    "code": "INS012",
+    "name": "175 X 310MM SC4 KERATINA LITRO",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "b4ea16bf-556d-4f4b-b333-08a7c035387f",
+    "code": "Insumo-7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -1500.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "054d5f87-4bff-488f-b3ac-a4f1eb50e670",
+    "code": "Insumo-7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "83a3c35c-81a6-4e9e-a770-5ba99b36f7ce",
+    "code": "Insumo-7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "48db8d47-3c3c-4d06-b60d-dc4f4be04820",
+    "code": "7703+BIOSERUM-excluido",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "9117c85f-6c70-46a1-8a06-706ac413a45f",
+    "code": "7703-excluido",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "99f94737-f8e6-4d2f-868c-d1f0699c65c3",
+    "code": "7703+BIOSERUM-exento",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "3e6e7367-297f-4771-b897-7cad007402b5",
+    "code": "7703-exento",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "90ca8e32-8d46-43e0-9a36-fa14c961facb",
+    "code": "7702+BIOSERUM-excluido",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "e93849cc-cf87-4a43-95d0-98e12141346c",
+    "code": "7702+BIOSERUM-exento",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "32ba5aa3-434d-47dc-8046-cf079e2bfd5a",
+    "code": "7702-excluido",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "cbae1963-8dec-4b59-b37c-25617fc76f6c",
+    "code": "7702-exento",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "6d82003b-bd4e-44fd-bf25-b2d40c6e879c",
+    "code": "7701+BIOSERUM-excluido",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "47323bd7-f103-4a22-809f-add257c88e01",
+    "code": "7701+BIOSERUM-exento",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "31f00760-3a99-44cf-861a-2f24cb402ab4",
+    "code": "7701-excluido",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "2a25bcd6-87c4-4977-a5c5-0c9358b23583",
+    "code": "7701-exento",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "89278c8e-b7a3-447e-99db-fe5b91cd3aea",
+    "code": "7701EX+BIOSERUM",
+    "name": "KIT KERATINA DE 1000ML PA 330520",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "4a5e8cfc-b4b3-4269-9acd-c4fc73dcfc60",
+    "code": "7702EX+BIOSERUM",
+    "name": "KIT KERATINA DE 250ML PA 330520",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      },
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "27ae32a8-96e1-49be-8ecb-5f0022e025fd",
+    "code": "7703EX+BIOSERUM",
+    "name": "KIT KERATINA DE 120ML PA 330520",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "4cb10628-76cc-4ee6-934b-bdff986c668c",
+    "code": "7701+BIOSERUM",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 5,
+        "name": "BODEGA AVER\u00cdAS ",
+        "quantity": 0.0
+      },
+      {
+        "id": 6,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "6400b546-393d-4a63-983c-12dd49fdd283",
+    "code": "7702+BIOSERUM",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 6,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "d2b7bd63-f534-4ed6-a3ff-7730d282c544",
+    "code": "7703+BIOSERUM",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 6,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 0.0
+      },
+      {
+        "id": 16,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 67.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "c7cd34ea-fd58-4d3a-9310-43b266f3f612",
+    "code": "7701EX",
+    "name": "KIT KERATINA DE 1000ML PA 330520",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "8c16b8e2-7529-4799-aff0-1fa9569712ac",
+    "code": "7702EX",
+    "name": "KIT KERATINA DE 250ML PA 330520",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 500.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "944ce789-94bd-4c1d-b4db-1394e5b1792e",
+    "code": "7703EX",
+    "name": "KIT KERATINA DE 120ML PA 330520",
+    "warehouses": [
+      {
+        "id": 3,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "56f10921-4e36-4b07-8272-b54dd5f00bce",
+    "code": "7701",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "c25deb75-a621-4b77-9a8d-32af1f5e5ef2",
+    "code": "7702",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ARMONIA COSMETICA S.A.S.",
+    "id": "f883fd14-17b5-4098-8cc3-0a8dca11ef0d",
+    "code": "7703",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 10,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "88aa61d1-53b0-4cea-b27a-2992ff9fcc96",
+    "code": "EVO-7702-EXCLUIDO.",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "5d71273e-d7a7-43c9-88af-8b59c68417eb",
+    "code": "EVO-7703-EXCLUIDO.",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "914d3e85-4ae3-4f36-bd58-b11a2f3d6cda",
+    "code": "EVO-7701-EXCLUIDO.",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "ecb264f5-8cc1-4ad2-856a-1c6626c36966",
+    "code": "EVO-7703-EXCLUIDO",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "695aaecd-6826-40a7-8e1b-6b739acf8dc4",
+    "code": "EVO-7702-EXCLUIDO",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "958b7edc-cf7e-4849-8989-294f0565b828",
+    "code": "EVO-7701-EXCLUIDO",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "e8cd2954-c1aa-4177-a0bc-644a878d47ef",
+    "code": "EVO-7701",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 1088.0
+      },
+      {
+        "id": 21,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 9.0
+      },
+      {
+        "id": 22,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 36.0
+      },
+      {
+        "id": 23,
+        "name": "BODEGA AVERIAS",
+        "quantity": 29.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "f6b2dba6-701d-41cf-ac2e-37378ebeae59",
+    "code": "EVO-7702",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 1100.0
+      },
+      {
+        "id": 21,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 1.0
+      },
+      {
+        "id": 22,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 224.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "62969a67-981c-45ca-8b02-2ced5ce70614",
+    "code": "EVO-7703",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 2770.0
+      },
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 21,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 0.0
+      },
+      {
+        "id": 22,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": -19.0
+      },
+      {
+        "id": 23,
+        "name": "BODEGA AVERIAS",
+        "quantity": 2.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "4302d357-f879-4ad5-a11c-3315ac2f4a6c",
+    "code": "INS065",
+    "name": "CAJA KIT KERATINA 120ML X 150UND",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 4070.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "6fa5aa62-56c4-43b1-a436-a9d96708d0a5",
+    "code": "INS064",
+    "name": "CAJA KIT KERATINA 120ML X 100UND",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 2225.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "946e3310-918e-4b93-a842-dbdd416e2c8c",
+    "code": "INS063",
+    "name": "CAJA KIT KERATINA 250 ML X 100 UND",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 4418.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "6b1740fc-7dac-477a-be77-1b69a7c167fb",
+    "code": "INS057",
+    "name": "Termoencogible Kit Keratina de 1.000ml",
+    "warehouses": [
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 58475.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "d6b3e0fd-e17e-43b4-9338-1a9ad6f2ac16",
+    "code": "INS034",
+    "name": "ETQ KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 15736.9
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "a98f48f8-65f6-4e58-8eaf-785b16871563",
+    "code": "INS032",
+    "name": "ETQ KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -1003.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "663b617a-e076-42f8-a19d-e30b6cc56af7",
+    "code": "INS031",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": [
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 75584.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "ce3ed2a1-ac16-4fed-a512-9df5433f75d9",
+    "code": "INS012",
+    "name": "175 X 310MM SC4 KERATINA LITRO",
+    "warehouses": []
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "8d64e125-70a4-4378-ac57-6979fa226059",
+    "code": "Insumo-7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -3100.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "ef38fe28-a636-49dd-b334-7e2725b3c2b4",
+    "code": "Insumo-7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -1100.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "00f67536-7b64-485e-ba29-690bc96e4b8f",
+    "code": "Insumo-7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -1100.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "123fe96d-9b5f-4ff6-b088-4e0b59112060",
+    "code": "7703+BIOSERUM-exento",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "af3da7c7-e187-4dc2-b32a-81debc32412e",
+    "code": "7703+BIOSERUM-excluido",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "09a21de6-b9c7-4db1-9834-d5cd1b843f09",
+    "code": "7703+BIOSERUM",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "b7ef899d-9943-41ef-9d5f-237142988bfb",
+    "code": "7702+BIOSERUM-exento",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "eb35523b-3a03-460c-be47-f8f00a23bbc5",
+    "code": "7702+BIOSERUM-excluido",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "f24a7233-a679-4f50-9f09-5137f7a51183",
+    "code": "7702+BIOSERUM",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "8d1b1227-69b5-4737-9a21-d508d7b49a39",
+    "code": "7701+BIOSERUM-exento",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "3683b0d5-73ee-41c4-bc5c-5d0a819737db",
+    "code": "7701+BIOSERUM-excluido",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "HECHIZO DE BELLEZA S.A.S.",
+    "id": "c68febbb-bf35-49e2-bef3-6e5caf0a4b2e",
+    "code": "7701+BIOSERUM",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 16,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 19,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 22,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "56768571-8993-48d0-8081-5d8b02eccbe4",
+    "code": "EVO-7702-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "b1656c86-1b09-41bf-af80-b850e2d60035",
+    "code": "EVO-7703-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "55cbd73f-43b6-42ff-a244-e5a6358d70c0",
+    "code": "EVO-7701-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "3866899e-a9aa-4f5f-99f6-a56f3cd34197",
+    "code": "EVO-7701",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 161.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 0.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 2.0
+      },
+      {
+        "id": 134,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 0.0
+      },
+      {
+        "id": 152,
+        "name": "BODEGA DE CUSTODIA",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "a75fd09f-103d-4d3d-bcd4-d61179d71b31",
+    "code": "EVO-7702",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 83.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 0.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 59.0
+      },
+      {
+        "id": 139,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 1.0
+      },
+      {
+        "id": 152,
+        "name": "BODEGA DE CUSTODIA",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "42abd769-70f5-4d8d-be4d-aa587e956935",
+    "code": "EVO-7703",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 301.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 0.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 2.0
+      },
+      {
+        "id": 152,
+        "name": "BODEGA DE CUSTODIA",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "0ec96d49-6ecd-416e-aa65-efd1dbb53c2c",
+    "code": "INS062",
+    "name": "CAJA KERATINA LITRO X 25 UND",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 990.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "5e5c56cb-88a2-4c6c-8124-3fca4b9b2ad9",
+    "code": "INS061",
+    "name": "CAJA KERATINA DE 250ML X 100 UND",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -20157.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "a4dfb63d-722a-4241-94b0-1a92f8a213c4",
+    "code": "INS060",
+    "name": "CAJA KERATINA DE 120 ML X 150",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 440.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "c8d6c619-4b6b-4a9a-b06e-a52a3163bae9",
+    "code": "INS059",
+    "name": "CAJA KERATINA DE 120 ML X 100",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 400.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "c64f5893-4fdd-4a38-9047-069bdbf1796d",
+    "code": "INS034",
+    "name": "ETQ KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -6500.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "1ef1d2b2-5b52-4c40-b86d-b333e38dc32f",
+    "code": "INS032",
+    "name": "ETQ KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 17850.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "ec0fb17e-99b8-40e2-a3a6-b6705e125746",
+    "code": "INS031",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 50008.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "214b47ec-c786-4084-83f6-b07ebce0dba1",
+    "code": "INS012",
+    "name": "175 X 310MM SC4 KERATINA LITRO",
+    "warehouses": []
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "cd487cc1-76f7-4c37-8001-aa3d06aa4931",
+    "code": "Insumo-7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -200.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "5e175ca2-6cfd-41ba-9e33-61a21a5eafbe",
+    "code": "Insumo-7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "3dbac7d9-71ff-41c1-abc3-ca6333f93b4a",
+    "code": "Insumo-7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 138,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -100.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "3bd30703-9432-4410-8c67-0d27f55a4a2e",
+    "code": "7703+BIOSERUM-excluido",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "3ddb0f19-53ec-4b4c-babc-baf5800bc16e",
+    "code": "7703-excluido",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "0f2da210-c200-4f60-a8e8-4a937f8188aa",
+    "code": "7703+BIOSERUM-exento",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "fc471227-1be9-4565-9d0e-a94a1ceca588",
+    "code": "7703-exento",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "730fe26e-28cc-4679-b1da-0f9e391c6b25",
+    "code": "7702+BIOSERUM-excluido",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "770aa6ec-5a52-4189-8370-07ec61b72c1b",
+    "code": "7702+BIOSERUM-exento",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "c5790a88-8f17-4574-b328-16485cf3aad4",
+    "code": "7702-excluido",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "c7e59d04-39d7-4b8d-b7f8-b2fc27805a0a",
+    "code": "7702-exento",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "b032367e-573b-428b-b4dd-b8d6751e6832",
+    "code": "7701+BIOSERUM-excluido",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "2da41e93-f078-4323-998d-131143373272",
+    "code": "7701+BIOSERUM-exento",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "2851e060-32c5-4bb7-8c8b-be2518aa0225",
+    "code": "7701-excluido",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "f443ed3f-a5b8-4241-ac8e-69db51fe1b7f",
+    "code": "7701-exento",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "5b2d5495-a3ea-4a4f-bb0a-c085221fda83",
+    "code": "7702+BIOSERUM",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 162.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 134,
+        "name": "BODEGA LABORATORIO",
+        "quantity": -45.0
+      },
+      {
+        "id": 139,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 100.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "0c45deec-ff5a-46f1-b586-4bd15f9c878c",
+    "code": "7701+BIOSERUM",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 86.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 134,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 34.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "03d8dd84-dc8d-4e80-bc88-5dba9c8e83db",
+    "code": "7703+BIOSERUM",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 108,
+        "name": "BODEGA TRANSITORIA ",
+        "quantity": 216.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 134,
+        "name": "BODEGA LABORATORIO",
+        "quantity": 460.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "843a1a69-8f9c-49cb-9a49-906d1c22b3f7",
+    "code": "7701",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 133,
+        "name": "BODEGA AVER\u00cdAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 139,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 12.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "10c05a8c-959b-4e43-81ea-26fd2fe32672",
+    "code": "7702",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 139,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 25.0
+      }
+    ]
+  },
+  {
+    "company": "RAICES ORGANICAS S.A.S.",
+    "id": "dc3d3399-4f73-442a-bb55-1138069d45b9",
+    "code": "7703",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 103,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 139,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "0b6db5a4-2335-4550-8db3-4c040b0e025b",
+    "code": "7703EX-EVO",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML PA 330520",
+    "warehouses": [
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "a5ea063d-2f01-499a-a6c2-7e9c7b61ed2b",
+    "code": "EVO-7702-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "b384e782-e8ec-4ff7-b6b5-60dd2d03b1f9",
+    "code": "EVO-7703-exento",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "17134857-2a43-472d-bb51-a79e586c2cb1",
+    "code": "EVO-7702-excluido",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "19007efd-0649-4ef9-8317-758cd0550c06",
+    "code": "EVO-7701-excluido",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "7c5088ca-f5f7-468f-b1be-ab4b10d017a5",
+    "code": "EVO-7703-excluido",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "090ac297-9c61-48bb-ab4b-1ed494145c69",
+    "code": "EVO-7701",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 79.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 1.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 4.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 0.0
+      },
+      {
+        "id": 314,
+        "name": "EXPOBELLEZA 2025",
+        "quantity": 1.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "2ef75afc-8eaf-408d-9fd5-b640e10b6a56",
+    "code": "EVO-7702",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 121.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 106.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 4.0
+      },
+      {
+        "id": 314,
+        "name": "EXPOBELLEZA 2025",
+        "quantity": -8.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "b513bf18-bd9e-45ae-b27c-5a0c0e3aab02",
+    "code": "EVO-7703",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 249.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 100.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 0.0
+      },
+      {
+        "id": 314,
+        "name": "EXPOBELLEZA 2025",
+        "quantity": 7.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "cfabea2b-97fb-4937-9e6c-0dd9a3acd3c3",
+    "code": "INS034",
+    "name": "ETQ KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -20976.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "3a16943f-83da-404e-8bd9-eeb0abde0370",
+    "code": "INS032",
+    "name": "ETQ KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": -3000.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -76692.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "82769d43-6ad5-4c57-8b2e-8b6a49128c6b",
+    "code": "INS031",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": -93085.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -23213.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "d4eb59e9-6d4e-4978-9ff1-73a2a02b456c",
+    "code": "INS012",
+    "name": "TERMOENCOGIBLE KERATINA LITRO",
+    "warehouses": [
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 37624.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "86188622-8dbc-4a75-9571-eb9f697e39b6",
+    "code": "Insumo-7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "f49a35c3-9f4f-4867-9a36-9c03b41f62c8",
+    "code": "Insumo-7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "711a2b7c-6c20-46bd-9c14-1383aad6b704",
+    "code": "Insumo-7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "b3763cd9-b11b-4414-b705-99ed9bcda82a",
+    "code": "7703+BIOSERUM-excluido",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "518b045f-4756-4f8d-b6d8-b592c2ab0b1d",
+    "code": "7703-excluido",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "cb4c6d20-b6b1-4858-89bb-e422a9bbbe9d",
+    "code": "7703+BIOSERUM-exento",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "c9fb52e5-77cc-4938-a783-55040b12ce3a",
+    "code": "7703-exento",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "d6336328-a55a-4198-a46a-d2f51dd74fd6",
+    "code": "7702+BIOSERUM-excluido",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "3d3d483f-6687-47d1-8c5f-6b62de461ce4",
+    "code": "7702+BIOSERUM-exento",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "e712e762-30e0-4321-80de-5431759dc22c",
+    "code": "7702-excluido",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "f2b8638f-2ac0-45da-9519-206e502e3a45",
+    "code": "7702-exento",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "1b06d29e-db85-4e9e-92d3-67d439184bc7",
+    "code": "7701+BIOSERUM-excluido",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "2bdcb926-3899-432a-a995-ba8c510ea61f",
+    "code": "7701+BIOSERUM-exento",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "b91ad27e-06aa-4387-a8fa-4cab8e5dee6c",
+    "code": "7701-excluido",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "859a12d4-a3b1-4fe8-9c9a-250f9696670a",
+    "code": "7701-exento",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "83975692-d60e-40f5-9b3e-d584cd5ea1db",
+    "code": "7701+BIOSERUM",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "76e73e13-9ccc-40e0-9ee0-0048a662582a",
+    "code": "7703+BIOSERUM",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "29fb8948-61f8-4140-80e6-d2419e8cded3",
+    "code": "7702+BIOSERUM",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 1.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 29.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "cb38537e-161f-4d9a-9248-7b6be4cf6792",
+    "code": "7701EX+BIOSERUM",
+    "name": "KIT KERATINA DE 1000ML + BIOSERUM PA 330520",
+    "warehouses": [
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "1a099a02-1d13-4bf2-b42b-9f7fdd3a44d5",
+    "code": "7702EX+BIOSERUM",
+    "name": "KIT KERATINA DE 250ML + BIOSERUM PA 330520",
+    "warehouses": []
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "1f2a399b-e76f-462c-913c-57a157182dfc",
+    "code": "7703EX+BIOSERUM",
+    "name": "KIT KERATINA DE 120ML + BIOSERUM PA 330520",
+    "warehouses": [
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "5cc5b27a-b423-4632-9b01-110349ee5976",
+    "code": "184*248K1.000",
+    "name": "ETQ KERATINA DE 1.000 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 20000.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 49.4
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "4bd72fb4-c6c4-4e45-880c-5dd07cb506ec",
+    "code": "129*150K250",
+    "name": "ETQ KERATINA 250ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 146.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "f6d7053e-9ae8-4c42-bb47-a6f925a9d848",
+    "code": "100*121k120",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 255005.5
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 22.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "aff5771e-707c-4d51-9de7-da6c631368bc",
+    "code": "C250",
+    "name": "CAJA KERATINA 250 DIVI 49 2",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 520.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "12f5850f-4393-40fe-ba75-333edecd77b1",
+    "code": "175310",
+    "name": "175 X 310MM SC4 KERATINA LITRO",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 69000.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "d31c335c-151a-4601-a943-53894886f356",
+    "code": "32533",
+    "name": "CAJA REG. + 2 DIV (32.5)+ 1 SEP(40). KERATINA 120X100 UNDS C790K 40 x 32.5 x 33 cm",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 3770.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "2b88c5d3-55c5-4cf2-9b80-85b6ec69b8f7",
+    "code": "7701EX",
+    "name": "KIT KERATINA DE 1000ML PA 330520",
+    "warehouses": [
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "8ed86a05-d0d5-473c-922d-5890d4c88d06",
+    "code": "7702EX",
+    "name": "KIT KERATINA DE 250ML PA 330520",
+    "warehouses": [
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "0f955dae-2f1e-4b57-bb70-e3870a052540",
+    "code": "7703EX",
+    "name": "KIT KERATINA DE 120ML PA 330520",
+    "warehouses": [
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "8911bf5a-ff36-46c8-92ee-38eb41109ecd",
+    "code": "7703K",
+    "name": "KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 177,
+        "name": "BODEGA PRINCIPAL ITAGUI",
+        "quantity": 0.0
+      },
+      {
+        "id": 217,
+        "name": "FALTANTES",
+        "quantity": 10.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 231,
+        "name": "FALTANTES 2",
+        "quantity": 67.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "b4f7f42e-ef71-42d8-a3b1-319a04fcfe2a",
+    "code": "7702K",
+    "name": "KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 177,
+        "name": "BODEGA PRINCIPAL ITAGUI",
+        "quantity": 0.0
+      },
+      {
+        "id": 217,
+        "name": "FALTANTES",
+        "quantity": 318.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "bb16e927-8c3c-4d6f-a120-bb51c3e221c4",
+    "code": "7701K",
+    "name": "KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 177,
+        "name": "BODEGA PRINCIPAL ITAGUI",
+        "quantity": 0.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 231,
+        "name": "FALTANTES 2",
+        "quantity": 40.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 293,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "4295fe56-14c7-44a9-904e-713ed6cfd798",
+    "code": "7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 30.0
+      },
+      {
+        "id": 177,
+        "name": "BODEGA PRINCIPAL ITAGUI",
+        "quantity": 0.0
+      },
+      {
+        "id": 178,
+        "name": "ALMACEN ITAGUI",
+        "quantity": 0.0
+      },
+      {
+        "id": 217,
+        "name": "FALTANTES",
+        "quantity": 3168.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": -3.0
+      },
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      },
+      {
+        "id": 231,
+        "name": "FALTANTES 2",
+        "quantity": 0.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 2.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 2.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "94867e33-a67b-4063-ba47-3d2dbae7ec5f",
+    "code": "7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 119.0
+      },
+      {
+        "id": 177,
+        "name": "BODEGA PRINCIPAL ITAGUI",
+        "quantity": 1.0
+      },
+      {
+        "id": 178,
+        "name": "ALMACEN ITAGUI",
+        "quantity": 0.0
+      },
+      {
+        "id": 217,
+        "name": "FALTANTES",
+        "quantity": 10963.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": -1.0
+      },
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      },
+      {
+        "id": 231,
+        "name": "FALTANTES 2",
+        "quantity": 21.0
+      },
+      {
+        "id": 237,
+        "name": "BODEGA EN CUSTODIA",
+        "quantity": 0.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 3.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 1.0
+      }
+    ]
+  },
+  {
+    "company": "RITUAL BOTANICO S.A.S.",
+    "id": "0710ab7c-2319-4493-9c13-a88dd3cd4fac",
+    "code": "7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 282.0
+      },
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": -1.0
+      },
+      {
+        "id": 177,
+        "name": "BODEGA PRINCIPAL ITAGUI",
+        "quantity": 2.0
+      },
+      {
+        "id": 178,
+        "name": "ALMACEN ITAGUI",
+        "quantity": 5.0
+      },
+      {
+        "id": 217,
+        "name": "FALTANTES",
+        "quantity": 15851.0
+      },
+      {
+        "id": 227,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 229,
+        "name": "BODEGA COMERCIO EXTERIOR",
+        "quantity": 0.0
+      },
+      {
+        "id": 231,
+        "name": "FALTANTES 2",
+        "quantity": 0.0
+      },
+      {
+        "id": 237,
+        "name": "BODEGA EN CUSTODIA",
+        "quantity": 0.0
+      },
+      {
+        "id": 240,
+        "name": "BODEGA AVERIAS",
+        "quantity": 0.0
+      },
+      {
+        "id": 281,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 4.0
+      },
+      {
+        "id": 313,
+        "name": "TRANSITORIA ",
+        "quantity": 1.0
+      }
+    ]
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "96e7aaa2-5c4e-4a83-b519-84d6fcbe090c",
+    "code": "INS032",
+    "name": "ETQ KERATINA 250 ML",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "90ce6cb0-e21b-4284-ad4c-b6c05dc24266",
+    "code": "INS034",
+    "name": "ETQ KERATINA 1000 ML",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "2a533c27-5762-4534-9e95-50679d2bc325",
+    "code": "INS031",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "173dd96a-2b12-4bfa-9746-e205c8429e5f",
+    "code": "EVO-7702",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 32.0
+      },
+      {
+        "id": 5,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 1.0
+      },
+      {
+        "id": 6,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "4370458e-23ed-4fb4-9d33-d8f402ea01da",
+    "code": "EVO-7703",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 1169.0
+      }
+    ]
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "55e4b5fc-7ba7-4e54-87aa-c116685338ff",
+    "code": "EVO-7701",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 200.0
+      },
+      {
+        "id": 5,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 1.0
+      }
+    ]
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "1f4cb2fc-3751-498b-91fa-1e694aab165f",
+    "code": "INS064",
+    "name": "CAJA KIT KERATINA 120ML X 100UND",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "235ed6db-fe6d-4b2d-b3c9-898464c2fc0d",
+    "code": "INS065",
+    "name": "CAJA KIT KERATINA 120ML X 150UND",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "c398d0ec-4f6d-423d-8706-39f2eb0ce487",
+    "code": "INS063",
+    "name": "CAJA KIT KERATINA 250 ML X 100 UND",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "8485fbbc-c269-427e-8841-d0e9ad80adda",
+    "code": "INS057",
+    "name": "Termoencogible Kit Keratina de 1.000ml",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "e28f76f6-3ddc-4303-af0f-c3935773ec90",
+    "code": "Insumo-7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 4,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "a359772d-6f44-4158-918f-16c7f0a90627",
+    "code": "INS012",
+    "name": "175 X 310MM SC4 KERATINA LITRO",
+    "warehouses": []
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "beb7cc8f-8420-4383-b0dd-734c2e3d7b2e",
+    "code": "Insumo-7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 4,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "ALMAVERDE BEAUTY S.A.S.",
+    "id": "e45e50dc-8794-4587-985b-53752bf7e594",
+    "code": "Insumo-7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 4,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "cbd4acaf-68b1-4be7-9f26-aacfa7f8db32",
+    "code": "INS057",
+    "name": "Termoencogible Kit Keratina de 1.000ml",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "e8e18d2f-93c3-4fd1-949f-dfae4098504b",
+    "code": "Insumo-7701",
+    "name": "KIT KERATINA 1000ML",
+    "warehouses": [
+      {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 52,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "28560e39-a8f6-4b1d-9b8d-43b1aaa56faf",
+    "code": "7702+BIOSERUM",
+    "name": "KIT KERATINA 250 ML + BIOSERUM",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 819.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "625a9726-c897-4d38-a321-9ed2b5e8bbc9",
+    "code": "EVO-7703",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 11155.0
+      },
+      {
+        "id": 56,
+        "name": "BODEGA 2",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "91937d6a-2221-4e80-a3e3-d0a88c185dd6",
+    "code": "Insumo-7703",
+    "name": "KIT KERATINA 120 ML",
+    "warehouses": [
+      {
+        "id": 52,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "8d204b82-19db-4a4b-ad16-3e8f846d41a9",
+    "code": "EVO-7701",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 1000 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 2506.0
+      },
+      {
+        "id": 53,
+        "name": "BODEGA MERCANCIA PERDIDA O DESTRUCCION",
+        "quantity": 2.0
+      },
+      {
+        "id": 54,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 0.0
+      },
+      {
+        "id": 56,
+        "name": "BODEGA 2",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "f82497ab-54d0-4656-8e41-c5423b8b481d",
+    "code": "7703+BIOSERUM",
+    "name": "KIT KERATINA 120 ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "ed23baf4-813f-414b-80ef-9c5d119e19a5",
+    "code": "7701+BIOSERUM",
+    "name": "KIT KERATINA 1000ML + BIOSERUM",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "08773e32-1266-4df8-8977-b8ce6c625bf2",
+    "code": "INS034",
+    "name": "ETQ KERATINA 1000 ML",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "59980c40-1dae-4024-8c16-499ded1135af",
+    "code": "INS032",
+    "name": "ETQ KERATINA 250 ML",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "1c911c94-ca09-499d-98a5-c75e4a510e27",
+    "code": "INS031",
+    "name": "ETQ KERATINA 12O ML",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "578a59f4-a882-4139-abae-2327287e69fb",
+    "code": "INS012",
+    "name": "175 X 310MM SC4 KERATINA LITRO",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "9efc370d-c4b9-4e74-ab9d-61b4af15c62f",
+    "code": "EVO-7702",
+    "name": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": -1,
+        "name": "Sin asignar",
+        "quantity": 0.0
+      },
+      {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 8764.0
+      },
+      {
+        "id": 54,
+        "name": "BODEGA TRANSITORIA",
+        "quantity": 0.0
+      },
+      {
+        "id": 56,
+        "name": "BODEGA 2",
+        "quantity": 0.0
+      }
+    ]
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "77f77fde-924c-4047-a9f3-7036e4302b0e",
+    "code": "INS064",
+    "name": "CAJA KIT KERATINA 120ML X 100UND",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "28001f85-59ae-4f41-8bbb-6d15bf3ab68f",
+    "code": "INS065",
+    "name": "CAJA KIT KERATINA 120ML X 150UND",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "2e498635-565f-49aa-a5f7-4e7f7bdacf53",
+    "code": "INS063",
+    "name": "CAJA KIT KERATINA 250 ML X 100 UND",
+    "warehouses": []
+  },
+  {
+    "company": "GRUPO HUMAN PROJECT S.A.S.",
+    "id": "c08f8faf-1203-4db5-905b-52776d7a36bf",
+    "code": "Insumo-7702",
+    "name": "KIT KERATINA 250 ML",
+    "warehouses": [
+      {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO",
+        "quantity": 0.0
+      },
+      {
+        "id": 52,
+        "name": "LABORATORIO INSTINCTS HUMAINS SAS",
+        "quantity": -819.0
+      }
+    ]
+  }
+]

@@ -61,7 +61,7 @@ export default function SaldosPage() {
   const [filterSales, setFilterSales] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
-  const salesCodes = ["7007", "7008", "7009", "7957", "7901", "7101", "7210", "3005", "3001", "7416", "EVO-7701", "EVO-7702", "EVO-7703", "3012", "7299"];
+  const salesCodes = ["7007", "7008", "7009", "7957", "7901", "7101", "7210", "3005", "3001", "7416", "7701", "7702", "7703", "3012", "7299"];
 
   // View State
   const [viewMode, setViewMode] = useState<"detail" | "consolidated">("detail");
@@ -675,7 +675,7 @@ export default function SaldosPage() {
                           // Auto-select warehouses - Robust Match from available list
                           const targetWarehouses = warehousesList.filter(wh => {
                             const w = wh.toLowerCase();
-                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("bodega libre") || w.includes("sin ingresar") || w.includes("sin asignar") || w.includes("externa");
+                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("bodega libre") || w.includes("sin ingresar") || w.includes("sin asignar") || w.includes("externa") || w.includes("laboratorio");
                           });
                           if (targetWarehouses.length > 0) {
                             setSelectedWarehouses(targetWarehouses);
