@@ -36,16 +36,24 @@ export default function MovementsPage() {
   const [auditMode, setAuditMode] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
 
-  // Convert Dates to YYYY-MM-DD
-  const sStr = startDate ? format(startDate, "yyyy-MM-dd") : "";
-  const eStr = endDate ? format(endDate, "yyyy-MM-dd") : "";
+  // Active Params State (only updated on "Consultar" click)
+  const [activeParams, setActiveParams] = useState<{ start: string, end: string, company: string } | null>(null);
 
   const { data, isLoading, isError } = useMovements(
-    sStr,
-    eStr,
-    selectedCompany === "all" ? [] : [selectedCompany],
+    activeParams?.start || "",
+    activeParams?.end || "",
+    activeParams?.company === "all" ? [] : [activeParams?.company || ""],
     refreshCount
   );
+
+  const handleConsultar = () => {
+    setActiveParams({
+      start: format(startDate, "yyyy-MM-dd"),
+      end: format(endDate, "yyyy-MM-dd"),
+      company: selectedCompany
+    });
+    setRefreshCount(prev => prev + 1);
+  };
 
   const movements = data?.data || [];
 
@@ -110,7 +118,7 @@ export default function MovementsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Movimientos_${sStr}_${eStr}.csv`);
+    link.setAttribute("download", `Movimientos_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.csv`);
     document.body.appendChild(link);
     link.click();
   };
@@ -166,7 +174,7 @@ export default function MovementsPage() {
                 </Popover>
 
                 <Button
-                  onClick={() => setRefreshCount(prev => prev + 1)}
+                  onClick={handleConsultar}
                   disabled={isLoading}
                   className="bg-[#183C30] hover:bg-[#122e24] text-white min-w-[120px]"
                 >
