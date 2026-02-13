@@ -44,23 +44,19 @@ class CacheService:
     def save(self, key: str, data: dict):
         try:
             self._connect()
-            
             json_str = json.dumps(data)
+            
+            # Save locally first
+            filepath = os.path.join(self.local_dir, key)
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(json_str)
+
             if self.mode == "cloud":
-                # Ensure bucket exists or handle 404
-                if not self.bucket.exists():
-                     try:
-                         self.bucket.create(location="US")
-                     except:
-                         logging.error("Could not create bucket.")
-                         return False
-                
+                # Optimization: Skip .exists() check. Just upload.
+                # GCS charges for every .exists() call.
                 blob = self.bucket.blob(key)
                 blob.upload_from_string(json_str, content_type='application/json')
-            else:
-                filepath = os.path.join(self.local_dir, key)
-                with open(filepath, "w", encoding="utf-8") as f:
-                    f.write(json_str)
+            
             return True
         except Exception as e:
             logging.error(f"Cache Save Error: {e}")
@@ -68,22 +64,30 @@ class CacheService:
 
     def load(self, key: str):
         try:
+            # 1. Try local cache first (Short-term memory)
+            filepath = os.path.join(self.local_dir, key)
+            if os.path.exists(filepath):
+                # Simple TTL check (1 hour)
+                import time
+                if (time.time() - os.path.getmtime(filepath)) < 3600:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        return json.load(f)
+
+            # 2. Try Cloud cache
             self._connect()
-            
             if self.mode == "cloud":
-                if not self.bucket.exists():
-                     return None
                 blob = self.bucket.blob(key)
-                if not blob.exists():
+                # Optimization: Use try-except instead of blob.exists() to save 1 API call
+                try:
+                    content = blob.download_as_text()
+                    # Update local cache
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    return json.loads(content)
+                except:
                     return None
-                content = blob.download_as_text()
-                return json.loads(content)
-            else:
-                filepath = os.path.join(self.local_dir, key)
-                if not os.path.exists(filepath):
-                    return None
-                with open(filepath, "r", encoding="utf-8") as f:
-                    return json.load(f)
+            
+            return None
         except Exception as e:
             logging.warning(f"Cache Load Miss/Error: {e}")
             return None

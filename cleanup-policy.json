@@ -1,0 +1,17 @@
+[
+    {
+        "name": "delete-untagged",
+        "action": "DELETE",
+        "condition": {
+            "tagState": "UNTAGGED",
+            "olderThan": "3600s"
+        }
+    },
+    {
+        "name": "keep-recent",
+        "action": "KEEP",
+        "mostRecentVersions": {
+            "keepCount": 10
+        }
+    }
+]
