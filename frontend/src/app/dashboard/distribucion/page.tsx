@@ -37,6 +37,7 @@ interface BatchResponse {
 export default function DistributionPage() {
     const [sku, setSku] = useState("");
     const [daysGoal, setDaysGoal] = useState<number>(15);
+    const [avgDays, setAvgDays] = useState<number>(30);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [loadingMessage, setLoadingMessage] = useState("");
     const [loadingProgress, setLoadingProgress] = useState(0);
@@ -52,12 +53,12 @@ export default function DistributionPage() {
 
     // Single Query
     const { data: singleData, isLoading: isSingleLoading, isError: isSingleError, error: singleError, refetch: refetchSingle, isRefetching: isSingleRefetching } = useQuery<DistributionProposal>({
-        queryKey: ["distribution", sku, daysGoal],
+        queryKey: ["distribution", sku, daysGoal, avgDays],
         queryFn: async () => {
             if (!sku) return null;
             const token = localStorage.getItem("gco_token");
             const res = await axios.get(`${API_URL}/distribution/proposal`, {
-                params: { sku, days_goal: daysGoal },
+                params: { sku, days_goal: daysGoal, avg_days: avgDays },
                 headers: { Authorization: `Bearer ${token}` }
             });
             return res.data;
@@ -93,7 +94,7 @@ export default function DistributionPage() {
             if (!token) throw new Error("No session token");
 
             const skus_str = SALES_CODES.join(",");
-            const url = `${API_URL}/distribution/proposal/batch/stream?days_goal=${daysGoal}&skus=${encodeURIComponent(skus_str)}`;
+            const url = `${API_URL}/distribution/proposal/batch/stream?days_goal=${daysGoal}&avg_days=${avgDays}&skus=${encodeURIComponent(skus_str)}`;
 
             const response = await fetch(url, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -403,7 +404,28 @@ export default function DistributionPage() {
                         />
                     </div>
 
-                    <div className="relative">
+                    <div className="space-y-2 w-full md:w-32" title="Número de días históricos para calcular el promedio de venta diaria">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Promedio (Días)</label>
+                        <input
+                            type="number"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#183C30]/20 font-bold text-center"
+                            value={avgDays}
+                            onChange={(e) => setAvgDays(Number(e.target.value))}
+                            min={1}
+                            max={90}
+                        />
+                    </div>
+
+                    <div className="flex gap-2 relative">
+                        <button
+                            onClick={() => mode === "batch" ? handleBatchAnalysis() : handleSearch()}
+                            disabled={isLoading}
+                            className="px-6 py-2.5 bg-[#183C30] hover:bg-[#122e24] text-white rounded-xl font-medium transition-all flex items-center gap-2 shadow-lg shadow-[#183C30]/10 disabled:opacity-50"
+                        >
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+                            Recalcular
+                        </button>
+
                         <button
                             onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
                             disabled={!streamedBatchData || isLoading}
@@ -414,7 +436,7 @@ export default function DistributionPage() {
                         </button>
 
                         {isExportMenuOpen && (
-                            <div className="absolute top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2">
+                            <div className="absolute top-full mt-2 right-0 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2">
                                 <button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-lg text-sm font-medium text-gray-700 flex items-center gap-2">
                                     <FileSpreadsheet className="h-4 w-4 text-green-600" /> Excel (.xlsx)
                                 </button>

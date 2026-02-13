@@ -57,13 +57,14 @@ def fetch_company_stock(company):
 def get_distribution_proposal(
     sku: str = Query(..., description="Target SKU to distribute"),
     days_goal: int = Query(30, description="Target Days of Inventory"),
+    avg_days: int = Query(30, description="Number of days to calculate sales average"),
     user: dict = Depends(verify_token)
 ):
     """
     Generates a smart distribution proposal for a specific SKU.
     1. Fetches available stock from Google Sheets (Source).
     2. Fetches current stock from Siigo (Destination).
-    3. Fetches per-company sales velocity (30 days avg).
+    3. Fetches per-company sales velocity (custom days avg).
     4. Calculates needs and distribution.
     """
     
@@ -96,9 +97,9 @@ def get_distribution_proposal(
             source_audit = f"Error fetching sheets: {e}"
             
     # 2. Fetch Sales Velocity (Per Company) - Cached if possible
-    # We force 30 days for now as a robust period
+    # We use dynamic avg_days
     # Note: calculate_average_sales is heavy, we should cache it
-    cache_key = "sales_averages_split_30d.json"
+    cache_key = f"sales_averages_split_{avg_days}d.json"
     cached_avgs = cache.load(cache_key)
     
     averages_data = None
@@ -106,7 +107,7 @@ def get_distribution_proposal(
         averages_data = cached_avgs.get("data")
     else:
         # Re-calculate
-        result_tuple = calculate_average_sales(days=30, split_by_company=True)
+        result_tuple = calculate_average_sales(days=avg_days, split_by_company=True)
         avg_map = result_tuple[0]
         averages_data = avg_map
         cache.save(cache_key, {"timestamp": time.time(), "data": avg_map})
@@ -227,6 +228,7 @@ import json
 def stream_batch_distribution_proposals(
     skus: str = Query(..., description="Comma separated SKUs"),
     days_goal: int = Query(30, description="Target Days of Inventory"),
+    avg_days: int = Query(30, description="Number of days to calculate sales average"),
     user: dict = Depends(verify_token)
 ):
     """
@@ -260,8 +262,8 @@ def stream_batch_distribution_proposals(
                      source_map[norm_sku] = current + float(item.get("quantity", 0))
 
             # 2. Sales Velocity
-            yield f"data: {json.dumps({'progress': 30, 'message': 'Calculando Velocidad de Ventas (Puede tardar)...'})}\n\n"
-            cache_key = "sales_averages_split_30d.json"
+            yield f"data: {json.dumps({'progress': 30, 'message': f'Calculando Velocidad de Ventas ({avg_days} días)...'})}\n\n"
+            cache_key = f"sales_averages_split_{avg_days}d.json"
             cached_avgs = cache.load(cache_key)
             averages_data = None
             
@@ -269,7 +271,7 @@ def stream_batch_distribution_proposals(
                 averages_data = cached_avgs.get("data")
             else:
                 # This is the heavy part
-                result_tuple = calculate_average_sales(days=30, split_by_company=True)
+                result_tuple = calculate_average_sales(days=avg_days, split_by_company=True)
                 avg_map = result_tuple[0]
                 averages_data = avg_map
                 cache.save(cache_key, {"timestamp": time.time(), "data": avg_map})
