@@ -479,7 +479,58 @@ export default function DistributionPage() {
             {/* Batch Mode Consolidated Table */}
             {mode === "batch" && streamedBatchData && !isLoading && (
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
+                    {(() => {
+                        let totalSuggestedGlobal = 0;
+                        let totalSourceGlobal = 0;
+
+                        streamedBatchData.results.forEach(p => {
+                            let totalNeededForSku = 0;
+                            p.distribution.forEach(d => {
+                                const targetQty = d.average_daily * daysGoal;
+                                totalNeededForSku += Math.max(0, targetQty - d.current_stock);
+                            });
+
+                            let fillRatio = 1.0;
+                            if (totalNeededForSku > 0) {
+                                fillRatio = (p.source_stock >= totalNeededForSku) ? 1.0 : (p.source_stock / totalNeededForSku);
+                            }
+
+                            p.distribution.forEach(d => {
+                                const targetQty = d.average_daily * daysGoal;
+                                const needed = Math.max(0, targetQty - d.current_stock);
+                                if (needed > 0) {
+                                    totalSuggestedGlobal += Math.floor(needed * fillRatio);
+                                }
+                            });
+                            totalSourceGlobal += p.source_stock;
+                        });
+
+                        const remainingInLibreGlobal = totalSourceGlobal - totalSuggestedGlobal;
+
+                        return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                                <div className="bg-[#183C30] text-white p-6 rounded-2xl shadow-lg border border-[#183C30]/20 flex items-center justify-between overflow-hidden relative group">
+                                    <div className="relative z-10">
+                                        <label className="text-xs font-bold text-green-200 uppercase block mb-1">Total Unidades a Ingresar</label>
+                                        <div className="text-3xl font-black">{totalSuggestedGlobal.toLocaleString()}</div>
+                                        <p className="text-[10px] text-green-300/80 mt-1 italic">Suma de todos los envíos sugeridos a tiendas</p>
+                                    </div>
+                                    <Truck className="h-12 w-12 text-green-800/40 absolute -right-2 -bottom-2 group-hover:scale-110 transition-transform" />
+                                </div>
+
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between overflow-hidden relative group">
+                                    <div className="relative z-10">
+                                        <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Quedarán en Bodega Libre</label>
+                                        <div className="text-3xl font-black text-gray-800">{remainingInLibreGlobal.toLocaleString()}</div>
+                                        <p className="text-[10px] text-gray-400 mt-1 italic">Stock total en bodega principal después de envíos</p>
+                                    </div>
+                                    <Package className="h-12 w-12 text-gray-100 absolute -right-2 -bottom-2 group-hover:scale-110 transition-transform" />
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <div className="flex justify-between items-center pt-4">
                         <h2 className="text-xl font-bold text-gray-700">Plan de Reabastecimiento Consolidado</h2>
                         <span className="text-xs text-gray-400">
                             {/* Stats */}
