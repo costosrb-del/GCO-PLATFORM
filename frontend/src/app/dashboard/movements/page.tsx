@@ -63,6 +63,7 @@ export default function MovementsPage() {
     const matchesSearch =
       m.doc_number?.toLowerCase().includes(term) ||
       m.client?.toLowerCase().includes(term) ||
+      m.nit?.toLowerCase().includes(term) ||
       m.code?.toLowerCase().includes(term) ||
       m.name?.toLowerCase().includes(term) ||
       m.company?.toLowerCase().includes(term);
@@ -245,7 +246,10 @@ export default function MovementsPage() {
                       <TableCell className="text-[10px] text-muted-foreground uppercase">{row.company}</TableCell>
                       <TableCell><span className={cn("px-2 py-0.5 rounded text-[10px] font-bold", row.doc_type === "FV" ? "bg-green-100 text-green-800" : row.doc_type === "FC" ? "bg-blue-100 text-blue-800" : "bg-gray-100")}>{row.doc_type}</span></TableCell>
                       <TableCell className="font-mono text-[10px]">{row.doc_number}</TableCell>
-                      <TableCell className="text-[10px] max-w-[150px] truncate" title={row.client}>{row.client}</TableCell>
+                      <TableCell className="text-[10px] max-w-[150px] truncate" title={row.client}>
+                        <div className="font-medium text-gray-900">{row.client}</div>
+                        {row.nit && row.nit !== "N/A" && <div className="text-[9px] text-gray-400 font-mono">{row.nit}</div>}
+                      </TableCell>
                       <TableCell className="font-mono text-[10px]">{row.code}</TableCell>
                       <TableCell className="text-[10px] max-w-[250px] truncate" title={row.name}>{row.name}</TableCell>
                       <TableCell className={cn("font-bold text-right text-xs", row.type === "ENTRADA" ? "text-green-600" : "text-red-600")}>

@@ -199,8 +199,12 @@ def extract_movements_from_doc(doc, doc_type):
     
     # Extract Third Party info (Customer/Vendor)
     # Siigo API varies 'customer', 'provider', 'company', or sometimes 'contact'
-    # Prioritize specific keys based on document type if known, otherwise try all
-    third_party = doc.get("customer") or doc.get("provider") or doc.get("company") or doc.get("contact") or doc.get("cost_center") or {}
+    # For Purchases (FC), the third party is often in 'seller'
+    third_party = {}
+    if doc_type == "purchases":
+        third_party = doc.get("seller") or doc.get("provider") or {}
+    else:
+        third_party = doc.get("customer") or doc.get("provider") or doc.get("company") or doc.get("contact") or doc.get("cost_center") or {}
     
     # Sometimes it's a list (rare but possible), take first
     if isinstance(third_party, list) and len(third_party) > 0:
@@ -213,17 +217,18 @@ def extract_movements_from_doc(doc, doc_type):
     client_name = third_party.get("name") or third_party.get("full_name") or third_party.get("business_name")
     
     # Robust NIT Search: Check multiple common keys used by Siigo API
+    # Added .get("id") as last resort as it sometimes contains the identification in simplified objects
     client_nit = (third_party.get("identification") or 
                   third_party.get("identification_number") or 
                   third_party.get("nit") or 
-                  third_party.get("id") or 
-                  "N/A")
+                  str(third_party.get("id", "")) if third_party.get("id") else None)
+    
+    if not client_nit or client_nit == "" or client_nit == "None":
+        client_nit = "N/A"
     
     # Fallback: If name is missing (common in light API responses), show NIT as Name
     if not client_name:
         client_name = client_nit if client_nit != "N/A" else "Sin Tercero"
-    
-    # ... (existing client extraction logic)
     
     # Extract Observation
     observation = doc.get("observations", "")
@@ -238,17 +243,19 @@ def extract_movements_from_doc(doc, doc_type):
     elif cost_center:
         cc_name = str(cost_center)
         
-    # 2. Seller (Vendedor)
-    seller = doc.get("seller")
+    # 2. Seller (Vendedor/Asesor)
+    # SPECIAL: For purchases, 'seller' was the provider. We don't want to show the provider as the salesperson.
     seller_name = "N/A"
-    if isinstance(seller, dict):
-        # Try full name composition
-        parts = [seller.get("first_name", ""), seller.get("last_name", "")]
-        seller_name = " ".join([p for p in parts if p]).strip()
-        if not seller_name:
-            seller_name = seller.get("username") or seller.get("id") or "N/A"
-    elif seller:
-        seller_name = str(seller)
+    if doc_type != "purchases":
+        seller = doc.get("seller")
+        if isinstance(seller, dict):
+            # Try full name composition
+            parts = [seller.get("first_name", ""), seller.get("last_name", "")]
+            seller_name = " ".join([p for p in parts if p]).strip()
+            if not seller_name:
+                seller_name = seller.get("username") or str(seller.get("id", "")) or "N/A"
+        elif seller:
+            seller_name = str(seller)
         
     # 3. Payment Forms (Formas de Pago)
     payments = doc.get("payments", [])
