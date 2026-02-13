@@ -1,12 +1,14 @@
 "use strict";
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar as CalendarIcon, Filter, Search, Download, Eye, EyeOff } from "lucide-react";
+import { Calendar as CalendarIcon, Filter, Search, Download, Eye, EyeOff, AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 import {
   Select,
   SelectContent,
@@ -28,6 +30,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useMovements } from "@/hooks/useMovements";
 
+const LOADING_STEPS = [
+  "Validando credenciales y acceso a Siigo...",
+  "Consultando caché local de movimientos...",
+  "Identificando vacíos de información (Holes)...",
+  "Descargando datos faltantes desde la nube...",
+  "Consolidando y auditando miles de registros...",
+  "Finalizando reporte..."
+];
+
 export default function MovementsPage() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 30)));
   const [endDate, setEndDate] = useState<Date>(new Date());
@@ -35,6 +46,7 @@ export default function MovementsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [auditMode, setAuditMode] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Active Params State (only updated on "Consultar" click)
   const [activeParams, setActiveParams] = useState<{ start: string, end: string, company: string } | null>(null);
@@ -45,6 +57,20 @@ export default function MovementsPage() {
     activeParams?.company === "all" ? [] : [activeParams?.company || ""],
     refreshCount
   );
+
+  // Loading Step Simulation
+  useEffect(() => {
+    let interval: any;
+    if (isLoading) {
+      setCurrentStep(0);
+      interval = setInterval(() => {
+        setCurrentStep(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
+      }, 3500);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleConsultar = () => {
     setActiveParams({
@@ -236,9 +262,54 @@ export default function MovementsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={auditMode ? 14 : 9} className="h-24 text-center">Cargando y consolidando movimientos desde las APIs...</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={auditMode ? 14 : 9} className="py-20">
+                      <GCOProgress
+                        progress={((currentStep + 1) / LOADING_STEPS.length) * 100}
+                        message={LOADING_STEPS[currentStep]}
+                        submessage="Estamos consolidando la información de todas tus empresas. Si el período es largo, este proceso sincroniza automáticamente los datos faltantes."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : isError ? (
+                  <TableRow>
+                    <TableCell colSpan={auditMode ? 14 : 9} className="py-12 px-6">
+                      <GCOError
+                        message="Error al consultar movimientos"
+                        details="No se pudo establecer conexión con el servidor o las credenciales han expirado."
+                        onRetry={handleConsultar}
+                      />
+                    </TableCell>
+                  </TableRow>
                 ) : filteredData.length === 0 ? (
-                  <TableRow><TableCell colSpan={auditMode ? 14 : 9} className="h-24 text-center">No se encontraron movimientos. Use "Consultar" para buscar en el rango seleccionado.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={auditMode ? 14 : 9} className="h-64 text-center">
+                      <div className="flex flex-col items-center justify-center text-gray-400 gap-4 p-8">
+                        <div className="bg-gray-50 p-4 rounded-full">
+                          <Search className="h-12 w-12 opacity-40 text-gray-300" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-xl text-gray-600">No se encontraron movimientos</p>
+                          <p className="text-sm text-gray-400 max-w-md mx-auto mt-1">
+                            {data?.errors?.length
+                              ? "El proceso terminó con errores que impidieron obtener los datos. Verifique la conexión con Siigo."
+                              : "No hay registros que coincidan con los filtros seleccionados en este rango de fechas."}
+                          </p>
+                        </div>
+                        {data?.errors && data.errors.length > 0 && (
+                          <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-left max-w-lg mt-2">
+                            <p className="text-xs font-bold text-red-600 uppercase mb-2">Errores detectados:</p>
+                            <ul className="list-disc list-inside text-[10px] text-red-500 space-y-1">
+                              {data.errors.map((e: string, idx: number) => <li key={idx}>{e}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        <Button variant="outline" size="sm" onClick={handleConsultar} className="mt-2">
+                          <RefreshCcw className="h-3 w-3 mr-2" /> Reintentar Consulta
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredData.slice(0, 100).map((row, i) => (
                     <TableRow key={i} className="hover:bg-muted/50 border-b">

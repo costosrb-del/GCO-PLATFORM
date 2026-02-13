@@ -199,10 +199,10 @@ def extract_movements_from_doc(doc, doc_type):
     
     # Extract Third Party info (Customer/Vendor)
     # Siigo API varies 'customer', 'provider', 'company', or sometimes 'contact'
-    # For Purchases (FC), the third party is often in 'seller'
+    # For Purchases (FC), the third party is in 'supplier'
     third_party = {}
     if doc_type == "purchases":
-        third_party = doc.get("seller") or doc.get("provider") or {}
+        third_party = doc.get("supplier") or doc.get("provider") or doc.get("seller") or {}
     else:
         third_party = doc.get("customer") or doc.get("provider") or doc.get("company") or doc.get("contact") or doc.get("cost_center") or {}
     

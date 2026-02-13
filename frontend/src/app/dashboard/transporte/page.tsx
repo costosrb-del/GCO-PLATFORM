@@ -26,7 +26,8 @@ import {
     FilePenLine,
     AlertTriangle,
     TrendingUp,
-    Award
+    Award,
+    RefreshCcw
 } from "lucide-react";
 import {
     Dialog,
@@ -35,6 +36,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 
 export default function TransportPage() {
     const [data, setData] = useState<any[]>([]);
@@ -440,15 +443,22 @@ export default function TransportPage() {
                         <tbody className="divide-y divide-gray-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={7} className="py-20 text-center">
-                                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-300" />
-                                        <p className="mt-2 text-gray-400">Cargando datos...</p>
+                                    <td colSpan={7} className="py-20">
+                                        <GCOProgress
+                                            progress={30}
+                                            message="Cargando sistema de transporte..."
+                                            submessage="Estamos sincronizando las últimas hojas de ruta y estados de entrega."
+                                        />
                                     </td>
                                 </tr>
                             ) : filteredData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="py-20 text-center text-gray-400">
-                                        No se encontraron registros.
+                                    <td colSpan={7} className="py-24 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
+                                            <Search className="h-12 w-12 opacity-20" />
+                                            <p className="font-medium text-lg">No se encontraron registros</p>
+                                            <p className="text-sm">Intenta ajustar los filtros de fecha o el término de búsqueda.</p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (

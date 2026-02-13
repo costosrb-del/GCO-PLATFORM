@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { API_URL } from "@/lib/config";
-import { Search, ArrowRight, Truck, Package, Clock, Calculator, Loader2, AlertTriangle, CheckCircle, Info, Download, FileSpreadsheet } from "lucide-react";
+import { Search, ArrowRight, Truck, Package, Clock, Calculator, Loader2, CheckCircle, Info, Download, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 
 import { SALES_CODES } from "@/lib/constants";
 
@@ -452,25 +454,23 @@ export default function DistributionPage() {
                 </div>
             </div>
 
-            {/* Results */}
+            {/* Standardized Loading & Error States */}
             {isLoading && (
-                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-100 shadow-sm animate-pulse">
-                    <span className="text-gray-600 font-bold mb-2">{loadingMessage} {loadingProgress > 0 ? `${loadingProgress}%` : ''}</span>
-
-                    {isStreaming && (
-                        <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
-                            <div className="h-full bg-[#183C30] transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
-                        </div>
-                    )}
-                    <span className="text-gray-400 text-xs mt-2">Esto puede tomar hasta 2-3 minutos la primera vez.</span>
+                <div className="py-12">
+                    <GCOProgress
+                        progress={loadingProgress}
+                        message={loadingMessage}
+                        submessage="Estamos analizando miles de registros en tiempo real para optimizar tu stock. Esto puede tomar un minuto."
+                    />
                 </div>
             )}
 
             {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Error generando propuesta: {error}
-                </div>
+                <GCOError
+                    message="Hubo un problema al generar la propuesta de distribución"
+                    details={error}
+                    onRetry={() => mode === "batch" ? handleBatchAnalysis() : handleSearch()}
+                />
             )}
 
             {/* Single Mode Result */}

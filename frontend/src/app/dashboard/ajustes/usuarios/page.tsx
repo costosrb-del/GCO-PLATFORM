@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Loader2, UserPlus, Shield, User, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Shield, User, Trash2, RefreshCcw } from "lucide-react";
 import { API_URL } from "@/lib/config";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 
 export default function UsersPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -140,7 +142,15 @@ export default function UsersPage() {
                         <Shield className="h-5 w-5 text-[#183C30]" />
                         <span>Usuarios Activos</span>
                     </h2>
-                    {isLoading ? <Loader2 className="animate-spin h-8 w-8 text-gray-400" /> : (
+                    {isLoading ? (
+                        <div className="py-12">
+                            <GCOProgress
+                                progress={40}
+                                message="Cargando lista de usuarios..."
+                                submessage="Verificando permisos y accesos activos en Firebase."
+                            />
+                        </div>
+                    ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
@@ -156,8 +166,8 @@ export default function UsersPage() {
                                             <td className="p-3 font-medium text-gray-800">{u.email}</td>
                                             <td className="p-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                                                        u.role === 'asesora' ? 'bg-green-100 text-green-700' :
-                                                            'bg-blue-100 text-blue-700'
+                                                    u.role === 'asesora' ? 'bg-green-100 text-green-700' :
+                                                        'bg-blue-100 text-blue-700'
                                                     }`}>
                                                     {u.role === 'admin' ? 'Administrador' :
                                                         u.role === 'asesora' ? 'Asesora' : 'Visualizador'}

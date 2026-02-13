@@ -9,6 +9,8 @@ import {
     Filter, X, Download, FilterX, RefreshCcw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 
 const COMPANIES = [
     "ARMONIA C.",
@@ -433,10 +435,12 @@ export default function AsesorasPage() {
                                     <tbody className="divide-y divide-gray-50">
                                         {fetching ? (
                                             <tr>
-                                                <td colSpan={5} className="p-20 text-center text-gray-400">
-                                                    <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-6 opacity-80" />
-                                                    <p className="text-xl font-black text-[#183C30] mb-2 tracking-tight">Sincronizando Base de Datos</p>
-                                                    <p className="text-xs font-bold uppercase tracking-widest opacity-50">Esto puede tomar unos segundos para 13k+ registros</p>
+                                                <td colSpan={5} className="p-20">
+                                                    <GCOProgress
+                                                        progress={60}
+                                                        message="Sincronizando Base de Datos Maestra..."
+                                                        submessage="Recuperando más de 13,000 registros para traerte la información más actualizada."
+                                                    />
                                                 </td>
                                             </tr>
                                         ) : filteredClients.length > 0 ? (
@@ -588,10 +592,10 @@ export default function AsesorasPage() {
 
                                 <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-8">
                                     {error && (
-                                        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 flex items-center gap-3">
-                                            <AlertCircle className="h-5 w-5 shrink-0" />
-                                            <span className="text-sm font-bold">{error}</span>
-                                        </div>
+                                        <GCOError
+                                            message="Error al registrar cliente"
+                                            details={error}
+                                        />
                                     )}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

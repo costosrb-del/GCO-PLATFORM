@@ -11,6 +11,8 @@ import { API_URL } from "@/lib/config";
 import { useInventory, useSalesAverages, useRefreshSalesAverages } from "@/hooks/useInventory";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 import { toast } from "sonner";
 import { SalesHistoryModal } from "@/components/dashboard/SalesHistoryModal";
 
@@ -719,19 +721,32 @@ export default function SaldosPage() {
         )}
       </div>
 
-      {isInventoryLoading && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4 mb-6">
-          <div className="flex space-x-4 mb-4">
-            <Skeleton className="h-8 w-1/4" />
-            <Skeleton className="h-8 w-1/4" />
-          </div>
-          <div className="space-y-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="flex gap-4">
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ))}
-          </div>
+      {isInventoryLoading && data.length === 0 && (
+        <div className="py-20">
+          <GCOProgress
+            progress={15}
+            message="Conectando con el almacén de datos..."
+            submessage="Recuperando la última foto del inventario consolidado. Por favor, espera."
+          />
+        </div>
+      )}
+
+      {inventoryError && (
+        <GCOError
+          message="No se pudo cargar el inventario"
+          details={inventoryError.toString()}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['inventory'] })}
+        />
+      )}
+
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#183C30]/10 backdrop-blur-sm p-6">
+          <GCOProgress
+            progress={loadingProgress}
+            message={loadingMessage || "Sincronizando con Siigo..."}
+            submessage="Estamos trayendo los últimos saldos directo desde las APIs. El proceso puede tomar unos segundos."
+            className="w-full max-w-lg"
+          />
         </div>
       )}
 

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Loader2, RefreshCcw, Download, FileSpreadsheet, FileText, CheckCircle2, AlertTriangle, Filter, ArrowUpDown, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2, RefreshCcw, Download, FileSpreadsheet, FileText, CheckCircle2, AlertTriangle, Filter, ArrowUpDown, TrendingUp, TrendingDown, Lock, Unlock, Calendar, FileText as FilePdf } from "lucide-react";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { API_URL } from "@/lib/config";
 import {
     Dialog,
@@ -13,6 +15,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { GCOProgress } from "@/components/ui/GCOProgress";
+import { GCOError } from "@/components/ui/GCOError";
 
 interface JuegoItem {
     sku: string;
@@ -45,6 +49,20 @@ export default function JuegoInventariosPage() {
 
     const [selectedItem, setSelectedItem] = useState<JuegoItem | null>(null);
     const [errors, setErrors] = useState<string[]>([]);
+
+    // Monthly State
+    const [activeMonth, setActiveMonth] = useState<string>("");
+    const [isClosing, setIsClosing] = useState(false);
+
+    const fetchStatus = async () => {
+        try {
+            const token = localStorage.getItem("gco_token");
+            const res = await axios.get(`${API_URL}/juego-inventario/status`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setActiveMonth(res.data.active_month);
+        } catch (e) { console.error("Error fetching status", e); }
+    };
 
     // fetchData function
     const fetchData = async () => {
@@ -89,13 +107,104 @@ export default function JuegoInventariosPage() {
     };
 
     useEffect(() => {
+        fetchStatus();
         fetchData();
     }, []);
 
-    const exportToExcel = () => {
-        if (data.length === 0) return;
+    const getMonthName = (monthStr: string) => {
+        if (!monthStr) return "...";
+        try {
+            const [year, month] = monthStr.split('-');
+            return new Date(parseInt(year), parseInt(month) - 1).toLocaleString('es-CO', { month: 'long', year: 'numeric' }).toUpperCase();
+        } catch (e) { return monthStr; }
+    };
 
-        const worksheet = XLSX.utils.json_to_sheet(data.map(item => ({
+    const exportToPDF = (customData?: JuegoItem[]) => {
+        const reportData = customData || data;
+        if (reportData.length === 0) return;
+
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFontSize(18);
+        doc.setTextColor(24, 60, 48); // #183C30
+        doc.text("Juego de Inventarios - Reporte Mensual", 14, 22);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Mes: ${getMonthName(activeMonth)}`, 14, 30);
+        doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 35);
+
+        const tableColumn = ["SKU", "Nombre", "S. Inicial", "Entradas", "Salidas", "Calculado", "Siigo", "Diff"];
+        const tableRows: any[] = [];
+
+        reportData.forEach(item => {
+            const rowData = [
+                item.sku,
+                item.name.substring(0, 30),
+                formatNumber(item.initial_balance),
+                formatNumber(item.entries),
+                formatNumber(item.exits),
+                formatNumber(item.final_balance),
+                formatNumber(item.current_siigo_stock || 0),
+                formatNumber(item.difference || 0)
+            ];
+            tableRows.push(rowData);
+        });
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 45,
+            theme: 'striped',
+            headStyles: { fillColor: [24, 60, 48] },
+            styles: { fontSize: 8 }
+        });
+
+        doc.save(`Juego_Inventarios_${activeMonth}.pdf`);
+    };
+
+    const handleCloseMonth = async () => {
+        const confirmMsg = `¿ESTÁS SEGURO DE CERRAR EL MES DE ${getMonthName(activeMonth)}?\n\n` +
+            "Se descargarán los informes finales y el sistema pasará al siguiente mes.\n" +
+            "SOLO HAZ ESTO SI EL MES HA TERMINADO Y LOS MOVIMIENTOS ESTÁN AL DÍA.";
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            setIsClosing(true);
+            const token = localStorage.getItem("gco_token");
+            const res = await axios.post(`${API_URL}/juego-inventario/close?company_index=0`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data) {
+                // 1. Export both with the closed data
+                const closedData = res.data.data;
+                exportToExcel(closedData);
+                exportToPDF(closedData);
+
+                // 2. Update State
+                setActiveMonth(res.data.new_month);
+                setData(closedData);
+                alert(`¡Mes de ${getMonthName(res.data.closed_month)} cerrado exitosamente!\nAhora visualizando ${getMonthName(res.data.new_month)}.`);
+
+                // 3. Refresh to get fresh movements for new month
+                fetchData();
+            }
+        } catch (error: any) {
+            console.error("Close Error:", error);
+            alert("Error al cerrar el mes: " + (error.response?.data?.detail || "Error desconocido"));
+        } finally {
+            setIsClosing(false);
+        }
+    };
+
+    const exportToExcel = (customData?: JuegoItem[]) => {
+        const reportData = customData || data;
+        if (reportData.length === 0) return;
+
+        const worksheet = XLSX.utils.json_to_sheet(reportData.map(item => ({
             "SKU": item.sku,
             "Nombre": item.name,
             "Saldo Inicial": item.initial_balance,
@@ -156,28 +265,13 @@ export default function JuegoInventariosPage() {
         <div className="p-6 space-y-6 bg-gray-50 min-h-screen relative">
             {/* Loading Overlay */}
             {isLoading && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-all duration-300">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full flex flex-col items-center text-center">
-                        <div className="relative mb-6">
-                            <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
-                            <div className="rounded-full border-4 border-[#183C30] border-t-transparent h-16 w-16 animate-spin"></div>
-                        </div>
-                        <h3 className="text-xl font-bold text-[#183C30] mb-2">Actualizando Inventario</h3>
-                        <p className="text-gray-500 text-sm min-h-[20px] animate-pulse">
-                            {loadingStatus}
-                        </p>
-                        <div className="mt-6 flex gap-2 justify-center">
-                            {LOADING_STEPS.map((_, i) => (
-                                <div
-                                    key={i}
-                                    className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${loadingStatus === LOADING_STEPS[i] || LOADING_STEPS.indexOf(loadingStatus) > i
-                                        ? "bg-[#183C30]"
-                                        : "bg-gray-200"
-                                        }`}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#183C30]/10 backdrop-blur-sm p-6">
+                    <GCOProgress
+                        progress={((LOADING_STEPS.indexOf(loadingStatus) + 1) / LOADING_STEPS.length) * 100}
+                        message={loadingStatus}
+                        submessage="Este proceso audita miles de facturas y notas crédito para detectar discrepancias."
+                        className="w-full max-w-lg"
+                    />
                 </div>
             )}
 
@@ -197,10 +291,18 @@ export default function JuegoInventariosPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-800 rounded-xl border border-blue-100 shadow-sm">
+                        <Calendar className="h-4 w-4" />
+                        <div className="flex flex-col">
+                            <span className="text-[10px] uppercase font-bold opacity-60 leading-none">Mes Activo</span>
+                            <span className="text-sm font-bold">{getMonthName(activeMonth)}</span>
+                        </div>
+                    </div>
+
                     <button
                         onClick={fetchData}
-                        disabled={isLoading}
+                        disabled={isLoading || isClosing}
                         className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-[#183C30] transition-colors disabled:opacity-50"
                     >
                         <RefreshCcw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -208,12 +310,32 @@ export default function JuegoInventariosPage() {
                     </button>
 
                     <button
-                        onClick={exportToExcel}
-                        disabled={data.length === 0 || isLoading}
+                        onClick={() => exportToPDF()}
+                        disabled={data.length === 0 || isLoading || isClosing}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-all disabled:opacity-50"
+                    >
+                        <FilePdf className="h-4 w-4" />
+                        <span className="hidden sm:inline font-medium">PDF</span>
+                    </button>
+
+                    <button
+                        onClick={() => exportToExcel()}
+                        disabled={data.length === 0 || isLoading || isClosing}
                         className="flex items-center gap-2 px-4 py-2 bg-[#183C30] text-white rounded-xl hover:bg-[#122e24] transition-all shadow-lg shadow-[#183C30]/20 disabled:opacity-50 disabled:shadow-none"
                     >
                         <FileSpreadsheet className="h-4 w-4" />
-                        <span className="hidden sm:inline font-medium">Exportar Excel</span>
+                        <span className="hidden sm:inline font-medium">Excel</span>
+                    </button>
+
+                    <div className="h-8 w-px bg-gray-200 mx-1 hidden md:block"></div>
+
+                    <button
+                        onClick={handleCloseMonth}
+                        disabled={isLoading || isClosing}
+                        className="flex items-center gap-2 px-5 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-900/10 disabled:opacity-50 font-bold"
+                    >
+                        {isClosing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                        Cerrar Mes
                     </button>
                 </div>
             </div>
@@ -349,17 +471,11 @@ export default function JuegoInventariosPage() {
 
             {/* Errors */}
             {errors.length > 0 && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                        <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                        <h3 className="font-semibold text-yellow-800">Atención: Reporte Incompleto</h3>
-                    </div>
-                    <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1 ml-1">
-                        {errors.map((err, i) => (
-                            <li key={i}>{err}</li>
-                        ))}
-                    </ul>
-                </div>
+                <GCOError
+                    message="Análisis de inventario parcial"
+                    details={errors}
+                    className="mb-8"
+                />
             )}
             {/* Content */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

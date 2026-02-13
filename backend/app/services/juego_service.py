@@ -3,17 +3,58 @@ import requests
 import io
 from datetime import datetime, timedelta
 from app.services.movements import get_consolidated_movements
+from app.services.cache import cache
+import calendar
 
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQOJxkl2FTcv3uPUE8jbhPw1HgoQAIN5iWPvvsAMU1VwHVnqM5Zaes1AExyNaSIqhmAnpOLGesj6oWi/pub?gid=0&single=true&output=csv"
 
+def get_juego_state():
+    """
+    Returns the active month for the inventory game.
+    """
+    state = cache.load("juego_state.json")
+    if not state:
+        # Default to current month
+        now = datetime.now()
+        state = {"active_month": now.strftime("%Y-%m")}
+        cache.save("juego_state.json", state)
+    return state
+
+def save_juego_state(new_month: str):
+    """
+    Saves the active month (Format: YYYY-MM)
+    """
+    state = {"active_month": new_month}
+    cache.save("juego_state.json", state)
+    return state
+
 def get_current_month_dates():
+    """
+    Calculates the date range based on the active state.
+    If it's the current calendar month, it goes from 1st to Today.
+    If it's a past month (pending closure), it goes from 1st to Last Day.
+    """
+    state = get_juego_state()
+    month_str = state["active_month"]
+    month_date = datetime.strptime(month_str, "%Y-%m")
+    
     now = datetime.now()
-    start_date = now.replace(day=1).strftime("%Y-%m-%d")
-    # For end date, we can just use "now" or the last day of month. 
-    # Using specific logic to get next month's first day - 1 sec would be precise, 
-    # but "today" is enough for "current month so far".
-    # However, user said "MES ACTUAL", so let's allow up to today.
-    end_date = now.strftime("%Y-%m-%d")
+    
+    # Start is always the 1st
+    start_date = month_date.replace(day=1).strftime("%Y-%m-%d")
+    
+    # End date determination
+    if now.year == month_date.year and now.month == month_date.month:
+        # Month is current, show until today
+        end_date = now.strftime("%Y-%m-%d")
+    elif now > month_date:
+        # Month is in the past, show full month
+        _, last_day = calendar.monthrange(month_date.year, month_date.month)
+        end_date = month_date.replace(day=last_day).strftime("%Y-%m-%d")
+    else:
+        # Month is in the future? (shouldn't happen, but fallback)
+        end_date = now.strftime("%Y-%m-%d")
+        
     return start_date, end_date
 
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck, UserPlus } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck, UserPlus, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_URL } from "@/lib/config";
@@ -15,6 +15,7 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const [isInventoryOpen, setIsInventoryOpen] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [role, setRole] = useState("");
   const [userEmail, setUserEmail] = useState("Usuario");
   // Local state removed in favor of props
@@ -122,18 +123,49 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           </Link>
         )}
 
+        {/* Settings Group */}
         {role === "admin" && (
-          <Link
-            href="/dashboard/users"
-            className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all ${pathname === "/dashboard/users"
-              ? "bg-white/10 text-white font-medium"
-              : "text-gray-300 hover:bg-white/5 hover:text-white"
-              } ${isCollapsed ? "justify-center" : ""}`}
-            title={isCollapsed ? "Administrar Usuarios" : ""}
-          >
-            <User className="h-5 w-5 shrink-0" />
-            {!isCollapsed && <span>Administrar Usuarios</span>}
-          </Link>
+          <div className="space-y-1">
+            <button
+              onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
+              className={`flex items-center justify-between w-full px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition-all ${isCollapsed ? "justify-center cursor-default" : ""}`}
+              title={isCollapsed ? "Ajustes" : ""}
+            >
+              <div className="flex items-center space-x-3">
+                <Settings className="h-5 w-5 shrink-0" />
+                {!isCollapsed && <span>Ajustes</span>}
+              </div>
+              {!isCollapsed && (
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${isSettingsOpen ? "rotate-180" : ""}`}
+                />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {(isSettingsOpen || isCollapsed) && (
+                <motion.div
+                  initial={!isCollapsed ? { height: 0, opacity: 0 } : {}}
+                  animate={!isCollapsed ? { height: "auto", opacity: 1 } : {}}
+                  exit={!isCollapsed ? { height: 0, opacity: 0 } : {}}
+                  className="overflow-hidden"
+                >
+                  <div className={`${!isCollapsed ? "ml-4 pl-4 border-l border-[#2A5E4D]" : "flex flex-col items-center"} space-y-1 pt-1`}>
+                    <Link
+                      href="/dashboard/ajustes/usuarios"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/ajustes/usuarios"
+                        ? "bg-white text-[#183C30] font-medium shadow-md"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                      title={isCollapsed ? "Administrar Usuarios" : ""}
+                    >
+                      {isCollapsed ? "Usuar." : "Administrar Usuarios"}
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
 
         {/* Inventory Group */}

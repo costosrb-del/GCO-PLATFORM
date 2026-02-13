@@ -3,6 +3,7 @@ from google.oauth2.service_account import Credentials
 import os
 import json
 import tempfile
+import threading
 
 # Configuración de Google Sheets
 SPREADSHEET_ID = "1ErpsHhGGsz8gJ9l1IixSiHDqHdk41OPJTwH8IVJ2KGk"
@@ -87,6 +88,10 @@ _CLIENTS_CACHE = {
     'ttl': 300  # 5 minutos de vida (tiempo que tarda en detectar cambios manuales de Sheets)
 }
 
+# --- LOCK DE CONCURRENCIA ---
+# Evita que múltiples peticiones simultáneas calculen el mismo CUC o registren el mismo NIT
+_SHEET_LOCK = threading.Lock()
+
 def invalidate_cache():
     """Fuerza a recargar los datos de Sheets en la próxima consulta."""
     _CLIENTS_CACHE['timestamp'] = 0
@@ -94,72 +99,81 @@ def invalidate_cache():
 
 def add_client_to_sheet(client_data: dict):
     """
-    Agrega un nuevo cliente a la hoja de cálculo.
+    Agrega un nuevo cliente a la hoja de cálculo de forma segura (Thread-Safe).
     """
-    client = get_sheets_client()
-    ss = client.open_by_key(SPREADSHEET_ID)
-    sheet = get_target_sheet(ss)
-    
-    # ... (Lógica de prefijos y cálculo de CUC se mantiene igual, abreviada aquí por simplicidad) ...
-    # NOTA: Para no romper el código existente, repetimos la lógica de cálculo o asumimos que ya está.
-    # Dado que replace_file es por bloques, reinsertaré la lógica completa de add_client que ya tenías,
-    # pero añadiendo la gestión de caché al final.
-    
-    PREFIX_MAP = {
-        "ARMONIA C.": "AB",
-        "HECHIZO DE BELLEZA": "HB",
-        "RAICES ORGANICAS": "RO",
-        "RITUAL BOTANICO": "RB",
-        "GRUPO HUMAN": "GH",
-        "ALMAVERDE": "AV"
-    }
-    
-    selected_company = client_data.get("empresa", "ARMONIA C.")
-    prefix = PREFIX_MAP.get(selected_company, "AB")
-    
-    # IMPORTANTE: Usamos get_all_values directo de Sheet (no caché) para calcular CUC seguro
-    all_values = sheet.get_all_values()
-    
-    company_cucs = []
-    if len(all_values) > 1:
-        for row in all_values[1:]:
-            cuc = str(row[0]).strip()
-            if cuc.startswith(prefix):
-                try:
-                    num = int(cuc[len(prefix):])
-                    company_cucs.append(num)
-                except ValueError:
-                    continue
-    
-    next_num = 100
-    if company_cucs:
-        next_num = max(company_cucs) + 1
-    
-    new_cuc = f"{prefix}{next_num:08d}"
+    with _SHEET_LOCK:
+        # 1. Re-verificar duplicados dentro del lock para máxima seguridad 
+        # (por si otra petición acaba de registrar el mismo NIT hace milisegundos)
+        target_nit = str(client_data.get("nit", "")).strip()
+        existing = find_client_by_nit(target_nit)
+        if existing:
+            # Si ya existe, lanzamos excepción para que el router la maneje
+            import json
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=409, 
+                detail=json.dumps({
+                    "message": "El cliente con este NIT ya fue registrado por otro usuario hace instantes",
+                    "client_data": existing
+                })
+            )
+
+        client = get_sheets_client()
+        ss = client.open_by_key(SPREADSHEET_ID)
+        sheet = get_target_sheet(ss)
         
-    new_row = [
-        new_cuc,
-        client_data.get("nit", ""),
-        client_data.get("nombre", ""),
-        client_data.get("telefono", ""),
-        client_data.get("correo", ""),
-        client_data.get("categoria", ""),
-        selected_company.upper(),
-        client_data.get("ciudad", "").upper(),
-        client_data.get("departamento", "").upper()
-    ]
-    
-    sheet.append_row(new_row)
-    
-    # --- ACTUALIZACIÓN INTELIGENTE DE CACHÉ ---
-    # En lugar de invalidar y obligar a leer todo (lento), agregamos el nuevo cliente a la memoria
-    if _CLIENTS_CACHE['data']:
-        # Convertimos la lista plana a diccionario (con headers conocidos o inferidos)
-        # Para ser seguros, mejor INVALIDAMOS para que la próxima lectura traiga todo limpio
-        # ya que manejar los headers en memoria es riesgoso si cambian.
-        invalidate_cache() 
-        # Si quisiéramos "append" en memoria, necesitaríamos conocer los headers exactos aquí.
-        # Invalidad es suficientemente rápido para el usuario que guarda (ya esperó el guardado).
+        PREFIX_MAP = {
+            "ARMONIA C.": "AB",
+            "HECHIZO DE BELLEZA": "HB",
+            "RAICES ORGANICAS": "RO",
+            "RITUAL BOTANICO": "RB",
+            "GRUPO HUMAN": "GH",
+            "ALMAVERDE": "AV"
+        }
+        
+        selected_company = client_data.get("empresa", "ARMONIA C.")
+        prefix = PREFIX_MAP.get(selected_company, "AB")
+        
+        # 2. Calcular CUC (Obtenemos valores frescos de la hoja dentro del lock)
+        all_values = sheet.get_all_values()
+        
+        company_cucs = []
+        if len(all_values) > 1:
+            for row in all_values[1:]:
+                if not row: continue
+                cuc = str(row[0]).strip()
+                if cuc.startswith(prefix):
+                    try:
+                        num = int(cuc[len(prefix):])
+                        company_cucs.append(num)
+                    except ValueError:
+                        continue
+        
+        next_num = 100
+        if company_cucs:
+            next_num = max(company_cucs) + 1
+        
+        new_cuc = f"{prefix}{next_num:08d}"
+            
+        new_row = [
+            new_cuc,
+            target_nit,
+            client_data.get("nombre", ""),
+            client_data.get("telefono", ""),
+            client_data.get("correo", ""),
+            client_data.get("categoria", ""),
+            selected_company.upper(),
+            client_data.get("ciudad", "").upper(),
+            client_data.get("departamento", "").upper()
+        ]
+        
+        # 3. Guardar físicamente
+        sheet.append_row(new_row)
+        
+        # 4. Invalida caché global para que otros vean el cambio
+        invalidate_cache()
+        
+        return new_cuc
     
     return new_cuc
 
