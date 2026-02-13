@@ -219,16 +219,21 @@ def get_movements(
             
             for future in concurrent.futures.as_completed(future_to_c):
                 data, err = future.result()
-                if data: all_results.extend(data)
-                if err: errors.append(err)
+                if data: 
+                    all_results.extend(data)
+                if err: 
+                    errors.append(err)
 
-        if not all_results:
-             return {"count": 0, "data": [], "errors": errors}
+        if not all_results and errors:
+             return {"count": 0, "data": [], "errors": errors, "status": "partial_error"}
              
         # cleanup
-        df = pd.DataFrame(all_results)
-        final_data = df.where(pd.notnull(df), None).to_dict(orient="records")
-        return {"count": len(final_data), "data": final_data, "errors": errors}
+        if all_results:
+            df = pd.DataFrame(all_results)
+            final_data = df.where(pd.notnull(df), None).to_dict(orient="records")
+            return {"count": len(final_data), "data": final_data, "errors": errors}
+        
+        return {"count": 0, "data": [], "errors": errors}
 
     except Exception as e:
         import traceback; traceback.print_exc()

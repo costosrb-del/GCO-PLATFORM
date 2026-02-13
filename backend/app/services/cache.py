@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+import gzip
+import io
 try:
     from google.cloud import storage
 except ImportError:
@@ -17,7 +19,6 @@ class CacheService:
         self.bucket = None
         
         if self.mode == "cloud" and storage:
-            # Lazy initialization to prevent import blocking
             self.client = None 
             self.bucket = None
         else:
@@ -37,7 +38,6 @@ class CacheService:
             except Exception as e:
                 logging.error(f"Failed to connect to GCS: {e}. Falling back to local.")
                 self.mode = "local"
-                self.local_dir = os.getenv("LOCAL_CACHE_DIR", "/tmp/gco_local_cache")
                 if not os.path.exists(self.local_dir):
                     os.makedirs(self.local_dir, exist_ok=True)
 
@@ -46,16 +46,22 @@ class CacheService:
             self._connect()
             json_str = json.dumps(data)
             
-            # Save locally first
+            # Save locally first (Always uncompressed for speed)
             filepath = os.path.join(self.local_dir, key)
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(json_str)
 
             if self.mode == "cloud":
-                # Optimization: Skip .exists() check. Just upload.
-                # GCS charges for every .exists() call.
+                # COMPRESSION: Gzip the JSON string
+                out = io.BytesIO()
+                with gzip.GzipFile(fileobj=out, mode='w') as f:
+                    f.write(json_str.encode('utf-8'))
+                compressed_data = out.getvalue()
+
                 blob = self.bucket.blob(key)
-                blob.upload_from_string(json_str, content_type='application/json')
+                blob.content_encoding = 'gzip'
+                blob.upload_from_string(compressed_data, content_type='application/json')
+                logging.info(f"Cache Saved to Cloud (Compressed): {key} - {len(compressed_data)} bytes")
             
             return True
         except Exception as e:
@@ -67,8 +73,8 @@ class CacheService:
             # 1. Try local cache first (Short-term memory)
             filepath = os.path.join(self.local_dir, key)
             if os.path.exists(filepath):
-                # Simple TTL check (1 hour)
                 import time
+                # TTL 1 hour for local cache
                 if (time.time() - os.path.getmtime(filepath)) < 3600:
                     with open(filepath, "r", encoding="utf-8") as f:
                         return json.load(f)
@@ -77,14 +83,25 @@ class CacheService:
             self._connect()
             if self.mode == "cloud":
                 blob = self.bucket.blob(key)
-                # Optimization: Use try-except instead of blob.exists() to save 1 API call
                 try:
-                    content = blob.download_as_text()
+                    # GCS will auto-decompress if we use download_as_text() AND content-encoding was set,
+                    # but being explicit is safer for cost control.
+                    compressed_content = blob.download_as_bytes()
+                    
+                    # Decompress
+                    try:
+                        with gzip.GzipFile(fileobj=io.BytesIO(compressed_content), mode='r') as f:
+                            content = f.read().decode('utf-8')
+                    except:
+                        # Fallback if file was NOT compressed (legacy files)
+                        content = compressed_content.decode('utf-8')
+
                     # Update local cache
                     with open(filepath, "w", encoding="utf-8") as f:
                         f.write(content)
                     return json.loads(content)
-                except:
+                except Exception as e:
+                    logging.debug(f"Cloud miss for {key}: {e}")
                     return None
             
             return None
