@@ -379,6 +379,37 @@ def get_inventory_history(
         history = get_product_history(sku, days, current_stock, all_movements)
         return history
         
-    except Exception as e:
-        print(f"History Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/actas")
+async def save_acta(data: dict, user: dict = Depends(verify_token)):
+    """Guardado histórico de actas de inventario"""
+    import uuid
+    import datetime
+    
+    acta_id = str(uuid.uuid4())
+    acta = {
+        "id": acta_id,
+        "date": datetime.datetime.now().isoformat(),
+        "user": user.get("username", "Unknown"),
+        "data": data
+    }
+    
+    # Save to cache history
+    try:
+        history = cache.load("actas_history.json") or []
+        history.append(acta)
+        cache.save("actas_history.json", history)
+        return {"status": "success", "acta_id": acta_id, "message": "Acta guardada correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/actas")
+async def get_actas(user: dict = Depends(verify_token)):
+    """Consultar historial de actas guardadas"""
+    try:
+        history = cache.load("actas_history.json") or []
+        return {"status": "success", "data": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

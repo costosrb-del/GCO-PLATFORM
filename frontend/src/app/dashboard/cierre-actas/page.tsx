@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useRef, useMemo, useEffect } from "react";
-import { FileText, Printer, Save, CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { FileText, Printer, Save, CheckCircle2, AlertTriangle, ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { SALES_CODES } from "@/lib/constants";
 import { useInventory } from "@/hooks/useInventory";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import axios from "axios";
+import { API_URL } from "@/lib/config";
 
 // Mapa de nombres comunes (Fallback)
 const DEFAULT_PRODUCT_NAMES: Record<string, string> = {
@@ -129,7 +134,74 @@ export default function CierreActasPage() {
 
     const handleGenerate = () => {
         setViewMode("document");
-        toast.success("Acta generada. Lista para imprimir.");
+        toast.success("Acta generada. Lista para imprimir o guardar.");
+    };
+
+    const printRef = useRef<HTMLDivElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleDownloadExcel = () => {
+        const rows = processedItems.map(item => ({
+            "Referencia": `${item.sku} - ${item.name}`,
+            "Sistema (Und)": item.s,
+            "Físico (Und)": item.p,
+            "Diferencia": item.diff,
+            "Estado": item.diff < 0 ? "Faltante" : item.diff > 0 ? "Sobrante" : "OK",
+            "Costo Restado (Faltantes)": item.diff < 0 ? (Math.abs(item.diff) * (Number(item.unitPrice) || 0)) : 0
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, "Diferencias");
+        XLSX.writeFile(wb, `Inventario_${company}_${fecha.replace(/-/g, "")}.xlsx`);
+        toast.success("Excel descargado correctamente.");
+    };
+
+    const handleSaveActa = async () => {
+        setIsSaving(true);
+        try {
+            const token = localStorage.getItem("gco_token");
+            if (!token) throw new Error("No hay token de sesión");
+
+            const payload = {
+                company, consecutivo, fecha, periodo, observaciones,
+                items: processedItems,
+                resumen: { totalReferencias, refConDiferencias, exactitud, totalUnidadesSistema, totalUnidadesDiferencia, exactitudUnidades }
+            };
+
+            const res = await axios.post(`${API_URL}/inventory/actas`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data?.status === "success") {
+                toast.success("Acta guardada correctamente en el Historial");
+            }
+        } catch (error: any) {
+            console.error("Error al guardar", error);
+            toast.error(error.message || "Error al guardar el acta");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        if (!printRef.current) return;
+        toast.info("Generando PDF (esto puede tomar unos segundos)...", { id: "pdf_wait" });
+        try {
+            // Se usa clone para ajustar la vista al renderizar sin romper el original
+            const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL("image/png");
+
+            const pdf = new jsPDF("p", "mm", "a4");
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+            pdf.save(`Acta_Inventario_${company}_${fecha.replace(/-/g, "")}.pdf`);
+            toast.success("PDF descargado", { id: "pdf_wait" });
+        } catch (err) {
+            console.error(err);
+            toast.error("Error al generar el PDF", { id: "pdf_wait" });
+        }
     };
 
     // Cálculos Derivados
@@ -399,23 +471,46 @@ export default function CierreActasPage() {
                 <div className="max-w-[800px] mx-auto bg-white shadow-xl min-h-screen relative print-section">
 
                     {/* Botonera Flotante (No Imprimible) */}
-                    <div className="no-print sticky top-4 right-4 flex justify-end gap-2 p-4 z-50">
+                    <div className="no-print sticky top-4 right-4 flex justify-end gap-2 p-4 z-50 flex-wrap">
                         <button
                             onClick={() => setViewMode("form")}
                             className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
                         >
-                            <ArrowLeft className="h-4 w-4" /> Editar Datos
+                            <ArrowLeft className="h-4 w-4" /> Editar
                         </button>
+
+                        <button
+                            onClick={handleDownloadExcel}
+                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-all flex items-center gap-2 shadow-sm"
+                        >
+                            <FileSpreadsheet className="h-4 w-4" /> Excel
+                        </button>
+
+                        <button
+                            onClick={handleDownloadPDF}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-all flex items-center gap-2 shadow-sm"
+                        >
+                            <FileDown className="h-4 w-4" /> PDF
+                        </button>
+
                         <button
                             onClick={handlePrint}
-                            className="bg-[#183C30] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#122e24] transition-all flex items-center gap-2 shadow-sm"
+                            className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-900 transition-all flex items-center gap-2 shadow-sm"
                         >
-                            <Printer className="h-4 w-4" /> Imprimir Acta / PDF
+                            <Printer className="h-4 w-4" /> Imprimir
+                        </button>
+
+                        <button
+                            onClick={handleSaveActa}
+                            disabled={isSaving}
+                            className={`${isSaving ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm ml-2`}
+                        >
+                            <Save className="h-4 w-4" /> {isSaving ? "Guardando..." : "Guardar Acta"}
                         </button>
                     </div>
 
                     {/* Hoja Formato A4 */}
-                    <div className="p-8 sm:p-12 print:p-2 text-[12px] leading-relaxed text-gray-900 font-sans bg-white pb-32 print:pb-0">
+                    <div ref={printRef} className="p-8 sm:p-12 print:p-2 text-[12px] leading-relaxed text-gray-900 font-sans bg-white pb-32 print:pb-0">
 
                         {/* Cabecera Profesional */}
                         <div className="border-b-2 border-[#183C30] pb-6 mb-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
