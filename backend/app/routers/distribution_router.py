@@ -9,6 +9,51 @@ from app.services.analytics import calculate_average_sales
 from app.services.cache import cache
 import concurrent.futures
 import time
+import math
+
+PACKAGING_UNITS = {
+    "3001": 68,
+    "3005": 50,
+    "3012": 84,
+    "7007": 50,
+    "7008": 50,
+    "7009": 50,
+    "7101": 100,
+    "7210": 50,
+    "7299": 70,
+    "7416": 100,
+    "7901": 100,
+    "7957": 100,
+    "7701": 25,
+    "EVO-7701": 25,
+    "7702": 100,
+    "EVO-7702": 100,
+    "7703": 150,
+    "EVO-7703": 150,
+}
+
+def get_packaging_unit(sku: str) -> int:
+    norm = normalize_sku(sku)
+    return PACKAGING_UNITS.get(norm, PACKAGING_UNITS.get(sku, 1))
+
+def round_to_packaging(quantity: float, sku: str, limit: float = None) -> int:
+    unit = get_packaging_unit(sku)
+    if unit <= 1 or quantity <= 0:
+        val = int(quantity)
+        if limit is not None and val > limit:
+            return int(limit)
+        return val
+    
+    boxes = round(quantity / unit)
+    if boxes == 0 and quantity > 0:
+        boxes = 1
+        
+    suggested = int(boxes * unit)
+    if limit is not None and suggested > limit:
+        max_boxes = int(limit / unit)
+        suggested = int(max_boxes * unit)
+        
+    return suggested
 
 router = APIRouter(prefix="/distribution", tags=["distribution"])
 
@@ -162,39 +207,29 @@ def get_distribution_proposal(
         total_needed += needed
         
     # 5. Distribute Source Stock
-    # If we have enough, give everyone what they need.
-    # If not, distribute proportionally? Or prioritize critical?
-    # User said: "deberias ingresar X cantidad... por esto y esto"
-    
-    # If total needed > source stock, we ration (ratio < 1).
-    # If total needed < source stock, we just fill the need (ratio = 1 effectively for allocation).
-    # We DO NOT push extra stock. Remaining stays in source.
-    
-    remaining_source = source_stock
-    
-    # Logic:
-    # 1. Provide proportionally to what they NEED.
-    # 2. Never give more than they NEED (unless rule changes).
-    # 3. If Shortage (Source < Total Need): Ration strictly by % of need.
-    # 4. If Surplus (Source > Total Need): Give 100% of need, keep rest in source.
+    total_global_avg = sum(averages_data.get(c["name"], {}).get(norm_sku, 0) for c in companies)
+    reserve_qty = total_global_avg * 5
+    available_to_distribute = max(0, source_stock - reserve_qty)
     
     fill_ratio = 1.0
     if total_needed > 0:
-        if source_stock >= total_needed:
+        if available_to_distribute >= total_needed:
             fill_ratio = 1.0
         else:
-            fill_ratio = source_stock / total_needed
+            fill_ratio = available_to_distribute / total_needed
     else:
         fill_ratio = 0.0
         
-    for p in proposal:
+    remaining_to_distribute = available_to_distribute
+        
+    # Order proposal by most critical first to give them the boxes if we are short
+    for p in sorted(proposal, key=lambda x: x["days_remaining"]):
         if p["needed"] > 0:
-            # Proportional allocation
-            # e.g. Need 100, Ratio 0.5 -> Suggested 50
-            alloc = int(p["needed"] * fill_ratio)
+            alloc_raw = p["needed"] * fill_ratio
+            alloc = round_to_packaging(alloc_raw, sku, limit=remaining_to_distribute)
             
             p["suggested"] = alloc
-            remaining_source -= alloc
+            remaining_to_distribute -= alloc
             
             # Justification
             if p["days_remaining"] == 0 and p["average_daily"] > 0:
@@ -218,7 +253,8 @@ def get_distribution_proposal(
         "source_audit": source_audit,
         "total_needed": total_needed,
         "distribution": proposal,
-        "fill_ratio": fill_ratio
+        "fill_ratio": fill_ratio,
+        "packaging_unit": get_packaging_unit(sku)
     }
 
 from fastapi.responses import StreamingResponse
@@ -327,18 +363,29 @@ def stream_batch_distribution_proposals(
                     })
                     total_needed += needed
 
+                total_global_avg = sum(averages_data.get(c["name"], {}).get(norm_sku, 0) for c in companies)
+                reserve_qty = total_global_avg * 5
+                available_to_distribute = max(0, source_stock - reserve_qty)
+
                 fill_ratio = 1.0
-                if total_needed > source_stock and total_needed > 0:
-                    fill_ratio = source_stock / total_needed
+                if total_needed > available_to_distribute and total_needed > 0:
+                    fill_ratio = available_to_distribute / total_needed
                 elif total_needed > 0:
                      fill_ratio = 1.0 
                 else:
                      fill_ratio = 0.0
+                     
+                remaining_to_distribute = available_to_distribute
                     
-                for p in proposal:
+                # Re-order logic to serve most critical first when using boxes
+                for p in sorted(proposal, key=lambda x: x["days_remaining"]):
                     if p["needed"] > 0:
-                        alloc = int(p["needed"] * fill_ratio)
+                        alloc_raw = p["needed"] * fill_ratio
+                        alloc = round_to_packaging(alloc_raw, sku, limit=remaining_to_distribute)
+                        
                         p["suggested"] = alloc
+                        remaining_to_distribute -= alloc
+                        
                         if p["days_remaining"] < 5:
                             p["reason"] = "Crítico (<5d)"
                         elif p["days_remaining"] < days_goal / 2:
@@ -354,7 +401,8 @@ def stream_batch_distribution_proposals(
                     "source_stock": source_stock,
                     "total_needed": total_needed,
                     "fill_ratio": fill_ratio,
-                    "distribution": proposal
+                    "distribution": proposal,
+                    "packaging_unit": get_packaging_unit(sku)
                 })
                 
             final_payload = {
