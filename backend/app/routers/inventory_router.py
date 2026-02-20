@@ -378,7 +378,8 @@ def get_inventory_history(
         # Now processing
         history = get_product_history(sku, days, current_stock, all_movements)
         return history
-        
+    except Exception as e:
+        print(f"History Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/actas")
