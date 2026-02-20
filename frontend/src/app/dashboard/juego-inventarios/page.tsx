@@ -108,7 +108,7 @@ export default function JuegoInventariosPage() {
 
     useEffect(() => {
         fetchStatus();
-        fetchData();
+        // fetchData(); -> Se quita ejecución automática, el usuario debe oprimir "Actualizar Reporte"
     }, []);
 
     const getMonthName = (monthStr: string) => {
