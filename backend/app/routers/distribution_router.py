@@ -157,6 +157,17 @@ def get_distribution_proposal(
         averages_data = avg_map
         cache.save(cache_key, {"timestamp": time.time(), "data": avg_map})
         
+    cache_key_5d = "sales_averages_split_5d.json"
+    cached_avgs_5d = cache.load(cache_key_5d)
+    
+    averages_data_5d = None
+    if cached_avgs_5d and (time.time() - cached_avgs_5d.get("timestamp", 0) < 3600):
+        averages_data_5d = cached_avgs_5d.get("data")
+    else:
+        result_tuple_5d = calculate_average_sales(days=5, split_by_company=True)
+        averages_data_5d = result_tuple_5d[0]
+        cache.save(cache_key_5d, {"timestamp": time.time(), "data": averages_data_5d})
+        
     # 3. Fetch Current Stock (Siigo) - Realtime
     companies = get_config()
     current_stocks = {} # Company -> SKU -> Qty
@@ -207,8 +218,8 @@ def get_distribution_proposal(
         total_needed += needed
         
     # 5. Distribute Source Stock
-    total_global_avg = sum(averages_data.get(c["name"], {}).get(norm_sku, 0) for c in companies)
-    reserve_qty = total_global_avg * 5
+    total_global_avg_5d = sum(averages_data_5d.get(c["name"], {}).get(norm_sku, 0) for c in companies)
+    reserve_qty = total_global_avg_5d * 5
     available_to_distribute = max(0, source_stock - reserve_qty)
     
     fill_ratio = 1.0
@@ -312,6 +323,18 @@ def stream_batch_distribution_proposals(
                 averages_data = avg_map
                 cache.save(cache_key, {"timestamp": time.time(), "data": avg_map})
                 
+            yield f"data: {json.dumps({'progress': 50, 'message': f'Calculando Velocidad de Ventas (5 días para reserva)...'})}\n\n"
+            cache_key_5d = "sales_averages_split_5d.json"
+            cached_avgs_5d = cache.load(cache_key_5d)
+            averages_data_5d = None
+            
+            if cached_avgs_5d and (time.time() - cached_avgs_5d.get("timestamp", 0) < 3600): 
+                averages_data_5d = cached_avgs_5d.get("data")
+            else:
+                result_tuple_5d = calculate_average_sales(days=5, split_by_company=True)
+                averages_data_5d = result_tuple_5d[0]
+                cache.save(cache_key_5d, {"timestamp": time.time(), "data": averages_data_5d})
+                
             yield f"data: {json.dumps({'progress': 70, 'message': 'Consultando Stock Actual...'})}\n\n"
 
             # 3. Current Stock
@@ -363,8 +386,8 @@ def stream_batch_distribution_proposals(
                     })
                     total_needed += needed
 
-                total_global_avg = sum(averages_data.get(c["name"], {}).get(norm_sku, 0) for c in companies)
-                reserve_qty = total_global_avg * 5
+                total_global_avg_5d = sum(averages_data_5d.get(c["name"], {}).get(norm_sku, 0) for c in companies)
+                reserve_qty = total_global_avg_5d * 5
                 available_to_distribute = max(0, source_stock - reserve_qty)
 
                 fill_ratio = 1.0

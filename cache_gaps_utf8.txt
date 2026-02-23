@@ -1,0 +1,43 @@
+﻿Checking 6 cache files in C:\tmp\gco_local_cache...
+
+File: history_ALMAVERDE BEAUTY S.A.S..json
+  Range: 2025-11-30 to 2026-02-10
+  Total Days Span: 73
+  Unique Dates Found: 43
+  Coverage: 58.9%
+  [ALERT] Found 30 missing days! First 5: ['2025-12-01', '2025-12-02', '2025-12-03', '2025-12-04', '2025-12-06']
+
+File: history_ARMONIA COSMETICA S.A.S..json
+  Range: 2024-07-31 to 2026-02-10
+  Total Days Span: 560
+  Unique Dates Found: 370
+  Coverage: 66.1%
+  [ALERT] Found 190 missing days! First 5: ['2024-08-01', '2024-08-02', '2024-08-03', '2024-08-04', '2024-08-05']
+
+File: history_GRUPO HUMAN PROJECT S.A.S..json
+  Range: 2024-08-08 to 2026-02-10
+  Total Days Span: 552
+  Unique Dates Found: 287
+  Coverage: 52.0%
+  [ALERT] Found 265 missing days! First 5: ['2024-08-09', '2024-08-11', '2024-08-12', '2024-08-13', '2024-08-14']
+
+File: history_HECHIZO DE BELLEZA S.A.S..json
+  Range: 2024-08-28 to 2026-02-10
+  Total Days Span: 532
+  Unique Dates Found: 324
+  Coverage: 60.9%
+  [ALERT] Found 208 missing days! First 5: ['2024-08-30', '2024-08-31', '2024-09-01', '2024-09-02', '2024-09-03']
+
+File: history_RAICES ORGANICAS S.A.S..json
+  Range: 2024-07-05 to 2026-02-10
+  Total Days Span: 586
+  Unique Dates Found: 385
+  Coverage: 65.7%
+  [ALERT] Found 201 missing days! First 5: ['2024-07-06', '2024-07-08', '2024-07-09', '2024-07-10', '2024-07-11']
+
+File: history_RITUAL BOTANICO S.A.S..json
+  Range: 2022-12-29 to 2026-02-10
+  Total Days Span: 1140
+  Unique Dates Found: 1046
+  Coverage: 91.8%
+  [ALERT] Found 94 missing days! First 5: ['2022-12-30', '2022-12-31', '2023-04-02', '2023-10-08', '2024-03-03']

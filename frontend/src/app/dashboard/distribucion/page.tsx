@@ -19,6 +19,7 @@ interface DistributionProposal {
     source_audit?: string;
     total_needed: number;
     fill_ratio: number;
+    packaging_unit?: number;
     distribution: {
         company: string;
         current_stock: number;
@@ -157,11 +158,11 @@ export default function DistributionPage() {
         }
     };
 
-    // Auto-run batch on mount if default mode
+    // Auto-run batch on mount if default mode (Disabled per request)
     useEffect(() => {
-        if (mode === "batch" && !streamedBatchData && !isStreaming) {
-            handleBatchAnalysis();
-        }
+        // if (mode === "batch" && !streamedBatchData && !isStreaming) {
+        //     handleBatchAnalysis();
+        // }
     }, []); // Run once
 
     // Combined Loading & Error States
@@ -175,6 +176,23 @@ export default function DistributionPage() {
             direction = 'desc';
         }
         setSortConfig({ key, direction });
+    };
+
+    // Helper para redondear a cajas completas
+    const roundToPackaging = (quantity: number, unit: number, limit?: number) => {
+        if (!unit || unit <= 1 || quantity <= 0) {
+            const val = Math.floor(quantity);
+            if (limit !== undefined && val > limit) return Math.floor(limit);
+            return val;
+        }
+        let boxes = Math.round(quantity / unit);
+        if (boxes === 0 && quantity > 0) boxes = 1;
+        let suggested = boxes * unit;
+        if (limit !== undefined && suggested > limit) {
+            const maxBoxes = Math.floor(limit / unit);
+            suggested = maxBoxes * unit;
+        }
+        return suggested;
     };
 
     const getSortIndicator = (key: string) => {
@@ -212,18 +230,35 @@ export default function DistributionPage() {
                 fillRatio = (p.source_stock >= totalNeededForSku) ? 1.0 : (p.source_stock / totalNeededForSku);
             }
 
-            p.distribution.forEach(d => {
+            let remainingSource = p.source_stock;
+            const sortedDist = [...p.distribution].map(d => {
                 const targetQty = d.average_daily * daysGoal;
                 const needed = Math.max(0, targetQty - d.current_stock);
-                let suggested = 0;
-                if (needed > 0) suggested = Math.floor(needed * fillRatio);
+                return { ...d, needed };
+            }).sort((a, b) => a.days_remaining - b.days_remaining);
 
-                if (suggested > 0) {
+            // Reconstruir orden original después de asignar stock
+            const assignedDist = sortedDist.map(d => {
+                let suggested = 0;
+                if (d.needed > 0) {
+                    const raw = d.needed * fillRatio;
+                    suggested = roundToPackaging(raw, p.packaging_unit || 1, remainingSource);
+                    remainingSource -= suggested;
+                }
+                return { ...d, suggested };
+            });
+
+            // Restore original order to push properties consistently if desired, or just push sorted
+            assignedDist.forEach(d => {
+                if (d.suggested > 0) {
                     exportRows.push({
                         SKU: p.sku,
                         "Origen": "Bodega Principal",
                         "Destino": d.company,
-                        "Enviar": suggested,
+                        "Enviar": d.suggested,
+                        "Caja": p.packaging_unit || 1,
+                        "Num_Cajas": Math.ceil(d.suggested / (p.packaging_unit || 1)),
+                        "Queda_Bodega": remainingSource,
                         "Prioridad": (d.days_remaining < 5 && d.average_daily > 0) ? "Alta" : "Normal",
                         "Stock": d.current_stock,
                         "Venta_Dia": d.average_daily.toFixed(2),
@@ -247,17 +282,160 @@ export default function DistributionPage() {
             const ext = format === 'excel' ? 'xlsx' : 'csv';
             XLSX.writeFile(wb, `Plan_Distribucion_${dateStr}.${ext}`);
         } else if (format === 'pdf') {
-            const doc = new jsPDF();
-            doc.text(`Plan de Distribución - ${dateStr}`, 14, 15);
+            const doc = new jsPDF('p', 'pt', 'letter');
+
+            // Add types for sorted
+            interface PdfRow { Destino: string; SKU: string; Enviar: number; Caja: number; Num_Cajas: number; Queda_Bodega: number; Prioridad: string; }
+            const sortedData = [...(data as PdfRow[])].sort((a, b) => {
+                if (a.Destino < b.Destino) return -1;
+                if (a.Destino > b.Destino) return 1;
+                return a.SKU.localeCompare(b.SKU);
+            });
+
+            // Calculate totals
+            const totalItems = sortedData.reduce((acc, curr) => acc + Number(curr.Enviar), 0);
+            const totalBoxes = sortedData.reduce((acc, curr) => acc + Number(curr.Num_Cajas), 0);
+
+            // Header rectangle
+            doc.setFillColor(24, 60, 48); // #183C30
+            doc.rect(0, 0, doc.internal.pageSize.width, 70, 'F');
+
+            // Header Text
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PLAN DE DISTRIBUCIÓN Y TRASLADOS', 40, 35);
+
             doc.setFontSize(10);
-            doc.text(`Meta: ${daysGoal} días | Total Referencias: ${data.length}`, 14, 22);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Fecha: ${new Date().toLocaleString()}`, 40, 52);
+
+            // Subheader stats
+            doc.setTextColor(50, 50, 50);
+            doc.setFontSize(10);
+            doc.text(`Total Tareas (Traslados): ${sortedData.length}`, 40, 95);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Total a Enviar: ${totalBoxes} Cajas (${totalItems.toLocaleString()} unds)`, 40, 110);
+            doc.setFont('helvetica', 'normal');
+
+            // Align Right info
+            doc.text(`Generado: Plataforma Logística GCO`, doc.internal.pageSize.width - 40, 95, { align: 'right' });
+            doc.text(`Meta Cobertura: ${daysGoal} días`, doc.internal.pageSize.width - 40, 110, { align: 'right' });
 
             autoTable(doc, {
-                startY: 25,
-                head: [['SKU', 'Destino', 'Enviar', 'Prioridad', 'Stock', 'Venta/Día']],
-                body: data.map(r => [r.SKU, r.Destino, r.Enviar, r.Prioridad, r.Stock, r.Venta_Dia]),
+                startY: 125,
+                head: [['Destino', 'Ref', 'Cant. Enviar', 'Cajas', 'Prioridad']],
+                body: sortedData.map(r => [
+                    r.Destino,
+                    r.SKU,
+                    `${r.Enviar} unds`,
+                    `${r.Num_Cajas}`,
+                    r.Prioridad
+                ]),
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [24, 60, 48],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                bodyStyles: {
+                    textColor: [50, 50, 50]
+                },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 160 }, // Destino
+                    1: { fontStyle: 'bold', halign: 'center' }, // SKU
+                    2: { halign: 'center', fontStyle: 'bold', textColor: [24, 60, 48] }, // Cant. Enviar
+                    3: { halign: 'center', fontStyle: 'bold', textColor: [24, 60, 48] }, // Cajas
+                    4: { halign: 'center' } // Prioridad
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 250, 245]
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index === 4) {
+                        if (data.cell.raw === 'Alta') {
+                            data.cell.styles.textColor = [220, 38, 38]; // Red
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                }
             });
-            doc.save(`Plan_Distribucion_${dateStr}.pdf`);
+
+            // Second table for Final Warehouse Stock
+            const finalStockMap = new Map<string, number>();
+            if (streamedBatchData?.results) {
+                streamedBatchData.results.forEach(p => {
+                    let totalNeededForSku = 0;
+                    p.distribution.forEach(d => {
+                        const targetQty = d.average_daily * daysGoal;
+                        totalNeededForSku += Math.max(0, targetQty - d.current_stock);
+                    });
+
+                    let fillRatio = 0.0;
+                    if (totalNeededForSku > 0) {
+                        fillRatio = (p.source_stock >= totalNeededForSku) ? 1.0 : (p.source_stock / totalNeededForSku);
+                    }
+
+                    let remainingSource = p.source_stock;
+                    const sortedDist = [...p.distribution].map(d => {
+                        const targetQty = d.average_daily * daysGoal;
+                        const needed = Math.max(0, targetQty - d.current_stock);
+                        return { ...d, needed };
+                    }).sort((a, b) => a.days_remaining - b.days_remaining);
+
+                    sortedDist.forEach(d => {
+                        if (d.needed > 0) {
+                            const raw = d.needed * fillRatio;
+                            const suggested = roundToPackaging(raw, p.packaging_unit || 1, remainingSource);
+                            remainingSource -= suggested;
+                        }
+                    });
+
+                    finalStockMap.set(p.sku, remainingSource);
+                });
+            }
+
+            const finalStockRows = Array.from(finalStockMap.entries()).map(([sku, stock]) => [sku, stock.toLocaleString()]).sort((a, b) => a[0].localeCompare(b[0]));
+
+            const firstTableRef = (doc as any).lastAutoTable;
+            const startY = firstTableRef ? firstTableRef.finalY + 30 : 125;
+
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(24, 60, 48);
+            doc.text('INVENTARIO FINAL EN BODEGA LIBRE', 40, startY - 10);
+
+            autoTable(doc, {
+                startY: startY,
+                head: [['Referencia (SKU)', 'Queda en Bodega Libre']],
+                body: finalStockRows,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [24, 60, 48],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                columnStyles: {
+                    0: { fontStyle: 'bold', halign: 'center' }, // SKU
+                    1: { halign: 'center', fontStyle: 'bold', textColor: [24, 60, 48] } // Stock
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 250, 245]
+                }
+            });
+
+            // Footer
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 20, { align: 'center' });
+            }
+
+            doc.save(`Traslados_Logistica_${dateStr}.pdf`);
         }
         setIsExportMenuOpen(false);
     };
@@ -495,11 +673,19 @@ export default function DistributionPage() {
                                 fillRatio = (p.source_stock >= totalNeededForSku) ? 1.0 : (p.source_stock / totalNeededForSku);
                             }
 
-                            p.distribution.forEach(d => {
+                            let remainingSource = p.source_stock;
+                            const sortedDist = [...p.distribution].map(d => {
                                 const targetQty = d.average_daily * daysGoal;
                                 const needed = Math.max(0, targetQty - d.current_stock);
-                                if (needed > 0) {
-                                    totalSuggestedGlobal += Math.floor(needed * fillRatio);
+                                return { ...d, needed };
+                            }).sort((a, b) => a.days_remaining - b.days_remaining);
+
+                            sortedDist.forEach(d => {
+                                if (d.needed > 0) {
+                                    const raw = d.needed * fillRatio;
+                                    const suggested = roundToPackaging(raw, p.packaging_unit || 1, remainingSource);
+                                    totalSuggestedGlobal += suggested;
+                                    remainingSource -= suggested;
                                 }
                             });
                             totalSourceGlobal += p.source_stock;
@@ -582,6 +768,7 @@ export default function DistributionPage() {
                                         reason: string;
                                         fill_ratio: number;
                                         average_daily: number;
+                                        packaging_unit: number;
                                     };
 
                                     const rows: Row[] = [];
@@ -625,15 +812,25 @@ export default function DistributionPage() {
 
                                         // 3. Distribute & Build Rows
                                         let remainingSource = p.source_stock;
+
+                                        // Update suggestion sequentially by priority
+                                        const sortedDist = [...recalcDistribution].sort((a, b) => a.days_remaining - b.days_remaining);
+                                        const allocMap = new Map();
+                                        sortedDist.forEach(d => {
+                                            let suggested = 0;
+                                            if (d.needed > 0) {
+                                                const raw = d.needed * fillRatio;
+                                                suggested = roundToPackaging(raw, p.packaging_unit || 1, remainingSource);
+                                                remainingSource -= suggested;
+                                            }
+                                            allocMap.set(d.company, suggested);
+                                        });
+
                                         recalcDistribution.forEach(d => {
                                             // Company Filter
                                             if (filterCompany !== "all" && d.company !== filterCompany) return;
 
-                                            // Calculate Suggestion
-                                            let suggested = 0;
-                                            if (d.needed > 0) {
-                                                suggested = Math.floor(d.needed * fillRatio);
-                                            }
+                                            const suggested = allocMap.get(d.company) || 0;
 
                                             // Status Logic
                                             const isAgotado = d.needed > 0 && p.source_stock === 0;
@@ -660,7 +857,8 @@ export default function DistributionPage() {
                                                 suggested: suggested, // Recalculated
                                                 reason: reason,
                                                 fill_ratio: fillRatio,
-                                                average_daily: d.average_daily
+                                                average_daily: d.average_daily,
+                                                packaging_unit: p.packaging_unit || 1
                                             });
                                         });
                                     });
@@ -742,9 +940,14 @@ export default function DistributionPage() {
                                                     {isAgotado ? (
                                                         <span className="text-red-600 text-xs font-black uppercase tracking-wider">¡AGOTADO!</span>
                                                     ) : (
-                                                        <span className={row.suggested > 0 ? 'text-[#183C30] bg-green-50 px-2 py-1 rounded' : 'text-gray-300'}>
-                                                            {row.suggested > 0 ? `+${row.suggested}` : '-'}
-                                                        </span>
+                                                        <div className="flex flex-col items-center">
+                                                            <span className={row.suggested > 0 ? 'text-[#183C30] bg-green-50 px-2 py-1 rounded' : 'text-gray-300'}>
+                                                                {row.suggested > 0 ? `+${row.suggested}` : '-'}
+                                                            </span>
+                                                            {row.suggested > 0 && row.packaging_unit > 1 && (
+                                                                <span className="text-[10px] text-gray-500 font-medium mt-1">Caja: {row.packaging_unit}unds</span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-3 text-xs italic">

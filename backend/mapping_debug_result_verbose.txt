@@ -1,0 +1,5 @@
+Detailed movements for 7702 in Ritual Botanico:
+  2026-02-05 FV FV-6-417 : 100.0 -> 100.0 (Code: 7702EX-EVO)
+  2026-02-10 FV FV-2-1342 : 100.0 -> 100.0 (Code: EVO-7702)
+
+TOTAL NET QTY: 200.0

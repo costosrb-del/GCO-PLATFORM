@@ -13,3 +13,4 @@ python-multipart
 gspread
 google-auth
 email-validator
+tenacity

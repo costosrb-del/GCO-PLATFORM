@@ -1,0 +1,54 @@
+Cargando configuraci¾n de empresas...
+Total empresas encontradas: 6
+[DEBUG] Calculating averages from 2026-01-31 to 2026-02-15 (Split: True)
+[Analytics] Fetching from API for ARMONIA COSMETICA S.A.S.
+[Analytics] Fetching from API for HECHIZO DE BELLEZA S.A.S.
+[Analytics] Fetching from API for RAICES ORGANICAS S.A.S.
+[Analytics] Fetching from API for RITUAL BOTANICO S.A.S.
+[Analytics] Fetching from API for ALMAVERDE BEAUTY S.A.S.
+[Analytics] Fetching from API for GRUPO HUMAN PROJECT S.A.S.
+Integrity Check Passed: 13/13 documents verified.
+Integrity Check Passed: 19/19 documents verified.
+Integrity Check Passed: 71/71 documents verified.
+DEBUG: Total movements extracted: 24
+Integrity Check Passed: 43/43 documents verified.
+Integrity Check Passed: 17/17 documents verified.
+Integrity Check Passed: 39/39 documents verified.
+Integrity Check Passed: 85/85 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 186/186 documents verified.
+Integrity Check Passed: 255/255 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 149/149 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 681/681 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 1163/1163 documents verified.
+DEBUG: Total movements extracted: 0
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7702 [1st: 0.0 vs 2nd: 500.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7702 [1st: 0.0 vs 2nd: 1500.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7702 [1st: 0.0 vs 2nd: 1524.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7702 [1st: 100.0 vs 2nd: 1524.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7210 [1st: 0.0 vs 2nd: 300.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7210 [1st: 0.0 vs 2nd: 324.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7210 [1st: 50.0 vs 2nd: 324.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7703 [1st: 0.0 vs 2nd: 100.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7703 [1st: 0.0 vs 2nd: 124.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7703 [1st: 300.0 vs 2nd: 124.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7703 [1st: 312.0 vs 2nd: 124.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7901 [1st: 0.0 vs 2nd: 1000.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7901 [1st: 50.0 vs 2nd: 1000.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7007 [1st: 0.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7007 [1st: 300.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7007 [1st: 350.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7009 [1st: 0.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7008 [1st: 0.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7299 [1st: 0.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7299 [1st: 74.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7416 [1st: 0.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7416 [1st: 6.0 vs 2nd: 24.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 7701 [1st: 6.0 vs 2nd: 0.0]
+TREND DEBUG: ARMONIA COSMETICA S.A.S. 3012 [1st: 12.0 vs 2nd: 0.0]
+Time: 25.72s
+Global Average for 7702: 101.5
+  ARMONIA COSMETICA S.A.S.: 101.5

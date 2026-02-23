@@ -677,7 +677,7 @@ export default function SaldosPage() {
                           // Auto-select warehouses - Robust Match from available list
                           const targetWarehouses = warehousesList.filter(wh => {
                             const w = wh.toLowerCase();
-                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("bodega libre") || w.includes("sin ingresar") || w.includes("sin asignar") || w.includes("externa") || w.includes("laboratorio");
+                            return (w.includes("principal") && w.includes("rionegro")) || w.includes("sin ingresar");
                           });
                           if (targetWarehouses.length > 0) {
                             setSelectedWarehouses(targetWarehouses);

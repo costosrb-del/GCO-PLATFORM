@@ -14,8 +14,9 @@ export const useInventory = () => {
             const token = localStorage.getItem("gco_token");
             if (!token) throw new Error("No authenticated");
 
-            const { data } = await axios.get(`${getBaseUrl()}/inventory?force_refresh=true`, {
-                headers: { Authorization: `Bearer ${token}` }
+            const { data } = await axios.get(`${getBaseUrl()}/inventory?force_refresh=false`, {
+                headers: { Authorization: `Bearer ${token}` },
+                timeout: 300000
             });
             return data.data; // The API returns { data: [...], count: N, errors: [] }
         },

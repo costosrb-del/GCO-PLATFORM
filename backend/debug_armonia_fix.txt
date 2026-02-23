@@ -1,0 +1,6 @@
+Analyzing ARMONIA COSMETICA S.A.S. from 2026-01-31 to 2026-02-15
+Found 17 movements in range/type
+7702 Total: 200.0
+History:
+  2026-02-05 FV-6-417 7702EX-EVO : 100.0
+  2026-02-10 FV-2-1342 EVO-7702 : 100.0

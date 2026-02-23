@@ -2,8 +2,24 @@ import requests
 import time
 from datetime import datetime
 import logging
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 BASE_URL = "https://api.siigo.com/v1"
+
+def should_retry(e):
+    if isinstance(e, requests.exceptions.HTTPError):
+        return e.response.status_code in (429, 500, 502, 503, 504)
+    return isinstance(e, requests.exceptions.RequestException)
+
+@retry(
+    retry=retry_if_exception(should_retry),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=30),
+    stop=stop_after_attempt(5)
+)
+def _do_get_documents(url, headers, params):
+    response = requests.get(url, headers=headers, params=params, timeout=30)
+    response.raise_for_status()
+    return response.json()
 
 def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, date_param_name="date_start"):
     """
@@ -26,39 +42,14 @@ def get_documents(token, endpoint, start_date, end_date, page=1, page_size=50, d
         end_key: end_date,
     }
     
-    max_retries = 3
-    retry_delay = 2
-
-    for attempt in range(max_retries):
-        try:
-            # print(f"DEBUG: Fetching {endpoint} page {page} with params {params}")
-            logging.info(f"Fetching {endpoint} page {page}. Params: {params}")
-            response = requests.get(url, headers=headers, params=params, timeout=30)
-            
-            if response.status_code == 429:
-                logging.warning(f"Rate limit 429 for {endpoint}")
-                print(f"Rate limit exceeded (429) fetching {endpoint} page {page}. Retrying...")
-                time.sleep(retry_delay)
-                retry_delay *= 2
-                continue
-                
-            response.raise_for_status()
-            data = response.json()
-            logging.info(f"Page {page} {endpoint}: Got {len(data.get('results', []))} results. Total: {data.get('pagination', {}).get('total_results')}")
-            return data
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching {endpoint}: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                # print(f"Response content: {e.response.text}")
-                pass
-            
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay)
-                continue
-            return None
-            
-    return None
+    try:
+        logging.info(f"Fetching {endpoint} page {page}. Params: {params}")
+        data = _do_get_documents(url, headers, params)
+        logging.info(f"Page {page} {endpoint}: Got {len(data.get('results', []))} results. Total: {data.get('pagination', {}).get('total_results')}")
+        return data
+    except Exception as e:
+        print(f"Error fetching {endpoint} page {page}: {e}")
+        return None
 
 def get_all_documents(token, endpoint, start_date, end_date, progress_callback=None):
     """

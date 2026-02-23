@@ -1,0 +1,3 @@
+Original codes mapped to 7702:
+  - EVO-7702: 17 movements, Total Qty: 20.0
+    Example: 2026-02-02 FV FV-2-72899 : 1.0

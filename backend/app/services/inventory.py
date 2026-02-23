@@ -1,7 +1,23 @@
 import requests
 import time
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 PRODUCTS_URL = "https://api.siigo.com/v1/products"
+
+def should_retry(e):
+    if isinstance(e, requests.exceptions.HTTPError):
+        return e.response.status_code in (429, 500, 502, 503, 504)
+    return isinstance(e, requests.exceptions.RequestException)
+
+@retry(
+    retry=retry_if_exception(should_retry),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=30),
+    stop=stop_after_attempt(5)
+)
+def _do_get_products(headers, params):
+    response = requests.get(PRODUCTS_URL, headers=headers, params=params, timeout=20)
+    response.raise_for_status()
+    return response.json()
 
 def get_products(token, partner_id="SiigoApi", page=1, page_size=25):
     """
@@ -17,51 +33,11 @@ def get_products(token, partner_id="SiigoApi", page=1, page_size=25):
         "page_size": page_size
     }
     
-    max_retries = 2
-    retry_delay = 1
-
-    for attempt in range(max_retries):
-        try:
-            # Timeout 10s: Fail fast rather than hang
-            response = requests.get(PRODUCTS_URL, headers=headers, params=params, timeout=10)
-            
-            # Handle rate limiting
-            if response.status_code == 429:
-                print(f"Rate limit exceeded (429) fetching page {page}. Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-                retry_delay *= 2
-                continue
-            
-            # Handle temporary server errors (502 Bad Gateway, 503 Service Unavailable)
-            if response.status_code in [502, 503]:
-                print(f"Server error ({response.status_code}) fetching page {page}. Attempt {attempt+1}/{max_retries}.")
-                if attempt < max_retries - 1:
-                    print(f"Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                else:
-                    print(f"Max retries reached for page {page}. Skipping.")
-                    return None
-                
-            response.raise_for_status()
-            return response.json()
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching products (attempt {attempt+1}/{max_retries}): {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                print(f"Response status: {e.response.status_code}")
-                # print(f"Response content: {e.response.text[:200]}")
-            
-            if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-                retry_delay *= 2
-            else:
-                print(f"Max retries reached. Returning None.")
-                return None
-            
-    return None
+    try:
+        return _do_get_products(headers, params)
+    except Exception as e:
+        print(f"Error fetching products page {page}: {e}")
+        return None
 
 def get_all_products(token, partner_id="SiigoApi", progress_callback=None):
     """
