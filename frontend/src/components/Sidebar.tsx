@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck, UserPlus, Settings } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, User, ChevronDown, ChevronLeft, ChevronRight, Menu, Truck, UserPlus, Settings, ClipboardList } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_URL } from "@/lib/config";
@@ -269,8 +269,21 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Transporte" : ""}
           >
-            <Truck className="h-5 w-5 shrink-0" />
-            {!isCollapsed && <span>Gestión Transporte</span>}
+          </Link>
+        )}
+
+        {/* Tasks (New Top Level) */}
+        {(role === "admin" || role === "asesora" || role === "viewer") && (
+          <Link
+            href="/dashboard/tareas"
+            className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all group ${pathname === "/dashboard/tareas"
+              ? "bg-white/10 text-white font-medium"
+              : "text-gray-300 hover:bg-white/5 hover:text-white"
+              } ${isCollapsed ? "justify-center" : ""}`}
+            title={isCollapsed ? "Tareas" : ""}
+          >
+            <ClipboardList className="h-5 w-5 shrink-0" />
+            {!isCollapsed && <span>Tareas</span>}
           </Link>
         )}
       </nav>

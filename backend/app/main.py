@@ -65,3 +65,5 @@ app.include_router(transport_router.router)
 from app.routers import clients_router
 app.include_router(clients_router.router)
 
+from app.routers import tasks_router
+app.include_router(tasks_router.router)
