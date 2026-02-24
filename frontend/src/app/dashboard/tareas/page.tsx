@@ -59,6 +59,9 @@ export default function TareasPage() {
     // Estado del Drag & Drop
     const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
+    // Ocultar completadas
+    const [showCompletedColumn, setShowCompletedColumn] = useState(true);
+
     // Filtros Histórico
     const [historyDate, setHistoryDate] = useState<string>("");
 
@@ -471,13 +474,13 @@ export default function TareasPage() {
                                             <CalendarIcon className="w-4 h-4 text-gray-400" /> Agenda y Reuniones
                                         </h3>
 
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-[11px] font-semibold text-gray-700 mb-1.5 block">Fecha Programada / Límite</label>
+                                                <label className="text-[11px] font-semibold text-gray-700 mb-1.5 block">Fecha Límite</label>
                                                 <Input type="date" value={formData.due_date} onChange={e => setFormData({ ...formData, due_date: e.target.value })} className="bg-gray-50 h-9" />
                                             </div>
                                             <div>
-                                                <label className="text-[11px] font-semibold text-gray-700 mb-1.5 block flex items-center gap-1"><Repeat className="w-3 h-3 text-blue-500" /> Frecuencia de Repetición</label>
+                                                <label className="text-[11px] font-semibold text-gray-700 mb-1.5 block flex items-center gap-1"><Repeat className="w-3 h-3 text-blue-500" /> Repetición</label>
                                                 <Select value={formData.recurrence || 'none'} onValueChange={v => setFormData({ ...formData, recurrence: v })}>
                                                     <SelectTrigger className="bg-gray-50 h-9"><SelectValue placeholder="No se repite" /></SelectTrigger>
                                                     <SelectContent>
@@ -642,189 +645,260 @@ export default function TareasPage() {
 
             {/* CONTENIDO: TABLERO INTERACTIVO (KANBAN) */}
             {activeTab === "tablero" && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-4 animate-in fade-in slide-in-from-bottom-4">
-                    {[
-                        { id: "Pendiente", color: "bg-slate-100/50", dot: "bg-slate-400", border: 'border-slate-200' },
-                        { id: "En Progreso", color: "bg-blue-50/30", dot: "bg-blue-500", border: 'border-blue-200' },
-                        { id: "Completada", color: "bg-green-50/40", dot: "bg-green-500", border: 'border-green-200' },
-                        { id: "Cancelada", color: "bg-red-50/30", dot: "bg-red-500", border: 'border-red-200' }
-                    ].map(statusGroup => (
-                        <div
-                            key={statusGroup.id}
-                            className={`${statusGroup.color} rounded-2xl p-3 min-h-[60vh] border border-gray-200/60 shadow-inner flex flex-col transition-all duration-300 ${draggedTaskId ? `ring-2 ring-dashed ${statusGroup.border} ring-opacity-50` : ''}`}
-                            onDragOver={handleDragOver}
-                            onDrop={(e) => handleDrop(e, statusGroup.id)}
-                        >
-                            <div className="flex items-center justify-between mb-4 px-1">
-                                <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm tracking-tight">
-                                    <span className={`w-2 h-2 rounded-full ${statusGroup.dot}`} />
-                                    {statusGroup.id}
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="bg-white border border-gray-200 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                        {filteredTasks.filter(t => {
-                                            if (t.status !== statusGroup.id) return false;
-                                            if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
-                                                if (t.completed_at && isToday(new Date(t.completed_at))) return true;
-                                                if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
-                                                return false;
-                                            }
-                                            return true;
-                                        }).length}
-                                    </span>
-                                </div>
+                <>
+                    {/* Productivity Widget */}
+                    <div className="mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between text-sm animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-4">
+                            <span className="font-bold text-gray-800 flex items-center gap-1.5"><ListTodo className="w-4 h-4 text-gray-400" /> Resumen del Día</span>
+                            <div className="flex items-center gap-3 text-xs">
+                                <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-semibold">
+                                    Pendientes: {tasks.filter(t => t.status === "Pendiente").length}
+                                </span>
+                                <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-semibold">
+                                    En Progreso: {tasks.filter(t => t.status === "En Progreso").length}
+                                </span>
+                                <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">
+                                    Completas: {tasks.filter(t => t.status === "Completada" && (t.completed_at ? isToday(new Date(t.completed_at)) : (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))))).length}
+                                </span>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600 font-semibold cursor-pointer select-none" onClick={() => setShowCompletedColumn(!showCompletedColumn)}>
+                                Ocultar Columna "Completadas"
+                            </label>
+                            <button
+                                onClick={() => setShowCompletedColumn(!showCompletedColumn)}
+                                className={`w-8 h-4 rounded-full transition-colors relative ${!showCompletedColumn ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            >
+                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${!showCompletedColumn ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                            </button>
+                        </div>
+                    </div>
 
-                            <div className="space-y-3 flex-1 overflow-y-auto pr-1 pb-4">
-                                {isLoading ? (
-                                    <div className="flex items-center justify-center py-10">
-                                        <div className="w-5 h-5 border-2 border-[#183C30]/20 border-t-[#183C30] rounded-full animate-spin" />
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-4 animate-in fade-in slide-in-from-bottom-4">
+                        {[
+                            { id: "Pendiente", color: "bg-slate-100/50", dot: "bg-slate-400", border: 'border-slate-200', show: true },
+                            { id: "En Progreso", color: "bg-blue-50/30", dot: "bg-blue-500", border: 'border-blue-200', show: true },
+                            { id: "Completada", color: "bg-green-50/40", dot: "bg-green-500", border: 'border-green-200', show: showCompletedColumn },
+                            { id: "Cancelada", color: "bg-red-50/30", dot: "bg-red-500", border: 'border-red-200', show: true }
+                        ].filter(g => g.show).map(statusGroup => (
+                            <div
+                                key={statusGroup.id}
+                                className={`${statusGroup.color} rounded-2xl p-3 min-h-[60vh] border border-gray-200/60 shadow-inner flex flex-col transition-all duration-300 ${draggedTaskId ? `ring-2 ring-dashed ${statusGroup.border} ring-opacity-50` : ''}`}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, statusGroup.id)}
+                            >
+                                <div className="flex items-center justify-between mb-4 px-1">
+                                    <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm tracking-tight">
+                                        <span className={`w-2 h-2 rounded-full ${statusGroup.dot}`} />
+                                        {statusGroup.id}
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-white border border-gray-200 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                            {filteredTasks.filter(t => {
+                                                if (t.status !== statusGroup.id) return false;
+                                                if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
+                                                    if (t.completed_at && isToday(new Date(t.completed_at))) return true;
+                                                    if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
+                                                    return false;
+                                                }
+                                                return true;
+                                            }).length}
+                                        </span>
                                     </div>
-                                ) : filteredTasks.filter(t => {
-                                    if (t.status !== statusGroup.id) return false;
-                                    if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
-                                        if (t.completed_at && isToday(new Date(t.completed_at))) return true;
-                                        if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
-                                        return false;
-                                    }
-                                    return true;
-                                }).map(task => {
-                                    const timeStatus = getTimeStatus(task.due_date, task.status);
-                                    const hasComments = task.history && task.history.some(h => h.comment);
-                                    const progress = getSubtaskProgress(task.subtasks);
+                                </div>
 
-                                    return (
-                                        <Card
-                                            key={task.id}
-                                            id={`task-${task.id}`}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, task.id)}
-                                            onDragEnd={(e) => handleDragEnd(e, task.id)}
-                                            className="group bg-white hover:shadow-lg transition-all duration-200 border-gray-200/60 overflow-hidden relative cursor-grab active:cursor-grabbing hover:-translate-y-0.5"
-                                        >
+                                <div className="space-y-3 flex-1 overflow-y-auto pr-1 pb-4">
+                                    {isLoading ? (
+                                        <div className="flex items-center justify-center py-10">
+                                            <div className="w-5 h-5 border-2 border-[#183C30]/20 border-t-[#183C30] rounded-full animate-spin" />
+                                        </div>
+                                    ) : filteredTasks.filter(t => {
+                                        if (t.status !== statusGroup.id) return false;
+                                        if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
+                                            if (t.completed_at && isToday(new Date(t.completed_at))) return true;
+                                            if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
+                                            return false;
+                                        }
+                                        return true;
+                                    }).map(task => {
+                                        const timeStatus = getTimeStatus(task.due_date, task.status);
+                                        const hasComments = task.history && task.history.some(h => h.comment);
+                                        const progress = getSubtaskProgress(task.subtasks);
+                                        const isDone = task.status === "Completada" || task.status === "Cancelada";
 
-                                            {/* Checklist Top Progress Bar (subtle) */}
-                                            {progress && (
-                                                <div className="w-full absolute top-0 left-0 h-1 bg-gray-100">
-                                                    <div
-                                                        className={`h-full ${progress.percentage === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                                                        style={{ width: `${progress.percentage}%` }}
-                                                    ></div>
-                                                </div>
-                                            )}
-
-                                            <CardContent className="p-3 pt-4">
-                                                {/* Header de la tarjeta */}
-                                                <div className="flex justify-between items-start gap-2 mb-2">
-                                                    <h4 className={`font-bold text-[13px] leading-tight break-words ${task.status === "Completada" || task.status === "Cancelada" ? "line-through text-gray-400" : "text-gray-800"}`}>
-                                                        {task.title}
-                                                    </h4>
-
-                                                    {/* Eliminar Rápidamente */}
-                                                    <div className="opacity-0 md:group-hover:opacity-100 transition-opacity bg-white pl-2">
-                                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} title="Eliminar para siempre">
+                                        if (isDone) {
+                                            return (
+                                                <div key={task.id} className="bg-gradient-to-r from-gray-50 to-white px-2.5 py-2 rounded-md border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col gap-1 opacity-75 hover:opacity-100 transition-opacity relative" title="Operación cerrada el día de hoy. Mañana desaparecerá del tablero principal.">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className={`text-[10.5px] font-bold line-clamp-1 flex-1 line-through decoration-black/20 ${task.status === "Cancelada" ? 'text-red-600' : 'text-green-600'}`}>
+                                                            {task.title}
+                                                        </span>
+                                                        <Button variant="ghost" size="icon" className="h-4 w-4 shrink-0 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded" onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} title="Eliminar para siempre">
                                                             <Trash2 className="w-3 h-3" />
                                                         </Button>
                                                     </div>
-                                                </div>
-
-                                                {/* Etiquetas Visuales (Tags) */}
-                                                {task.tags && task.tags.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mb-2">
-                                                        {task.tags.map(t => (
-                                                            <span key={t} className="bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-bold px-1.5 py-0.5 rounded leading-none">
-                                                                #{t}
-                                                            </span>
-                                                        ))}
+                                                    <div className="flex justify-between items-center text-[9px] text-gray-400 font-medium tracking-tight">
+                                                        <span className="flex items-center gap-1"><User className="w-2 h-2" />{task.assigned_to || 'N/A'}</span>
+                                                        <span>{task.status === "Completada" ? (task.completed_at ? `Tomó ${calculateTaskDuration(task.created_at, task.completed_at)}` : "Completada Hoy") : "Se Descartó"}</span>
                                                     </div>
-                                                )}
+                                                </div>
+                                            );
+                                        }
 
-                                                {task.description && (
-                                                    <p className="text-[11px] text-gray-500 mb-2.5 line-clamp-2 leading-snug">
-                                                        {task.description}
-                                                    </p>
-                                                )}
+                                        return (
+                                            <Card
+                                                key={task.id}
+                                                id={`task-${task.id}`}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, task.id)}
+                                                onDragEnd={(e) => handleDragEnd(e, task.id)}
+                                                className="group bg-white hover:shadow-lg transition-all duration-200 border-gray-200/60 overflow-hidden relative cursor-grab active:cursor-grabbing hover:-translate-y-0.5"
+                                            >
 
-                                                {/* Checklists Indicators */}
+                                                {/* Checklist Top Progress Bar (subtle) */}
                                                 {progress && (
-                                                    <div className="flex items-center gap-1.5 mb-2.5 text-[10px] font-medium text-gray-500">
-                                                        <ListTodo className="w-3 h-3 text-blue-500" />
-                                                        Puntos: {progress.completed}/{progress.total}
-                                                        {progress.percentage === 100 && <span className="text-green-500 ml-1">(Todo listo)</span>}
+                                                    <div className="w-full absolute top-0 left-0 h-1 bg-gray-100">
+                                                        <div
+                                                            className={`h-full ${progress.percentage === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                                                            style={{ width: `${progress.percentage}%` }}
+                                                        ></div>
                                                     </div>
                                                 )}
 
-                                                {/* Badges Inferiores */}
-                                                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-50">
-                                                    {task.meeting_link && (
-                                                        <a href={task.meeting_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100" title="Entrar a Reunión">
-                                                            <Video className="w-3 h-3" /> Conectar
-                                                        </a>
+                                                <CardContent className="p-3 pt-4">
+                                                    {/* Header de la tarjeta */}
+                                                    <div className="flex justify-between items-start gap-2 mb-2">
+                                                        <h4 className="font-bold text-[13px] leading-tight break-words text-gray-800">
+                                                            {task.title}
+                                                        </h4>
+
+                                                        {/* Eliminar Rápidamente */}
+                                                        <div className="opacity-0 md:group-hover:opacity-100 transition-opacity bg-white pl-2">
+                                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} title="Eliminar para siempre">
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Etiquetas Visuales (Tags) */}
+                                                    {task.tags && task.tags.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mb-2">
+                                                            {task.tags.map(t => (
+                                                                <span key={t} className="bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-bold px-1.5 py-0.5 rounded leading-none">
+                                                                    #{t}
+                                                                </span>
+                                                            ))}
+                                                        </div>
                                                     )}
 
-                                                    {hasComments && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold bg-orange-50 text-orange-600 border border-orange-200" title="Contiene justificaciones/notas">
-                                                            <MessageSquare className="w-2.5 h-2.5" /> Nota
-                                                        </span>
+                                                    {task.description && (
+                                                        <p className="text-[11px] text-gray-500 mb-2.5 line-clamp-2 leading-snug">
+                                                            {task.description}
+                                                        </p>
                                                     )}
 
-                                                    {task.priority && (
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium border ${getPriorityColor(task.priority)}`}>
-                                                            <Flag className="w-2.5 h-2.5" /> {task.priority}
-                                                        </span>
+                                                    {/* Checklists Indicators / Interactive */}
+                                                    {task.subtasks && task.subtasks.length > 0 && (
+                                                        <div className="mb-3 space-y-1.5 bg-gray-50/50 p-2 rounded-lg border border-gray-100">
+                                                            <div className="flex items-center justify-between text-[10px] font-bold text-gray-500 mb-1">
+                                                                <span className="flex items-center gap-1"><ListTodo className="w-3 h-3 text-blue-500" /> Pasos a realizar</span>
+                                                                {progress && <span>{progress.completed}/{progress.total}</span>}
+                                                            </div>
+                                                            <div className="space-y-1 max-h-[80px] overflow-y-auto pr-1">
+                                                                {task.subtasks.map(sub => (
+                                                                    <div key={sub.id} className="flex items-center gap-2 group cursor-pointer" onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        // Update this specific subtask
+                                                                        const updatedSubtasks = task.subtasks!.map(s =>
+                                                                            s.id === sub.id ? { ...s, completed: !s.completed } : s
+                                                                        );
+                                                                        updateTask(task.id, { subtasks: updatedSubtasks });
+                                                                    }}>
+                                                                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${sub.completed ? 'bg-green-500 border-green-600' : 'border-gray-300 bg-white group-hover:border-[#183C30]'}`}>
+                                                                            {sub.completed && <CheckCircle className="w-2.5 h-2.5 text-white" />}
+                                                                        </div>
+                                                                        <span className={`text-[10.5px] font-medium leading-tight truncate flex-1 ${sub.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                                                                            {sub.title}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                     )}
 
-                                                    {task.assigned_to && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium bg-purple-50 text-purple-700 border border-purple-100">
-                                                            <User className="w-2.5 h-2.5" /> {task.assigned_to}
-                                                        </span>
-                                                    )}
+                                                    {/* Badges Inferiores */}
+                                                    <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-50">
+                                                        {task.meeting_link && (
+                                                            <a href={task.meeting_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100" title="Entrar a Reunión">
+                                                                <Video className="w-3 h-3" /> Conectar
+                                                            </a>
+                                                        )}
 
-                                                    {task.recurrence && task.recurrence !== 'none' && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                                                            <Repeat className="w-2.5 h-2.5" /> Fijo
-                                                        </span>
-                                                    )}
+                                                        {hasComments && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold bg-orange-50 text-orange-600 border border-orange-200" title="Contiene justificaciones/notas">
+                                                                <MessageSquare className="w-2.5 h-2.5" /> Nota
+                                                            </span>
+                                                        )}
 
-                                                    {timeStatus && (
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium ${timeStatus.color}`}>
-                                                            {timeStatus.icon} {timeStatus.text}
-                                                        </span>
-                                                    )}
+                                                        {task.priority && (
+                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium border ${getPriorityColor(task.priority)}`}>
+                                                                <Flag className="w-2.5 h-2.5" /> {task.priority}
+                                                            </span>
+                                                        )}
+
+                                                        {task.assigned_to && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                                                                <User className="w-2.5 h-2.5" /> {task.assigned_to}
+                                                            </span>
+                                                        )}
+
+                                                        {task.recurrence && task.recurrence !== 'none' && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                                                <Repeat className="w-2.5 h-2.5" /> Fijo
+                                                            </span>
+                                                        )}
+
+                                                        {timeStatus && (
+                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium ${timeStatus.color}`}>
+                                                                {timeStatus.icon} {timeStatus.text}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => handleOpenDialog(task)}
+                                                        className="absolute bottom-2 right-2 p-1.5 text-[#183C30] hover:text-white bg-[#183C30]/10 hover:bg-[#183C30] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all border border-[#183C30]/20 shadow-sm"
+                                                        title="Expandir Panel / Editar"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+
+                                    {filteredTasks.filter(t => {
+                                        if (t.status !== statusGroup.id) return false;
+                                        if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
+                                            if (t.completed_at && isToday(new Date(t.completed_at))) return true;
+                                            if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
+                                            return false;
+                                        }
+                                        return true;
+                                    }).length === 0 && !isLoading && (
+                                            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center bg-gray-50/30 flex flex-col items-center justify-center text-gray-400 mt-2">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                                                    <span className={`w-3 h-3 rounded-full ${statusGroup.dot}`} />
                                                 </div>
-
-                                                <button
-                                                    onClick={() => handleOpenDialog(task)}
-                                                    className="absolute bottom-2 right-2 p-1.5 text-[#183C30] hover:text-white bg-[#183C30]/10 hover:bg-[#183C30] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all border border-[#183C30]/20 shadow-sm"
-                                                    title="Expandir Panel / Editar"
-                                                >
-                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                })}
-
-                                {filteredTasks.filter(t => {
-                                    if (t.status !== statusGroup.id) return false;
-                                    if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
-                                        if (t.completed_at && isToday(new Date(t.completed_at))) return true;
-                                        if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
-                                        return false;
-                                    }
-                                    return true;
-                                }).length === 0 && !isLoading && (
-                                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center bg-gray-50/30 flex flex-col items-center justify-center text-gray-400 mt-2">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                                                <span className={`w-3 h-3 rounded-full ${statusGroup.dot}`} />
+                                                <span className="text-xs font-medium">Bandeja Vacía</span>
                                             </div>
-                                            <span className="text-xs font-medium">Bandeja Vacía</span>
-                                        </div>
-                                    )}
+                                        )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                </>
             )}
 
             {/* CONTENIDO: CALENDARIO DE EVENTOS */}
