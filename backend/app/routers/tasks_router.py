@@ -12,8 +12,15 @@ class TaskCreate(BaseModel):
     priority: Optional[str] = "Media"
     due_date: Optional[str] = ""
     status: Optional[str] = "Pendiente"
+    category: Optional[str] = "Tarea"
     id: Optional[str] = None
     created_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = []
+    tags: Optional[List[str]] = []
+    subtasks: Optional[List[Dict[str, Any]]] = []
+    meeting_link: Optional[str] = ""
+    recurrence: Optional[str] = "none"
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -22,6 +29,13 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = None
     due_date: Optional[str] = None
     status: Optional[str] = None
+    category: Optional[str] = None
+    completed_at: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = None
+    tags: Optional[List[str]] = None
+    subtasks: Optional[List[Dict[str, Any]]] = None
+    meeting_link: Optional[str] = None
+    recurrence: Optional[str] = None
 
 @router.get("/")
 def get_tasks():

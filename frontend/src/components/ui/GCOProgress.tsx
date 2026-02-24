@@ -23,9 +23,9 @@ export function GCOProgress({ progress, message, submessage, className }: GCOPro
                 </div>
             </div>
 
-            <div className="text-center space-y-2 mb-6">
-                <h3 className="text-lg font-bold text-gray-900">{message}</h3>
-                {submessage && <p className="text-sm text-gray-500">{submessage}</p>}
+            <div className="text-center space-y-2 mb-6 w-full px-4">
+                <h3 className="text-sm md:text-base font-bold text-gray-900 break-words leading-tight w-full max-w-[90vw] md:max-w-xl mx-auto">{message}</h3>
+                {submessage && <p className="text-xs md:text-sm text-gray-500 break-words max-w-[90vw] md:max-w-xl mx-auto">{submessage}</p>}
             </div>
 
             <div className="w-full max-w-xs space-y-2">

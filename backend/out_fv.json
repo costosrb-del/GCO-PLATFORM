@@ -1,0 +1,167 @@
+{
+  "id": "10e00cfd-2921-4bb0-9201-6cfb9c1e3255",
+  "document": {
+    "id": 40617
+  },
+  "prefix": "FEOB",
+  "number": 1191,
+  "name": "FV-4-1191",
+  "date": "2026-02-04",
+  "customer": {
+    "id": "015e1139-f52d-4525-98de-f3b83fd39df0",
+    "identification": "52025921",
+    "branch_office": 0
+  },
+  "cost_center": 3579,
+  "seller": 865,
+  "total": 939675.0,
+  "balance": 0.0,
+  "observations": "Pedido pw73176, Importante!! Direcci\u00f3n de despacho: Cra 33 n 10 53 casa b BARRIO VILLA MARIA, ZIPAQUIRA (C&#x2F;MARCA)",
+  "items": [
+    {
+      "id": "8d204b82-19db-4a4b-ad16-3e8f846d41a9",
+      "code": "EVO-7701",
+      "quantity": 3.0,
+      "price": 107142.857143,
+      "description": "Keratina 1000ml",
+      "taxes": [
+        {
+          "id": 11308,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 61071.43
+        }
+      ],
+      "warehouse": {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 382500.0
+    },
+    {
+      "id": "64aa7806-9d31-4d0c-a306-88da1e7e775b",
+      "code": "7210",
+      "quantity": 6.0,
+      "price": 22785.714286,
+      "description": "Tratamiento intensivo PLEX",
+      "taxes": [
+        {
+          "id": 11308,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 25975.71
+        }
+      ],
+      "warehouse": {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 162690.0
+    },
+    {
+      "id": "14540a4d-a2c7-433b-bec1-2bce320b7f16",
+      "code": "7101",
+      "quantity": 3.0,
+      "price": 18500.0,
+      "description": "Mantequilla Perfumada Ritual de Seduccion",
+      "taxes": [
+        {
+          "id": 11308,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 10545.0
+        }
+      ],
+      "warehouse": {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 66045.0
+    },
+    {
+      "id": "87b96b41-0e80-446e-808c-378bcf8112e8",
+      "code": "3012",
+      "quantity": 6.0,
+      "price": 12071.428571,
+      "description": "D\u00daO PERFUMES MINI CON PROTECCI\u00d3N T\u00c9RMICA",
+      "taxes": [
+        {
+          "id": 11308,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 13761.43
+        }
+      ],
+      "warehouse": {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 86190.0
+    },
+    {
+      "id": "625a9726-c897-4d38-a321-9ed2b5e8bbc9",
+      "code": "EVO-7703",
+      "quantity": 3.0,
+      "price": 25000.0,
+      "description": "Keratina 120ml",
+      "taxes": [
+        {
+          "id": 11308,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 14250.0
+        }
+      ],
+      "warehouse": {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 89250.0
+    },
+    {
+      "id": "9efc370d-c4b9-4e74-ab9d-61b4af15c62f",
+      "code": "EVO-7702",
+      "quantity": 3.0,
+      "price": 42857.142857,
+      "description": "Keratina 250ml",
+      "taxes": [
+        {
+          "id": 11308,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 24428.57
+        }
+      ],
+      "warehouse": {
+        "id": 49,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 153000.0
+    }
+  ],
+  "payments": [
+    {
+      "id": 11054,
+      "name": "Cuenta Bancolombia OB 4696",
+      "value": 939675.0
+    }
+  ],
+  "stamp": {
+    "status": "Accepted",
+    "cufe": "e564e3a2ac885d908dbffa12d2c818572de3b056fbfd2df97cfe2ca6ee6f3125873e43e0fe9c2ca4b6cf9ac2ea9cb0c8"
+  },
+  "mail": {
+    "status": "sent",
+    "observations": "The invoice was sent to your customer successfully"
+  },
+  "metadata": {
+    "created": "2026-02-04T16:15:35.283"
+  },
+  "public_url": "https://documentview.siigo.com/document?data=Yr6f4uoifMs6oOylLRCJpPs0SbnyNsnh4254tYPS8KbvPequ3n%2bwWBpZVyjc29YOWvuMFNIsAJIkWt8EZth4gA%3d%3d"
+}

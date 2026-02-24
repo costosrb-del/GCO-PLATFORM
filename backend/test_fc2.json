@@ -1,0 +1,48 @@
+{
+  "id": "7d0012b0-5193-4ee2-bb54-c69203b328e1",
+  "document": {
+    "id": 5263
+  },
+  "number": 1176,
+  "name": "FC-1-1176",
+  "date": "2026-02-21",
+  "cost_center": 810,
+  "supplier": {
+    "id": "17d84945-2586-48de-a74d-070d895befbf",
+    "identification": "890904713",
+    "branch_office": 0
+  },
+  "total": 105853.0,
+  "balance": 105853.0,
+  "provider_invoice": {
+    "prefix": "FE02",
+    "number": "615423"
+  },
+  "supplier_by_item": false,
+  "observations": "Subido por Cifrato - PDF URL: https://storage.googleapis.com/invoices_ai_testing/71ca3be733656fa8aba4329e74b638a80d06306d0f01cff272f41cea810899febb6534b156bfbd509d5480dd83e5195d.pdf",
+  "discount_type": "Value",
+  "items": [
+    {
+      "id": "140431",
+      "type": "Account",
+      "code": "51355001",
+      "quantity": 1.0,
+      "price": 105853.0,
+      "discount": 0.0,
+      "description": "Servicios de Transporte de Mercanc\u00edas seg\u00fan anexo.",
+      "total": 105853.0
+    }
+  ],
+  "retentions": [],
+  "payments": [
+    {
+      "id": 1214,
+      "name": "Otras cuentas por pagar",
+      "value": 105853.0,
+      "due_date": "2026-02-23"
+    }
+  ],
+  "metadata": {
+    "created": "2026-02-23T10:28:42.593"
+  }
+}

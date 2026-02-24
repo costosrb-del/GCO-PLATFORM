@@ -1,6 +1,19 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
 
+export interface TaskHistoryEntry {
+    date: string;
+    action: string;
+    user: string;
+    comment?: string;
+}
+
+export interface TaskSubtask {
+    id: string;
+    title: string;
+    completed: boolean;
+}
+
 export interface Task {
     id: string;
     title: string;
@@ -9,7 +22,14 @@ export interface Task {
     priority: string;
     due_date: string;
     status: string;
+    category?: string;
     created_at: string;
+    completed_at?: string;
+    history?: TaskHistoryEntry[];
+    tags?: string[];
+    subtasks?: TaskSubtask[];
+    meeting_link?: string;
+    recurrence?: string;
 }
 
 export function useTasks() {
@@ -53,6 +73,9 @@ export function useTasks() {
     };
 
     const updateTask = async (id: string, updates: Partial<Task>) => {
+        // Optimistic UI update for immediate drag-and-drop feel
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+
         try {
             const response = await fetch(`${API_URL}/api/tasks/${id}`, {
                 method: "PUT",
@@ -60,10 +83,13 @@ export function useTasks() {
                 body: JSON.stringify(updates)
             });
             if (!response.ok) throw new Error("Failed to update task");
-            await fetchTasks();
+            // Se sincroniza en background
+            fetchTasks();
             return true;
         } catch (err) {
             console.error(err);
+            // Revert changes on error
+            fetchTasks();
             return false;
         }
     };

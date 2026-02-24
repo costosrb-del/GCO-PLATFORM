@@ -269,6 +269,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Transporte" : ""}
           >
+            <Truck className="h-5 w-5 shrink-0" />
+            {!isCollapsed && <span>Gestión Transporte</span>}
           </Link>
         )}
 

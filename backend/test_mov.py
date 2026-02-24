@@ -1,0 +1,1 @@
+import asyncio; from app.services.config import get_config; from app.services.auth import get_auth_token; from app.services.movements import get_consolidated_movements; c = get_config()[0]; t = get_auth_token(c['username'], c['access_key']); data = get_consolidated_movements(t, '2026-02-01', '2026-02-14'); import json; print(json.dumps(data[0] if data else {}, indent=2))
