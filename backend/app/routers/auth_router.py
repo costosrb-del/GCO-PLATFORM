@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import firebase_admin
@@ -10,7 +10,7 @@ from app.services import roles as role_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 # Initialize Firebase Admin
 try:
@@ -40,7 +40,13 @@ except ValueError:
     except Exception as e:
         print(f"Warning: Firebase Admin init failed: {e}")
 
-def verify_token(token: str = Depends(oauth2_scheme)):
+def verify_token(request: Request, token: str = Depends(oauth2_scheme)):
+    if not token:
+        token = request.query_params.get("token")
+        
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid Authentication Token")
+
     user_email = None
     
     # 1. Try validating with Firebase Admin SDK (Secure)

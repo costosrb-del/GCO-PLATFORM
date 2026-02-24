@@ -156,6 +156,17 @@ def extract_movements_from_doc(doc, doc_type):
     }
     friendly_type = type_map.get(doc_type, doc_type)
     
+    # For Purchases (FC), we want to show the external supplier invoice
+    provider_doc = "N/A"
+    if doc_type == "purchases":
+        prov_inv = doc.get("provider_invoice")
+        if isinstance(prov_inv, dict):
+            prefix = prov_inv.get("prefix") or ""
+            num_val = prov_inv.get("number") or ""
+            external_doc = f"{prefix}{num_val}".strip()
+            if external_doc:
+                provider_doc = external_doc
+    
     # Determine movement type based on document (using original endpoint name)
     mov_type = "SALIDA" # Default for invoices
     
@@ -337,6 +348,7 @@ def extract_movements_from_doc(doc, doc_type):
             "date": doc_date,
             "doc_type": friendly_type,
             "doc_number": doc_number,
+            "provider_doc": provider_doc,
             "client": client_name,
             "nit": client_nit,
             "code": code,

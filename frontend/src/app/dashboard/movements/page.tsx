@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import * as XLSX from "xlsx";
 import { Calendar as CalendarIcon, Filter, Search, Download, Eye, EyeOff, AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,15 +31,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useMovements } from "@/hooks/useMovements";
 
-const LOADING_STEPS = [
-  "Validando credenciales y acceso a Siigo...",
-  "Consultando caché local de movimientos...",
-  "Identificando vacíos de información (Holes)...",
-  "Descargando datos faltantes desde la nube...",
-  "Consolidando y auditando miles de registros...",
-  "Finalizando reporte..."
-];
-
 export default function MovementsPage() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 30)));
   const [endDate, setEndDate] = useState<Date>(new Date());
@@ -46,7 +38,9 @@ export default function MovementsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [auditMode, setAuditMode] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
+
+  const [progressStep, setProgressStep] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("Iniciando consulta...");
 
   // Active Params State (only updated on "Consultar" click)
   const [activeParams, setActiveParams] = useState<{ start: string, end: string, company: string } | null>(null);
@@ -55,22 +49,13 @@ export default function MovementsPage() {
     activeParams?.start || "",
     activeParams?.end || "",
     activeParams?.company === "all" ? [] : [activeParams?.company || ""],
-    refreshCount
-  );
-
-  // Loading Step Simulation
-  useEffect(() => {
-    let interval: any;
-    if (isLoading) {
-      setCurrentStep(0);
-      interval = setInterval(() => {
-        setCurrentStep(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
-      }, 3500);
-    } else {
-      clearInterval(interval);
+    refreshCount,
+    // Callback para tiempo real SSE
+    (step, progress) => {
+      setProgressMessage(step);
+      setProgressStep(progress);
     }
-    return () => clearInterval(interval);
-  }, [isLoading]);
+  );
 
   const handleConsultar = () => {
     setActiveParams({
@@ -105,49 +90,62 @@ export default function MovementsPage() {
   const handleExport = () => {
     if (!filteredData.length) return;
 
-    const headers = [
-      "Fecha", "Empresa", "Tipo", "Documento", "Tercero", "NIT",
-      "SKU", "Producto", "Bodega", "Cantidad", "Precio Unit", "Total Linea",
-      "Obs",
+    const exportData = filteredData.map(row => ({
+      "Fecha": row.date,
+      "Empresa": row.company || '',
+      "Tipo Doc": row.doc_type || '',
+      "Movimiento": row.type || '',
+      "Documento": row.doc_number || '',
+      "Doc. Ext.": row.provider_doc && row.provider_doc !== "N/A" ? row.provider_doc : "",
+      "Tercero": row.client || '',
+      "NIT": row.nit || '',
+      "SKU": row.code || '',
+      "Producto": row.name || '',
+      "Bodega": row.warehouse || '',
+      "Cantidad": row.quantity || 0,
+      "Precio Unit": row.price || 0,
+      "Total Linea": row.total || 0,
+      "Obs": row.observations || '',
       // Audit
-      "Centro Costos", "Vendedor", "Formas Pago", "Impuestos",
-      "Creado Por", "Creado En", "Total Doc"
+      "Centro Costos": row.cost_center || '',
+      "Vendedor": row.seller || '',
+      "Formas Pago": row.payment_forms || '',
+      "Impuestos": row.taxes || '',
+      "Creado Por": row.created_by || '',
+      "Creado En": row.created_at || '',
+      "Total Doc": row.doc_total_value || 0
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    worksheet['!cols'] = [
+      { wch: 12 }, // Fecha
+      { wch: 20 }, // Empresa
+      { wch: 10 }, // Tipo Doc
+      { wch: 12 }, // Movimiento
+      { wch: 15 }, // Documento
+      { wch: 15 }, // Doc. Ext.
+      { wch: 40 }, // Tercero
+      { wch: 15 }, // NIT
+      { wch: 12 }, // SKU
+      { wch: 50 }, // Producto
+      { wch: 15 }, // Bodega
+      { wch: 10 }, // Cantidad
+      { wch: 15 }, // Precio Unit
+      { wch: 15 }, // Total Linea
+      { wch: 30 }, // Obs
+      { wch: 15 }, // Centro Costos
+      { wch: 20 }, // Vendedor
+      { wch: 25 }, // Formas Pago
+      { wch: 20 }, // Impuestos
+      { wch: 25 }, // Creado Por
+      { wch: 20 }, // Creado En
+      { wch: 15 }, // Total Doc
     ];
 
-    const csvContent = [
-      headers.join(","),
-      ...filteredData.map(row => [
-        row.date,
-        `"${row.company || ''}"`,
-        row.type,
-        row.doc_number,
-        `"${row.client || ''}"`,
-        row.nit,
-        row.code,
-        `"${row.name.replace(/"/g, '""')}"`,
-        row.warehouse,
-        row.quantity,
-        row.price,
-        row.total,
-        `"${(row.observations || '').replace(/"/g, '""')}"`,
-        // Audit
-        `"${row.cost_center || ''}"`,
-        `"${row.seller || ''}"`,
-        `"${row.payment_forms || ''}"`,
-        `"${(row.taxes || '').replace(/"/g, '""')}"`,
-        row.created_by || '',
-        row.created_at || '',
-        row.doc_total_value || ''
-      ].join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Movimientos_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.csv`);
-    document.body.appendChild(link);
-    link.click();
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Movimientos");
+    XLSX.writeFile(workbook, `Movimientos_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`);
   };
 
   return (
@@ -169,7 +167,7 @@ export default function MovementsPage() {
             {auditMode ? "Modo Auditoría ACTIVO" : "Activar Auditoría"}
           </Button>
           <Button variant="outline" onClick={handleExport} disabled={!filteredData.length}>
-            <Download className="mr-2 h-4 w-4" /> Exportar CSV
+            <Download className="mr-2 h-4 w-4" /> Exportar Excel
           </Button>
         </div>
       </div>
@@ -244,6 +242,7 @@ export default function MovementsPage() {
                   <TableHead>Empresa</TableHead>
                   <TableHead>Doc</TableHead>
                   <TableHead>Número</TableHead>
+                  <TableHead>Doc. Ext.</TableHead>
                   <TableHead>Tercero</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead className="min-w-[200px]">Producto</TableHead>
@@ -263,17 +262,17 @@ export default function MovementsPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={auditMode ? 14 : 9} className="py-20">
+                    <TableCell colSpan={auditMode ? 15 : 10} className="py-20">
                       <GCOProgress
-                        progress={((currentStep + 1) / LOADING_STEPS.length) * 100}
-                        message={LOADING_STEPS[currentStep]}
-                        submessage="Estamos consolidando la información de todas tus empresas. Si el período es largo, este proceso sincroniza automáticamente los datos faltantes."
+                        progress={progressStep}
+                        message={progressMessage}
+                        submessage="Estamos consolidando la información. Esto puede tardar si es la primera vez que se consulta el rango de fechas."
                       />
                     </TableCell>
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
-                    <TableCell colSpan={auditMode ? 14 : 9} className="py-12 px-6">
+                    <TableCell colSpan={auditMode ? 15 : 10} className="py-12 px-6">
                       <GCOError
                         message="Error al consultar movimientos"
                         details="No se pudo establecer conexión con el servidor o las credenciales han expirado."
@@ -283,7 +282,7 @@ export default function MovementsPage() {
                   </TableRow>
                 ) : filteredData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={auditMode ? 14 : 9} className="h-64 text-center">
+                    <TableCell colSpan={auditMode ? 15 : 10} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center text-gray-400 gap-4 p-8">
                         <div className="bg-gray-50 p-4 rounded-full">
                           <Search className="h-12 w-12 opacity-40 text-gray-300" />
@@ -317,6 +316,7 @@ export default function MovementsPage() {
                       <TableCell className="text-[10px] text-muted-foreground uppercase">{row.company}</TableCell>
                       <TableCell><span className={cn("px-2 py-0.5 rounded text-[10px] font-bold", row.doc_type === "FV" ? "bg-green-100 text-green-800" : row.doc_type === "FC" ? "bg-blue-100 text-blue-800" : "bg-gray-100")}>{row.doc_type}</span></TableCell>
                       <TableCell className="font-mono text-[10px]">{row.doc_number}</TableCell>
+                      <TableCell className="font-mono text-[10px] text-gray-500">{row.provider_doc && row.provider_doc !== "N/A" ? row.provider_doc : "-"}</TableCell>
                       <TableCell className="text-[10px] max-w-[150px] truncate" title={row.client}>
                         <div className="font-medium text-gray-900">{row.client}</div>
                         {row.nit && row.nit !== "N/A" && <div className="text-[9px] text-gray-400 font-mono">{row.nit}</div>}

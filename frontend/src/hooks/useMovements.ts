@@ -12,6 +12,7 @@ export interface Movement {
     date: string;
     doc_type: string;
     doc_number: string;
+    provider_doc?: string;
     client: string;
     nit: string;
     code: string;
@@ -42,7 +43,13 @@ interface MovementsResponse {
     errors?: string[];
 }
 
-export const useMovements = (startDate: string, endDate: string, companies: string[] = [], refreshId: number = 0) => {
+export const useMovements = (
+    startDate: string,
+    endDate: string,
+    companies: string[] = [],
+    refreshId: number = 0,
+    onProgress?: (step: string, progress: number) => void
+) => {
     return useQuery({
         queryKey: ['movements', startDate, endDate, companies, refreshId],
         queryFn: async () => {
@@ -61,21 +68,45 @@ export const useMovements = (startDate: string, endDate: string, companies: stri
                 params.append('force_refresh', 'true');
             }
 
-            // Use axios
-            const { data } = await axios.get(`${getBaseUrl()}/movements/`, {
-                headers: { Authorization: `Bearer ${token}` },
-                params: params,
-                timeout: 300000 // 5 minutes timeout for heavy historical sync
-            });
+            return new Promise<MovementsResponse>((resolve, reject) => {
+                const eventSource = new EventSource(
+                    `${getBaseUrl()}/movements/stream?token=${token}&${params.toString()}`
+                );
 
-            return data as MovementsResponse;
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        if (data.error) {
+                            eventSource.close();
+                            reject(new Error(data.error));
+                            return;
+                        }
+
+                        if (onProgress && data.step) {
+                            onProgress(data.step, data.progress);
+                        }
+
+                        if (data.result !== undefined) {
+                            eventSource.close();
+                            resolve(data.result as MovementsResponse);
+                        }
+                    } catch (err) {
+                        eventSource.close();
+                        reject(err);
+                    }
+                };
+
+                eventSource.onerror = (err) => {
+                    eventSource.close();
+                    reject(new Error("Error en la conexión con el servidor (SSE)."));
+                };
+            });
         },
-        // Only run if dates are present
-        // Optimizing for "Load Once per Day/Session"
         enabled: !!startDate && !!endDate,
-        staleTime: Infinity,          // Never consider data 'stale' automatically
-        gcTime: Infinity,             // Keep in memory indefinitely (v5 name for cacheTime)
-        refetchOnWindowFocus: false,  // Do not refetch when switching tabs
-        refetchOnMount: false,        // Do not refetch when component remounts
+        staleTime: Infinity,
+        gcTime: Infinity,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
 };

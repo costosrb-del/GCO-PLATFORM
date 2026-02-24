@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from typing import List, Optional
 from datetime import datetime
 import concurrent.futures
 import pandas as pd
 import hashlib
 import json
+import asyncio
+from sse_starlette.sse import EventSourceResponse
 
 from app.services.movements import get_consolidated_movements as fetch_movements
 from app.services.config import get_config
@@ -238,6 +240,223 @@ def get_movements(
     except Exception as e:
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stream")
+async def stream_movements(
+    request: Request,
+    token: str = Depends(verify_token),
+    start_date: str = Query(..., description="YYYY-MM-DD"),
+    end_date: str = Query(..., description="YYYY-MM-DD"),
+    companies: Optional[List[str]] = Query(None),
+    doc_types: Optional[List[str]] = Query(None),
+    force_refresh: bool = Query(False)
+):
+    """
+    SSE Endpoint for movements. Yields progress updates and finally the data.
+    """
+    async def event_generator():
+        try:
+            yield json.dumps({"step": "Validando credenciales y compañías...", "progress": 10})
+            await asyncio.sleep(0.1)
+
+            all_companies = get_config()
+            if companies:
+                target_companies = [c for c in all_companies if c["name"] in companies]
+            else:
+                target_companies = all_companies
+
+            if not target_companies:
+                yield json.dumps({"step": "Completado", "progress": 100, "result": {"count": 0, "data": []}})
+                return
+
+            all_results = []
+            errors = []
+            total_companies = len(target_companies)
+
+            # We'll run the synchronous logic in a threadpool to not block the asyncio event loop
+            import threading
+            
+            # Map of company -> progress string
+            company_statuses = {}
+            for c in target_companies:
+                company_statuses[c["name"]] = "Iniciando..."
+                
+            def report_progress():
+                # Build an aggregated message
+                msg = " | ".join([f"{k}: {v}" for k,v in company_statuses.items()])
+                return msg
+
+            yield json.dumps({"step": "Calculando vacíos de caché (Holes)...", "progress": 20})
+
+            # We will reuse the same sync logic but wrap it to allow yielding
+            def sync_process_company(company):
+                c_name = company.get("name")
+                try:
+                    if not company.get("valid", True):
+                        company_statuses[c_name] = "Config Inválida"
+                        return [], f"Config Incompleta: {c_name}"
+
+                    cache_key = f"history_{c_name}.json" 
+                    db_data = cache.load(cache_key) or []
+                    
+                    fetch_ranges = [] 
+                    
+                    if force_refresh:
+                        company_statuses[c_name] = "Calculando rangos forzados..."
+                        try:
+                            sy = int(start_date[:4])
+                            ey = int(end_date[:4])
+                            for y in range(sy, ey + 1):
+                                chunk_start = f"{y}-01-01"
+                                chunk_end = f"{y}-12-31"
+                                if chunk_start < start_date: chunk_start = start_date
+                                if chunk_end > end_date: chunk_end = end_date
+                                fetch_ranges.append((chunk_start, chunk_end))
+                        except:
+                            fetch_ranges.append((start_date, end_date))
+                    else:
+                        company_statuses[c_name] = "Analizando caché..."
+                        try:
+                            existing_months = set()
+                            if db_data:
+                                existing_months = {x['date'][:7] for x in db_data if x.get('date')}
+                            
+                            from datetime import datetime, timedelta
+                            from dateutil.relativedelta import relativedelta
+                            
+                            req_start = datetime.strptime(start_date, "%Y-%m-%d")
+                            req_end = datetime.strptime(end_date, "%Y-%m-%d")
+                            
+                            curr = req_start.replace(day=1) 
+                            target_end = req_end.replace(day=1)
+                            
+                            missing_months_start = None
+                            
+                            while curr <= target_end:
+                                month_key = curr.strftime("%Y-%m")
+                                if month_key not in existing_months:
+                                    if missing_months_start is None:
+                                        missing_months_start = curr
+                                else:
+                                    if missing_months_start:
+                                        gap_end_date = curr - timedelta(days=1)
+                                        g_start_str = missing_months_start.strftime("%Y-%m-%d")
+                                        if missing_months_start.year == req_start.year and missing_months_start.month == req_start.month:
+                                            if g_start_str < start_date: g_start_str = start_date
+                                        g_end_str = gap_end_date.strftime("%Y-%m-%d")
+                                        if g_end_str > end_date: g_end_str = end_date
+                                        fetch_ranges.append((g_start_str, g_end_str))
+                                        missing_months_start = None
+                                curr += relativedelta(months=1)
+                            
+                            if missing_months_start:
+                                g_start_str = missing_months_start.strftime("%Y-%m-%d")
+                                if missing_months_start.year == req_start.year and missing_months_start.month == req_start.month:
+                                    if g_start_str < start_date: g_start_str = start_date
+                                g_end_str = req_end.strftime("%Y-%m-%d")
+                                fetch_ranges.append((g_start_str, g_end_str))
+                                
+                        except Exception as e:
+                            fetch_ranges.append((start_date, end_date))
+
+                    auth_token = None
+                    new_data_found = False
+                    
+                    total_gaps = len(fetch_ranges)
+                    for idx, (r_start, r_end) in enumerate(fetch_ranges):
+                        if r_start >= r_end: continue
+
+                        if not auth_token:
+                            auth_token = get_auth_token(company.get("username"), company.get("access_key"))
+                            if not auth_token: 
+                                company_statuses[c_name] = "Auth Fallida"
+                                return [], f"Auth Fallida: {c_name}"
+
+                        company_statuses[c_name] = f"Descargando {idx+1}/{total_gaps} ({r_start} a {r_end})..."
+                        gap_data = fetch_movements(auth_token, r_start, r_end, selected_types=doc_types)
+                        
+                        if gap_data:
+                            for m in gap_data: m["company"] = c_name
+                            db_data = [x for x in db_data if not (r_start <= x['date'] <= r_end)]
+                            db_data.extend(gap_data)
+                            db_data.sort(key=lambda x: x['date'])
+                            cache.save(cache_key, db_data)
+                            new_data_found = True
+
+                    company_statuses[c_name] = "Aplicando filtros de fecha..."
+                    if new_data_found and not force_refresh:
+                        db_data.sort(key=lambda x: x['date'])
+                        cache.save(cache_key, db_data)
+                    
+                    filtered_response = [x for x in db_data if start_date <= x['date'] <= end_date]
+                    if doc_types:
+                        filtered_response = [x for x in filtered_response if x.get('doc_type') in doc_types]
+
+                    company_statuses[c_name] = f"¡Listo! ({len(filtered_response)} regs)"
+                    return filtered_response, None
+
+                except Exception as e:
+                    company_statuses[c_name] = "Error"
+                    return [], f"Error {c_name}: {str(e)}"
+
+            loop = asyncio.get_running_loop()
+            
+            # Start standard ThreadPoolExecutor
+            yield json.dumps({"step": "Sincronizando con Siigo API...", "progress": 30})
+            
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(target_companies)+1)) as executor:
+                # Submit tasks
+                futures = {executor.submit(sync_process_company, c): c for c in target_companies}
+                
+                # We need an async loop to query futures and yield progress without blocking the main event loop
+                completed_count = 0
+                total_tasks = len(target_companies)
+                while completed_count < total_tasks:
+                    # Use asyncio.sleep to yield control back to uvicorn and flush SSE buffer
+                    await asyncio.sleep(1.0)
+                    
+                    next_done = [f for f in futures.keys() if f.done()]
+                    
+                    # Yield current progress text
+                    dynamic_prog = 30 + (completed_count / max(1, len(target_companies))) * 50
+                    yield json.dumps({
+                        "step": f"Consolidando: {report_progress()}", 
+                        "progress": int(dynamic_prog)
+                    })
+                    
+                    for f in next_done:
+                        if f in futures:
+                            data, err = f.result()
+                            if data: all_results.extend(data)
+                            if err: errors.append(err)
+                            completed_count += 1
+                            del futures[f]  # remove to not process twice
+            
+            yield json.dumps({"step": "Limpiando y formateando datos...", "progress": 90})
+            await asyncio.sleep(0.1)
+
+            final_data = []
+            if all_results:
+                df = pd.DataFrame(all_results)
+                final_data = df.where(pd.notnull(df), None).to_dict(orient="records")
+            
+            res_obj = {
+                "count": len(final_data), 
+                "data": final_data, 
+                "errors": errors,
+                "status": "partial_error" if (not final_data and errors) else "success"
+            }
+            
+            yield json.dumps({"step": "Completado", "progress": 100, "result": res_obj})
+
+        except asyncio.CancelledError:
+            print("SSE Client Disconnected")
+            raise
+        except Exception as e:
+            import traceback; traceback.print_exc()
+            yield json.dumps({"error": str(e), "step": "Error Interno", "progress": 0})
+
+    return EventSourceResponse(event_generator())
 
 from pydantic import BaseModel
 class SyncRequest(BaseModel):
