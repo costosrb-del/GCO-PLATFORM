@@ -12,7 +12,7 @@ class LocalTasksDB:
     def __init__(self):
         self.file_path = LOCAL_DB_FILE
         if not os.path.exists(self.file_path):
-            self._save([], self.file_path)
+            self._save([])
 
     def _load(self):
         try:
