@@ -75,6 +75,7 @@ export default function TareasPage() {
     const [isBreakDialogOpen, setIsBreakDialogOpen] = useState(false);
     const [breakReason, setBreakReason] = useState("");
     const [isOnBreak, setIsOnBreak] = useState(false);
+    const [isShiftActive, setIsShiftActive] = useState(false);
 
     import("react").then((React) => {
         React.useEffect(() => {
@@ -82,6 +83,8 @@ export default function TareasPage() {
             setCurrentUserEmail(email);
             const breakStatus = localStorage.getItem(`gco_break_${email}`);
             if (breakStatus === "true") setIsOnBreak(true);
+            const shiftStatus = localStorage.getItem(`gco_shift_${email}`);
+            if (shiftStatus === "true") setIsShiftActive(true);
         }, []);
     });
 
@@ -134,6 +137,11 @@ export default function TareasPage() {
     };
 
     const handleOpenDialog = (task?: Task) => {
+        if (!isShiftActive || isOnBreak) {
+            alert("🔒 Operación denegada. No puedes hacer modificaciones si tu turno está cerrado o si te encuentras en Break.");
+            return;
+        }
+
         if (task) {
             setEditingTask(task);
             setFormData({
@@ -305,6 +313,10 @@ export default function TareasPage() {
 
     // Funciones Drag & Drop
     const handleDragStart = (e: React.DragEvent, id: string) => {
+        if (!isShiftActive || isOnBreak) {
+            e.preventDefault();
+            return;
+        }
         setDraggedTaskId(id);
         e.dataTransfer.effectAllowed = "move";
         setTimeout(() => {
@@ -326,7 +338,7 @@ export default function TareasPage() {
 
     const handleDrop = async (e: React.DragEvent, newStatus: string) => {
         e.preventDefault();
-        if (!draggedTaskId) return;
+        if (!draggedTaskId || !isShiftActive || isOnBreak) return;
 
         const task = tasks.find(t => t.id === draggedTaskId);
         if (task && task.status !== newStatus) {
@@ -462,7 +474,10 @@ export default function TareasPage() {
                 <div className="flex gap-2">
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button onClick={() => handleOpenDialog()} className="bg-[#183C30] hover:bg-[#122e24] shadow-md shadow-[#183C30]/20 transition-all active:scale-95 px-6">
+                            <Button onClick={(e) => {
+                                if (!isShiftActive || isOnBreak) { e.preventDefault(); handleOpenDialog(); }
+                                else { handleOpenDialog(); }
+                            }} disabled={!isShiftActive || isOnBreak} className="bg-[#183C30] hover:bg-[#122e24] shadow-md shadow-[#183C30]/20 transition-all active:scale-95 px-6 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <Plus className="mr-2 h-4 w-4" /> Crear Nuevo
                             </Button>
                         </DialogTrigger>
@@ -810,29 +825,37 @@ export default function TareasPage() {
                         </div>
 
                         <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                            {/* Control de Turnos / Pausas Global */}
                             <div className="flex items-center gap-2 bg-indigo-50/50 px-2 py-1.5 rounded-lg border border-indigo-100">
                                 {!isOnBreak ? (
                                     <>
-                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-indigo-700 hover:bg-indigo-100 px-2" onClick={async () => {
-                                            const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
-                                            let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
-                                            const newEntry = { date: new Date().toISOString(), action: "▶️ Inició Turno/Jornada", user: currentUserEmail };
-                                            if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
-                                            else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
-                                        }}>▶️ Iniciar Turno</Button>
-                                        <div className="w-px h-4 bg-indigo-200"></div>
-                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-amber-700 hover:bg-amber-100 px-2 border border-amber-200 bg-amber-50" onClick={() => setIsBreakDialogOpen(true)}>
-                                            🍔 Salir (Break)
-                                        </Button>
-                                        <div className="w-px h-4 bg-indigo-200"></div>
-                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-slate-600 hover:bg-slate-200 px-2" onClick={async () => {
-                                            const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
-                                            let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
-                                            const newEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
-                                            if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
-                                            else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
-                                        }}>⏹️ Terminar Turno</Button>
+                                        {!isShiftActive ? (
+                                            <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-indigo-700 hover:bg-indigo-100 px-2 animate-pulse" onClick={async () => {
+                                                const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
+                                                let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+                                                const newEntry = { date: new Date().toISOString(), action: "▶️ Inició Turno/Jornada", user: currentUserEmail };
+                                                if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
+                                                else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
+                                                setIsShiftActive(true);
+                                                localStorage.setItem(`gco_shift_${currentUserEmail}`, "true");
+                                            }}>▶️ Iniciar Turno</Button>
+                                        ) : (
+                                            <>
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-amber-700 hover:bg-amber-100 px-2 border border-amber-200 bg-amber-50" onClick={() => setIsBreakDialogOpen(true)}>
+                                                    🍔 Salir (Break)
+                                                </Button>
+                                                <div className="w-px h-4 bg-indigo-200"></div>
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-slate-600 hover:bg-slate-200 px-2" onClick={async () => {
+                                                    const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
+                                                    let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+                                                    const newEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
+                                                    if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
+                                                    else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
+                                                    setIsShiftActive(false);
+                                                    localStorage.setItem(`gco_shift_${currentUserEmail}`, "false");
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}>⏹️ Terminar Turno</Button>
+                                            </>
+                                        )}
                                     </>
                                 ) : (
                                     <Button size="sm" variant="default" className="h-7 text-xs font-bold bg-amber-600 hover:bg-amber-700 px-6 shadow-sm border border-amber-800 animate-pulse" onClick={handleResumeBreak} disabled={isSaving}>
