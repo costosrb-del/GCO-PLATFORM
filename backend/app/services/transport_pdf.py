@@ -87,6 +87,18 @@ def safe_str(val, default=""):
     s = str(val).strip()
     return s if s else default
 
+def enhance_address(name, base_addr):
+    """Enforce exact addresses for known hubs if missing or loosely described"""
+    name_check = safe_str(name, "").lower()
+    if "rionegro" in name_check or "bodega principal" in name_check:
+        return "ZN E CENTRO LOGISTICO BG 16 DEL CRUCE DEL TABLAZO 900 MTS VIA ZONA FRANCA"
+    elif "bogot" in name_check or "laboratorio" in name_check:
+        return "CL 17A 68D - 38 Bogotá D.C, Barrio Montevideo, Zona Industrial"
+        
+    if not base_addr:
+        return safe_str(name, "Sin dirección registrada")
+    return base_addr
+
 def generate_transport_pdf_bytes(data: dict):
     pdf = TransportPDF()
     pdf.set_auto_page_break(auto=True, margin=40)
@@ -199,9 +211,7 @@ def generate_transport_pdf_bytes(data: dict):
         pdf.set_text_color(50, 50, 50)
         
         # Address logic
-        addr = safe_str(data.get("origin_address"), "")
-        if not addr:
-             addr = safe_str(data.get("origin"), "Sin dirección registrada")
+        addr = enhance_address(origin_name, data.get("origin_address"))
         
         pdf.set_x(x) # Ensure X aligns
         pdf.multi_cell(w, 4.5, f"Dirección Física:\n{addr}", 0, 'L')
@@ -217,10 +227,8 @@ def generate_transport_pdf_bytes(data: dict):
         pdf.ln(2)
         pdf.set_font('Arial', '', 9)
         pdf.set_text_color(50, 50, 50)
-        
-        addr = safe_str(data.get("destination_address"), "")
-        if not addr:
-             addr = safe_str(data.get("destination"), "Sin dirección registrada")
+        # Address logic
+        addr = enhance_address(dest_name, data.get("destination_address"))
         
         pdf.set_x(x) # Ensure X aligns
         pdf.multi_cell(w, 4.5, f"Dirección Física:\n{addr}", 0, 'L')
