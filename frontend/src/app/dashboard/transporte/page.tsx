@@ -1029,12 +1029,11 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
                                 onChange={e => setFormData({ ...formData, vehicle_type: e.target.value })}
                             >
                                 <option value="">Seleccione...</option>
-                                <option value="Turbo">Turbo</option>
-                                <option value="Sencillo">Sencillo</option>
-                                <option value="Dobletroque">Dobletroque</option>
-                                <option value="Mula">Mula</option>
-                                <option value="Furgon">Furgon</option>
-                                <option value="Particular">Particular</option>
+                                <option value="Turbo (4.5 ton)">Turbo (4.5 ton)</option>
+                                <option value="Sencillo (9 ton)">Sencillo (9 ton)</option>
+                                <option value="Patineta (15 ton)">Patineta (15 ton)</option>
+                                <option value="Mula (32.5 ton)">Mula (32.5 ton)</option>
+                                <option value="Particular / Otro">Particular / Otro</option>
                             </select>
                         </div>
 
