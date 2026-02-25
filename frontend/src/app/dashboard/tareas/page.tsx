@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTasks, Task, TaskHistoryEntry, TaskSubtask } from "@/hooks/useTasks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,16 +78,14 @@ export default function TareasPage() {
     const [isShiftActive, setIsShiftActive] = useState(false);
     const [customAssignee, setCustomAssignee] = useState(false);
 
-    import("react").then((React) => {
-        React.useEffect(() => {
-            const email = localStorage.getItem("gco_user") || "Usuario";
-            setCurrentUserEmail(email);
-            const breakStatus = localStorage.getItem(`gco_break_${email}`);
-            if (breakStatus === "true") setIsOnBreak(true);
-            const shiftStatus = localStorage.getItem(`gco_shift_${email}`);
-            if (shiftStatus === "true") setIsShiftActive(true);
-        }, []);
-    });
+    useEffect(() => {
+        const email = localStorage.getItem("gco_user") || "Usuario";
+        setCurrentUserEmail(email);
+        const breakStatus = localStorage.getItem(`gco_break_${email}`);
+        if (breakStatus === "true") setIsOnBreak(true);
+        const shiftStatus = localStorage.getItem(`gco_shift_${email}`);
+        if (shiftStatus === "true") setIsShiftActive(true);
+    }, []);
 
     const handleStartBreak = async () => {
         if (!breakReason.trim()) return;
