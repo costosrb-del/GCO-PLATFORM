@@ -1065,6 +1065,7 @@ export default function TareasPage() {
                                             {filteredTasks.filter(t => {
                                                 if (t.status !== statusGroup.id) return false;
                                                 if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
+                                                    if (searchQuery.trim().length > 0) return true;
                                                     if (t.completed_at && isToday(new Date(t.completed_at))) return true;
                                                     if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
                                                     return false;
@@ -1083,6 +1084,7 @@ export default function TareasPage() {
                                     ) : filteredTasks.filter(t => {
                                         if (t.status !== statusGroup.id) return false;
                                         if (statusGroup.id === "Completada" || statusGroup.id === "Cancelada") {
+                                            if (searchQuery.trim().length > 0) return true;
                                             if (t.completed_at && isToday(new Date(t.completed_at))) return true;
                                             if (t.history && t.history.length > 0 && isToday(new Date(t.history[t.history.length - 1].date))) return true;
                                             return false;
@@ -1096,7 +1098,7 @@ export default function TareasPage() {
 
                                         if (isDone) {
                                             return (
-                                                <div key={task.id} className="bg-gradient-to-r from-gray-50 to-white px-2.5 py-2 rounded-md border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col gap-1 opacity-75 hover:opacity-100 transition-opacity relative" title="Operación cerrada el día de hoy. Mañana desaparecerá del tablero principal.">
+                                                <div key={task.id} onClick={() => handleOpenDialog(task)} className="bg-gradient-to-r from-gray-50 to-white px-2.5 py-2 rounded-md border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col gap-1 opacity-75 hover:opacity-100 transition-opacity relative cursor-pointer" title="Haga clic para ver el historial completo de la operación.">
                                                     <div className="flex items-center justify-between gap-1">
                                                         <span className={`text-[10.5px] font-bold line-clamp-1 flex-1 line-through decoration-black/20 ${task.status === "Cancelada" ? 'text-red-600' : 'text-green-600'}`}>
                                                             {task.title}
@@ -1107,7 +1109,7 @@ export default function TareasPage() {
                                                     </div>
                                                     <div className="flex justify-between items-center text-[9px] text-gray-400 font-medium tracking-tight">
                                                         <span className="flex items-center gap-1"><User className="w-2 h-2" />{task.assigned_to || 'N/A'}</span>
-                                                        <span>{task.status === "Completada" ? (task.completed_at ? `Tomó ${calculateTaskDuration(task.created_at, task.completed_at)}` : "Completada Hoy") : "Se Descartó"}</span>
+                                                        <span>{task.status === "Completada" ? (task.completed_at ? `Tomó ${calculateTaskDuration(task.created_at, task.completed_at)}` : "Completada") : "Se Descartó"}</span>
                                                     </div>
                                                 </div>
                                             );
