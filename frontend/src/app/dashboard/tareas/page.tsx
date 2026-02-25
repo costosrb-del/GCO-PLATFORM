@@ -12,7 +12,7 @@ import {
     Plus, Trash2, Edit2, Calendar as CalendarIcon, User, Flag, CheckCircle,
     Search, Clock, AlertCircle, PlayCircle, Columns, CalendarDays, LineChart,
     XCircle, MessageSquare, History, AlignLeft, ArrowDownAZ, ListTodo, Paperclip,
-    Tags, Video, Repeat, Activity, Layers, CheckCircle2, Download, Copy, PaperclipIcon
+    Tags, Video, Repeat, Activity, Layers, CheckCircle2, Download, Copy, PaperclipIcon, Coffee
 } from "lucide-react";
 import {
     format, isPast, isToday, formatDistanceToNow, addDays,
@@ -72,13 +72,66 @@ export default function TareasPage() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("Usuario");
+    const [isBreakDialogOpen, setIsBreakDialogOpen] = useState(false);
+    const [breakReason, setBreakReason] = useState("");
+    const [isOnBreak, setIsOnBreak] = useState(false);
 
     import("react").then((React) => {
         React.useEffect(() => {
             const email = localStorage.getItem("gco_user") || "Usuario";
             setCurrentUserEmail(email);
+            const breakStatus = localStorage.getItem(`gco_break_${email}`);
+            if (breakStatus === "true") setIsOnBreak(true);
         }, []);
     });
+
+    const handleStartBreak = async () => {
+        if (!breakReason.trim()) return;
+        setIsSaving(true);
+        const activeTasks = tasks.filter(t => t.assigned_to === currentUserEmail && t.status === "En Progreso");
+
+        const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
+        let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+        const newEntry = { date: new Date().toISOString(), action: `⏸️ Pausó Turno: ${breakReason}`, user: currentUserEmail };
+        if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
+        else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
+
+        for (const t of activeTasks) {
+            const historyUpdate = [...(t.history || []), {
+                date: new Date().toISOString(),
+                action: `Operación auto-pausada (${breakReason})`,
+                user: currentUserEmail
+            }];
+            await updateTask(t.id, { status: "Pausada", history: historyUpdate });
+        }
+
+        localStorage.setItem(`gco_break_${currentUserEmail}`, "true");
+        setIsOnBreak(true);
+        setIsSaving(false);
+        setIsBreakDialogOpen(false);
+        setBreakReason("");
+    };
+
+    const handleResumeBreak = async () => {
+        setIsSaving(true);
+
+        const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
+        let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+        const newEntry = { date: new Date().toISOString(), action: "▶️ Reanudó Turno", user: currentUserEmail };
+        if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
+
+        const pausedTasks = tasks.filter(t => t.assigned_to === currentUserEmail && t.status === "Pausada" &&
+            t.history && t.history.length > 0 && t.history[t.history.length - 1].action.includes('auto-pausada'));
+
+        for (const t of pausedTasks) {
+            const historyUpdate = [...(t.history || []), { date: new Date().toISOString(), action: `Se retomó: En Progreso`, user: currentUserEmail }];
+            await updateTask(t.id, { status: "En Progreso", history: historyUpdate });
+        }
+
+        localStorage.setItem(`gco_break_${currentUserEmail}`, "false");
+        setIsOnBreak(false);
+        setIsSaving(false);
+    };
 
     const handleOpenDialog = (task?: Task) => {
         if (task) {
@@ -617,16 +670,6 @@ export default function TareasPage() {
                                             </div>
 
                                             <div className="mt-auto bg-gray-50/50 p-2 rounded-lg border">
-                                                <div className="flex gap-2 mb-2 justify-center">
-                                                    <Button size="sm" variant="outline" className="h-6 text-[9px] font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex-1" onClick={() => {
-                                                        const log: TaskHistoryEntry = { date: new Date().toISOString(), action: "▶️ Inició Turno/Jornada", user: currentUserEmail };
-                                                        setFormData(prev => ({ ...prev, history: [...(prev.history || []), log] }));
-                                                    }}>Iniciar Turno</Button>
-                                                    <Button size="sm" variant="outline" className="h-6 text-[9px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 flex-1" onClick={() => {
-                                                        const log: TaskHistoryEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
-                                                        setFormData(prev => ({ ...prev, history: [...(prev.history || []), log] }));
-                                                    }}>Terminar Turno</Button>
-                                                </div>
                                                 <div className="flex gap-2 relative">
                                                     <Input
                                                         value={newComment}
@@ -747,14 +790,13 @@ export default function TareasPage() {
                 </div>
             )}
 
-            {/* CONTENIDO: TABLERO INTERACTIVO (KANBAN) */}
             {activeTab === "tablero" && (
                 <>
                     {/* Productivity Widget */}
-                    <div className="mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between text-sm animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center gap-4">
+                    <div className="mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-sm animate-in fade-in slide-in-from-top-2">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto">
                             <span className="font-bold text-gray-800 flex items-center gap-1.5"><ListTodo className="w-4 h-4 text-gray-400" /> Resumen del Día</span>
-                            <div className="flex items-center gap-3 text-xs">
+                            <div className="flex items-center gap-3 text-xs flex-wrap">
                                 <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-semibold">
                                     Pendientes: {tasks.filter(t => t.status === "Pendiente").length}
                                 </span>
@@ -766,20 +808,56 @@ export default function TareasPage() {
                                 </span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-600 font-semibold cursor-pointer select-none" onClick={() => setShowCompletedColumn(!showCompletedColumn)}>
-                                Ocultar Columna "Completadas"
-                            </label>
-                            <button
-                                onClick={() => setShowCompletedColumn(!showCompletedColumn)}
-                                className={`w-8 h-4 rounded-full transition-colors relative ${!showCompletedColumn ? 'bg-blue-500' : 'bg-gray-300'}`}
-                            >
-                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${!showCompletedColumn ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                            </button>
+
+                        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                            {/* Control de Turnos / Pausas Global */}
+                            <div className="flex items-center gap-2 bg-indigo-50/50 px-2 py-1.5 rounded-lg border border-indigo-100">
+                                {!isOnBreak ? (
+                                    <>
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-indigo-700 hover:bg-indigo-100 px-2" onClick={async () => {
+                                            const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
+                                            let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+                                            const newEntry = { date: new Date().toISOString(), action: "▶️ Inició Turno/Jornada", user: currentUserEmail };
+                                            if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
+                                            else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
+                                        }}>▶️ Iniciar Turno</Button>
+                                        <div className="w-px h-4 bg-indigo-200"></div>
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-amber-700 hover:bg-amber-100 px-2 border border-amber-200 bg-amber-50" onClick={() => setIsBreakDialogOpen(true)}>
+                                            🍔 Salir (Break)
+                                        </Button>
+                                        <div className="w-px h-4 bg-indigo-200"></div>
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-slate-600 hover:bg-slate-200 px-2" onClick={async () => {
+                                            const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
+                                            let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+                                            const newEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
+                                            if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
+                                            else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
+                                        }}>⏹️ Terminar Turno</Button>
+                                    </>
+                                ) : (
+                                    <Button size="sm" variant="default" className="h-7 text-xs font-bold bg-amber-600 hover:bg-amber-700 px-6 shadow-sm border border-amber-800 animate-pulse" onClick={handleResumeBreak} disabled={isSaving}>
+                                        {isSaving ? "Cargando..." : "▶️ Retomar Turno Activo"}
+                                    </Button>
+                                )}
+                            </div>
+
+                            <div className="hidden md:block w-px h-6 bg-gray-200"></div>
+
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs text-gray-600 font-semibold cursor-pointer select-none" onClick={() => setShowCompletedColumn(!showCompletedColumn)}>
+                                    Ocultar Columna "Completadas"
+                                </label>
+                                <button
+                                    onClick={() => setShowCompletedColumn(!showCompletedColumn)}
+                                    className={`w-8 h-4 rounded-full transition-colors relative ${!showCompletedColumn ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                >
+                                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${!showCompletedColumn ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-4 animate-in fade-in slide-in-from-bottom-4">
+                    <div className={`grid grid-cols-1 ${showCompletedColumn ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-4 md:gap-4 animate-in fade-in slide-in-from-bottom-4`}>
                         {[
                             { id: "Pendiente", color: "bg-slate-100/50", dot: "bg-slate-400", border: 'border-slate-200', show: true },
                             { id: "En Progreso", color: "bg-blue-50/30", dot: "bg-blue-500", border: 'border-blue-200', show: true },
@@ -1285,6 +1363,34 @@ export default function TareasPage() {
                     })()}
                 </div>
             )}
+
+            {/* Modal para registrar el Break */}
+            <Dialog open={isBreakDialogOpen} onOpenChange={setIsBreakDialogOpen}>
+                <DialogContent className="max-w-md p-6 bg-white rounded-2xl shadow-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-bold text-amber-800 flex items-center gap-2">
+                            <Coffee className="w-5 h-5 text-amber-600" /> Pausar Turno
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <p className="text-sm text-gray-600">Al pausar, todas tus tareas "En Progreso" pasarán automáticamente a "Pausada". ¿Por qué motivo te ausentas?</p>
+                        <Select value={breakReason} onValueChange={setBreakReason}>
+                            <SelectTrigger className="h-10 border-amber-200 bg-amber-50">
+                                <SelectValue placeholder="Selecciona un motivo..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Almuerzo">Desayuno / Almuerzo</SelectItem>
+                                <SelectItem value="Reunión Especial">Reunión Especial</SelectItem>
+                                <SelectItem value="Pausa Activa / Baño">Pausa Activa / Baño</SelectItem>
+                                <SelectItem value="Diligencia Personal">Diligencia Externa</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-10 shadow-md transition-all" onClick={handleStartBreak} disabled={!breakReason || isSaving}>
+                            {isSaving ? "Aplicando Pausa Global..." : "Confirmar e Ir a Break"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
