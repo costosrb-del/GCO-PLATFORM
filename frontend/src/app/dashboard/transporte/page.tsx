@@ -27,7 +27,8 @@ import {
     AlertTriangle,
     TrendingUp,
     Award,
-    RefreshCcw
+    RefreshCcw,
+    Share2
 } from "lucide-react";
 import {
     Dialog,
@@ -180,6 +181,47 @@ export default function TransportPage() {
     const openTimeline = (item: any) => {
         setSelectedRequest(item);
         setIsTimelineOpen(true);
+    };
+
+    const handleShareWhatsApp = async (item: any) => {
+        try {
+            const safeName = item.legacy_id || item.id.substring(0, 8);
+            const fileName = `Orden_Transporte_${safeName}.pdf`;
+
+            const res = await axios.get(`${API_URL}/transport/${item.id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const file = new File([blob], fileName, { type: 'application/pdf' });
+
+            const shareData = {
+                title: 'Orden de Transporte',
+                text: `Hola, adjunto la orden de transporte ${safeName}.`,
+                files: [file]
+            };
+
+            if (navigator.canShare && navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback (Download + Open WA)
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+
+                const text = encodeURIComponent(`Hola, te envío la orden de transporte ${safeName}. Acabo de descargar el PDF para adjuntarlo en este chat.`);
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                const waUrl = isMobile ? `whatsapp://send?text=${text}` : `https://web.whatsapp.com/send?text=${text}`;
+                window.open(waUrl, '_blank');
+            }
+        } catch (error: any) {
+            console.error(error);
+            // Ignore user cancellation
+            if (error.name !== 'AbortError') {
+                alert("Buscador no soporta compartir directamente o ocurrió un error. Usa el botón de imprimir.");
+            }
+        }
     };
 
 
@@ -545,6 +587,14 @@ export default function TransportPage() {
                                                         title="Descargar PDF"
                                                     >
                                                         <Printer className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleShareWhatsApp(item)}
+                                                        className="p-2 hover:bg-teal-50 rounded-lg text-gray-400 hover:text-teal-600 transition-colors"
+                                                        title="Compartir por WhatsApp"
+                                                    >
+                                                        <Share2 className="h-4 w-4" />
                                                     </button>
 
                                                     {(item.status === 'Solicitado') && (
