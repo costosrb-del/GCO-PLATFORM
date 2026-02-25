@@ -495,7 +495,18 @@ export default function TareasPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                                 {/* Columna Izquierda: Detalles de Tarea */}
                                 <div className="space-y-4">
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                                    {!editingTask && (
+                                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 animate-in fade-in">
+                                            <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1.5"><Copy className="w-3 h-3" /> Plantillas Rápidas (Prototipos)</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button size="sm" variant="outline" className="h-6 text-[10px] bg-white text-gray-700 hover:text-blue-700 border-gray-200 hover:border-blue-300" onClick={(e) => { e.preventDefault(); setFormData({ ...formData, title: "Aprobar Facturas Diarias", description: "Revisar facturación generada y aplicar aprobaciones correspondientes.", tags: ["FACTURACION", "RUTINA"], priority: "Media", assigned_to: currentUserEmail }); }}>Aprobar Facturas</Button>
+                                                <Button size="sm" variant="outline" className="h-6 text-[10px] bg-white text-gray-700 hover:text-blue-700 border-gray-200 hover:border-blue-300" onClick={(e) => { e.preventDefault(); setFormData({ ...formData, title: "Corte de Inventario / Caja", description: "Realizar arqueo de caja y contrastar con inventario físico.", tags: ["INVENTARIO", "CAJA"], priority: "Alta", assigned_to: currentUserEmail }); }}>Corte de Inventario</Button>
+                                                <Button size="sm" variant="outline" className="h-6 text-[10px] bg-white text-gray-700 hover:text-blue-700 border-gray-200 hover:border-blue-300" onClick={(e) => { e.preventDefault(); setFormData({ ...formData, title: "Revisión de Correos / Soporte", description: "Verificar y responder tickets de soporte y correo electrónico.", tags: ["SOPORTE"], priority: "Baja", assigned_to: currentUserEmail }); }}>Soporte / Correos</Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4 overflow-hidden">
                                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 border-b pb-2">
                                             <AlignLeft className="w-4 h-4 text-gray-400" /> Información Principal
                                         </h3>
@@ -537,10 +548,10 @@ export default function TareasPage() {
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs font-semibold text-gray-700 mb-1.5 block">Nivel Prioridad</label>
+                                            <div className="min-w-0">
+                                                <label className="text-xs font-semibold text-gray-700 mb-1.5 block truncate">Nivel Prioridad</label>
                                                 <Select value={formData.priority} onValueChange={v => setFormData({ ...formData, priority: v })}>
-                                                    <SelectTrigger className="bg-gray-50 h-9"><SelectValue placeholder="Prioridad" /></SelectTrigger>
+                                                    <SelectTrigger className="bg-gray-50 h-9 w-full [&>span]:truncate"><SelectValue placeholder="Prioridad" /></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="Baja">Baja (Normal)</SelectItem>
                                                         <SelectItem value="Media">Media (Aviso)</SelectItem>
@@ -548,16 +559,16 @@ export default function TareasPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div>
-                                                <label className="text-xs font-semibold text-gray-700 mb-1.5 block">Asignado a</label>
+                                            <div className="min-w-0">
+                                                <label className="text-xs font-semibold text-gray-700 mb-1.5 block truncate">Asignado a</label>
                                                 {!customAssignee ? (
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-2 w-full">
                                                         <Select value={formData.assigned_to === currentUserEmail ? "Mismo" : (["Asesora", "Logistica", "Administracion"].includes(formData.assigned_to || "") ? formData.assigned_to : "Otro")} onValueChange={v => {
                                                             if (v === "Mismo") { setFormData({ ...formData, assigned_to: currentUserEmail }); setCustomAssignee(false); }
                                                             else if (v === "Otro") { setCustomAssignee(true); setFormData({ ...formData, assigned_to: "" }); }
                                                             else { setFormData({ ...formData, assigned_to: v }); setCustomAssignee(false); }
                                                         }}>
-                                                            <SelectTrigger className="bg-gray-50 h-9 flex-1"><SelectValue placeholder="Usuario" /></SelectTrigger>
+                                                            <SelectTrigger className="bg-gray-50 h-9 w-full [&>span]:truncate"><SelectValue placeholder="Usuario" /></SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="Mismo">Para mí mismo</SelectItem>
                                                                 <SelectItem value="Asesora">Equipo Comercial</SelectItem>
@@ -568,12 +579,12 @@ export default function TareasPage() {
                                                         </Select>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex gap-2 relative">
+                                                    <div className="flex gap-2 relative w-full">
                                                         <Input
                                                             value={formData.assigned_to}
                                                             onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}
                                                             placeholder="Escribe el nombre o correo..."
-                                                            className="bg-gray-50 h-9 text-xs"
+                                                            className="bg-gray-50 h-9 text-xs w-full pr-8"
                                                             autoFocus
                                                         />
                                                         <Button variant="ghost" size="sm" onClick={() => { setCustomAssignee(false); setFormData({ ...formData, assigned_to: currentUserEmail }); }} className="absolute right-1 top-1.5 h-6 w-6 p-0 rounded-full hover:bg-gray-200">
