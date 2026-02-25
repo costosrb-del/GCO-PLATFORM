@@ -12,15 +12,15 @@ class TransportPDF(FPDF):
         
         # Brand Title
         self.set_y(10)
-        self.set_font('Arial', 'B', 18)
+        self.set_font('Arial', 'B', 22)
         self.set_text_color(24, 60, 48)
-        self.cell(0, 8, 'GCO - Origen Botánico', 0, 1, 'L')
+        self.cell(0, 10, 'ORÍGEN BOTÁNICO', 0, 1, 'L')
         
         # Subtitle
-        self.set_y(18)
-        self.set_font('Arial', '', 10)
-        self.set_text_color(100, 100, 100)
-        self.cell(0, 5, 'Solicitud de Servicio de Transporte de Carga', 0, 1, 'L')
+        self.set_y(20)
+        self.set_font('Arial', 'I', 11)
+        self.set_text_color(80, 80, 80)
+        self.cell(0, 5, 'Solicitud Oficial de Transporte y Carga', 0, 1, 'L')
         
         # Divider Line
         self.set_draw_color(24, 60, 48)
@@ -98,20 +98,27 @@ def generate_transport_pdf_bytes(data: dict):
     
     # --- HEADER OVERLAY ---
     pdf.set_y(10) # Aligned with Title
-    pdf.set_x(120)
-    pdf.set_font('Arial', 'B', 12)
-    pdf.set_text_color(24, 60, 48)
-    req_id = safe_str(data.get('legacy_id') or data.get('id', 'N/A'))[:8].upper()
-    pdf.cell(80, 8, f'SOLICITUD: {req_id}', 0, 1, 'R')
     
-    pdf.set_x(120)
+    req_id = safe_str(data.get('legacy_id') or data.get('id', 'N/A'))[:8].upper()
+    cufe_uuid = safe_str(data.get('id', 'N/A'))
+    
+    # Badge Request ID
+    pdf.set_font('Arial', 'B', 14)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(0, 8, f'ORDEN N°: {req_id}', 0, 1, 'R')
+    
     pdf.set_font('Arial', '', 9)
     pdf.set_text_color(100, 100, 100)
     request_date_raw = data.get("request_date")
-    pdf.cell(80, 5, f'Fecha: {str(request_date_raw)[:10] if request_date_raw else "N/A"}', 0, 1, 'R')
+    date_str = str(request_date_raw)[:10] if request_date_raw else "N/A"
+    pdf.cell(0, 5, f'Fecha Emisión: {date_str}', 0, 1, 'R')
+
+    pdf.set_font('Arial', '', 7)
+    pdf.set_text_color(150, 150, 150)
+    pdf.cell(0, 4, f'UUID / CUFE interno: {cufe_uuid}', 0, 1, 'R')
     
     # --- LAYOUT ---
-    y_start = 35 # Moved up slightly since header is compact
+    y_start = 38 # Moved up slightly since header is compact
     
     # HELPER Draw Field
     def field_row(pdf_obj, label, value, w, ln=1):
@@ -228,17 +235,16 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.rect(120, y_sig, 70, 25, 'D')
     pdf.set_xy(120, y_sig + 5)
     pdf.set_font('Arial', 'B', 9)
-    pdf.cell(70, 5, "Santiago Alvarez Lopez", 0, 1, 'C')
+    pdf.cell(70, 5, "Firma del Coordinador / Autorizador", 0, 1, 'C')
     pdf.set_x(120)
     pdf.set_font('Arial', '', 7)
-    pdf.cell(70, 4, "Coordinador de Costos", 0, 1, 'C')
+    pdf.cell(70, 4, "Orígen Botánico - Centro Logístico", 0, 1, 'C')
 
-    # UUID
+    # Minimal Footer note
     pdf.set_y(-45)
-    uuid_code = safe_str(data.get("id"), "---")
-    pdf.set_font('Courier', '', 8)
-    pdf.set_text_color(150, 150, 150)
-    pdf.cell(0, 5, f"UUID: {uuid_code}", 0, 1, 'C')
+    pdf.set_font('Arial', 'I', 8)
+    pdf.set_text_color(180, 180, 180)
+    pdf.cell(0, 5, "Documento de uso interno y control logístico.", 0, 1, 'C')
 
     try:
         return pdf.output(dest='S').encode('latin-1')
