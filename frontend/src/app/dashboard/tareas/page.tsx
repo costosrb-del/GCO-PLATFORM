@@ -74,6 +74,7 @@ export default function TareasPage() {
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("Usuario");
     const [isBreakDialogOpen, setIsBreakDialogOpen] = useState(false);
     const [breakReason, setBreakReason] = useState("");
+    const [breakNote, setBreakNote] = useState("");
     const [isOnBreak, setIsOnBreak] = useState(false);
     const [isShiftActive, setIsShiftActive] = useState(false);
     const [customAssignee, setCustomAssignee] = useState(false);
@@ -92,16 +93,17 @@ export default function TareasPage() {
         setIsSaving(true);
         const activeTasks = tasks.filter(t => t.assigned_to === currentUserEmail && t.status === "En Progreso");
 
+        const finalReason = breakNote.trim() ? `${breakReason} - ${breakNote}` : breakReason;
         const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
         let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
-        const newEntry = { date: new Date().toISOString(), action: `⏸️ Pausó Turno: ${breakReason}`, user: currentUserEmail };
+        const newEntry = { date: new Date().toISOString(), action: `⏸️ Pausó Turno: ${finalReason}`, user: currentUserEmail };
         if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
         else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
 
         for (const t of activeTasks) {
             const historyUpdate = [...(t.history || []), {
                 date: new Date().toISOString(),
-                action: `Operación auto-pausada (${breakReason})`,
+                action: `Operación auto-pausada (${finalReason})`,
                 user: currentUserEmail
             }];
             await updateTask(t.id, { status: "Pausada", history: historyUpdate });
@@ -1434,7 +1436,7 @@ export default function TareasPage() {
             )}
 
             {/* Modal para registrar el Break */}
-            <Dialog open={isBreakDialogOpen} onOpenChange={setIsBreakDialogOpen}>
+            <Dialog open={isBreakDialogOpen} onOpenChange={(open) => { setIsBreakDialogOpen(open); if (!open) { setBreakReason(""); setBreakNote(""); } }}>
                 <DialogContent className="max-w-md p-6 bg-white rounded-2xl shadow-xl">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-bold text-amber-800 flex items-center gap-2">
@@ -1451,9 +1453,22 @@ export default function TareasPage() {
                                 <SelectItem value="Desayuno / Almuerzo">Desayuno / Almuerzo</SelectItem>
                                 <SelectItem value="Break / Pausa Activa">Break / Pausa Activa</SelectItem>
                                 <SelectItem value="Reunión Externa">Reunión Externa a mis funciones</SelectItem>
+                                <SelectItem value="Otro motivo">Otro motivo...</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-10 shadow-md transition-all" onClick={handleStartBreak} disabled={!breakReason || isSaving}>
+                        {(breakReason === "Reunión Externa" || breakReason === "Otro motivo") && (
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="text-xs font-semibold text-gray-700 mb-1.5 block">Nota / Detalle adicional:</label>
+                                <Input
+                                    value={breakNote}
+                                    onChange={e => setBreakNote(e.target.value)}
+                                    placeholder="Ej: Visita al banco, Reunión con cliente X..."
+                                    className="bg-gray-50 h-9 text-sm border-gray-200"
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+                        <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-10 shadow-md transition-all" onClick={handleStartBreak} disabled={!breakReason || isSaving || (['Reunión Externa', 'Otro motivo'].includes(breakReason) && !breakNote.trim())}>
                             {isSaving ? "Aplicando Pausa Global..." : "Confirmar e Ir a Break"}
                         </Button>
                     </div>
