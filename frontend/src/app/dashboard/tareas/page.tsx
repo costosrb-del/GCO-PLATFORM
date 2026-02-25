@@ -12,7 +12,7 @@ import {
     Plus, Trash2, Edit2, Calendar as CalendarIcon, User, Flag, CheckCircle,
     Search, Clock, AlertCircle, PlayCircle, Columns, CalendarDays, LineChart,
     XCircle, MessageSquare, History, AlignLeft, ArrowDownAZ, ListTodo, Paperclip,
-    Tags, Video, Repeat
+    Tags, Video, Repeat, Activity, Layers, CheckCircle2
 } from "lucide-react";
 import {
     format, isPast, isToday, formatDistanceToNow, addDays,
@@ -967,115 +967,210 @@ export default function TareasPage() {
                 </div>
             )}
 
-            {/* CONTENIDO: METRICAS Y ANALISIS DE TIEMPOS */}
+            {/* CONTENIDO: PRODUCTIVIDAD Y TRAZABILIDAD */}
             {activeTab === "metricas" && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <Card className="shadow-sm border-gray-100">
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Impacto Global</p>
-                                    <p className="text-2xl font-bold text-gray-900">{tasks.length} Op.</p>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                                    <LineChart className="w-5 h-5" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="shadow-sm border-gray-100">
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Éxitos</p>
-                                    <p className="text-2xl font-bold text-green-600">{tasks.filter(t => t.status === "Completada").length}</p>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-500">
-                                    <CheckCircle className="w-5 h-5" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="shadow-sm border-gray-100">
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">En Curso</p>
-                                    <p className="text-2xl font-bold text-blue-600">{tasks.filter(t => t.status === "En Progreso").length}</p>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                                    <PlayCircle className="w-5 h-5" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="shadow-sm border-gray-100">
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Detenidas</p>
-                                    <p className="text-2xl font-bold text-red-600">{tasks.filter(t => t.status === "Cancelada").length}</p>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500">
-                                    <XCircle className="w-5 h-5" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                    {(() => {
+                        const selectedDateStr = historyDate || format(new Date(), 'yyyy-MM-dd');
+                        const timelineEvents: any[] = [];
 
-                    <Card className="shadow-sm border-gray-100 overflow-hidden">
-                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-4">
-                            <div>
-                                <h3 className="font-bold text-gray-800">Cierre de Demoras Históricas</h3>
-                                <span className="text-xs text-gray-500 font-medium">Ver toda la trazabilidad y tiempos de respuesta</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded border shadow-sm">
-                                <CalendarIcon className="w-4 h-4 text-gray-400" />
-                                <Input
-                                    type="date"
-                                    value={historyDate}
-                                    onChange={e => setHistoryDate(e.target.value)}
-                                    className="border-0 h-6 p-0 text-sm focus-visible:ring-0 shadow-none w-[120px]"
-                                />
-                                {historyDate && (
-                                    <Button variant="ghost" size="icon" className="h-4 w-4 rounded-full" onClick={() => setHistoryDate("")}>
-                                        <XCircle className="w-3 h-3 text-red-400" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-gray-500 bg-white border-b border-gray-200 uppercase tracking-wider">
-                                    <tr>
-                                        <th className="px-4 py-3 font-bold">Proceso Operativo</th>
-                                        <th className="px-4 py-3 font-bold">Encargado</th>
-                                        <th className="px-4 py-3 font-bold">Recepción</th>
-                                        <th className="px-4 py-3 font-bold text-right">Duración de Resolución</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tasks.filter(t => t.status === "Completada" && (!historyDate || (t.completed_at && t.completed_at.startsWith(historyDate)))).length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
-                                                No hay procesos completados para la fecha seleccionada.
-                                            </td>
-                                        </tr>
-                                    ) : tasks.filter(t => t.status === "Completada" && (!historyDate || (t.completed_at && t.completed_at.startsWith(historyDate)))).sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime()).map(task => (
-                                        <tr key={`history-${task.id}`} className="bg-white border-b border-gray-50 hover:bg-gray-50/80 transition-colors">
-                                            <td className="px-4 py-3 font-semibold text-gray-900">{task.title}</td>
-                                            <td className="px-4 py-3">
-                                                <span className="bg-purple-50 text-purple-700 font-bold px-2 py-1 rounded text-[10px] border border-purple-100 uppercase tracking-wide">{task.assigned_to || 'Sin asignar'}</span>
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-500 text-xs font-medium">
-                                                {format(new Date(task.created_at), "dd/MMM yyyy", { locale: es })}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <span className="inline-flex items-center gap-1 font-bold text-[#183C30] bg-[#183C30]/10 px-2 py-1.5 rounded text-[10px] border border-[#183C30]/20 shadow-sm">
-                                                    <Clock className="w-3 h-3" />
-                                                    {calculateTaskDuration(task.created_at, task.completed_at)}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
+                        tasks.forEach(task => {
+                            if (task.history && task.history.length > 0) {
+                                task.history.forEach((h, index) => {
+                                    const hDate = new Date(h.date);
+                                    if (format(hDate, 'yyyy-MM-dd') === selectedDateStr) {
+                                        timelineEvents.push({
+                                            id: `${task.id}-${index}`,
+                                            time: hDate,
+                                            taskTitle: task.title,
+                                            user: h.user,
+                                            action: h.action,
+                                            comment: h.comment,
+                                            taskId: task.id,
+                                            status: task.status
+                                        });
+                                    }
+                                });
+                            }
+                        });
+
+                        timelineEvents.sort((a, b) => b.time.getTime() - a.time.getTime()); // Mas recientes arriba
+
+                        const actionsCount = timelineEvents.length;
+                        const tasksTouched = new Set(timelineEvents.map(e => e.taskId)).size;
+                        const tasksCompletedTodayObj = tasks.filter(t => (t.status === "Completada" || t.status === "Cancelada") && t.completed_at && t.completed_at.startsWith(selectedDateStr));
+                        const tasksCompletedToday = tasksCompletedTodayObj.length;
+
+                        return (
+                            <>
+                                {/* ENCABEZADO Y SELECTOR DE FECHA */}
+                                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-white p-4 rounded-xl shadow-[0_2px_8px_-3px_rgba(0,0,0,0.1)] border border-gray-100">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                            <LineChart className="text-[#183C30] w-6 h-6" /> Rendimiento y Trazabilidad
+                                        </h2>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Demuestra y evalúa tus funciones hora a hora en cualquier día específico.
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-xl border shadow-inner">
+                                        <span className="text-sm font-bold text-gray-600 flex items-center gap-1.5"><CalendarIcon className="w-4 h-4" /> Revisar Día:</span>
+                                        <Input
+                                            type="date"
+                                            value={historyDate || format(new Date(), 'yyyy-MM-dd')}
+                                            onChange={e => setHistoryDate(e.target.value)}
+                                            className="border-gray-200 h-9 text-sm focus-visible:ring-[#183C30] shadow-sm bg-white font-bold w-[140px] text-gray-700"
+                                        />
+                                        {historyDate && historyDate !== format(new Date(), 'yyyy-MM-dd') && (
+                                            <Button variant="ghost" size="sm" className="h-9 px-3 font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100" onClick={() => setHistoryDate("")}>
+                                                Volver a Hoy
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* TARJETAS DE METRICAS DEL DIA */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <Card className="shadow-sm border-gray-100 bg-gradient-to-br from-white to-blue-50/30">
+                                        <CardContent className="p-5 flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0 shadow-inner">
+                                                <Activity className="w-7 h-7" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">Acciones (Cliks/Cambios)</p>
+                                                <div className="flex items-baseline gap-2">
+                                                    <p className="text-3xl font-black text-gray-900">{actionsCount}</p>
+                                                    <span className="text-xs text-gray-500 font-medium">movimientos</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="shadow-sm border-gray-100 bg-gradient-to-br from-white to-purple-50/30">
+                                        <CardContent className="p-5 flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 shrink-0 shadow-inner">
+                                                <Layers className="w-7 h-7" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider mb-1">Operaciones Tocadas</p>
+                                                <div className="flex items-baseline gap-2">
+                                                    <p className="text-3xl font-black text-gray-900">{tasksTouched}</p>
+                                                    <span className="text-xs text-gray-500 font-medium">tareas gestionadas</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="shadow-sm border-gray-100 bg-gradient-to-br from-white to-green-50/30">
+                                        <CardContent className="p-5 flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center text-green-600 shrink-0 shadow-inner">
+                                                <CheckCircle2 className="w-7 h-7" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-green-600 uppercase tracking-wider mb-1">Cierres Efectivos</p>
+                                                <div className="flex items-baseline gap-2">
+                                                    <p className="text-3xl font-black text-gray-900">{tasksCompletedToday}</p>
+                                                    <span className="text-xs text-gray-500 font-medium">finalizados este día</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* TIMELINE HORA A HORA Y TABLA DE CIERRES */}
+                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                                    {/* TIMELINE VERTICAL */}
+                                    <Card className="shadow-sm border-gray-100 lg:col-span-3 overflow-hidden flex flex-col h-[650px]">
+                                        <div className="p-4 border-b border-gray-100 bg-gray-50/80 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="w-5 h-5 text-blue-600" />
+                                                <h3 className="font-bold text-gray-800">Bitácora Hora a Hora</h3>
+                                            </div>
+                                            <span className="text-xs bg-white border border-gray-200 px-2 py-1 rounded font-bold text-gray-500 shadow-sm">
+                                                Más recientes arriba ↑
+                                            </span>
+                                        </div>
+                                        <div className="p-6 overflow-y-auto flex-1 bg-white">
+                                            {timelineEvents.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                                    <History className="w-16 h-16 mb-4 text-gray-200" />
+                                                    <p className="font-bold text-gray-500 text-lg">Día sin Actividad</p>
+                                                    <p className="text-sm">No hay registros guardados en esta fecha.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 pb-4">
+                                                    {timelineEvents.map((event, idx) => (
+                                                        <div key={event.id} className="relative pl-6">
+                                                            {/* Circulo del timeline */}
+                                                            <div className="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-white shadow-sm" />
+
+                                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 mb-1">
+                                                                <h4 className="text-[15px] font-bold text-gray-900 line-clamp-1 flex-1 pr-4">{event.taskTitle}</h4>
+                                                                <span className="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full shrink-0 border border-blue-100 shadow-sm">
+                                                                    {format(event.time, 'hh:mm:ss a')}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600 leading-snug mt-1">
+                                                                <span className="font-bold text-[#183C30]">{event.user}</span> <span className="opacity-80">{event.action.toLowerCase()}</span>
+                                                            </p>
+                                                            {event.comment && (
+                                                                <div className="mt-2.5 bg-yellow-50/50 border border-yellow-100/70 p-3 rounded-xl text-xs italic text-gray-700 flex gap-2 items-start shadow-sm">
+                                                                    <MessageSquare className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                                                    <span className="leading-relaxed">&quot;{event.comment}&quot;</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Card>
+
+                                    {/* TABLA DE DEMORAS (DERECHA) */}
+                                    <Card className="shadow-sm border-gray-100 lg:col-span-2 overflow-hidden flex flex-col h-[650px]">
+                                        <div className="p-4 border-b border-gray-100 bg-gray-50/80">
+                                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                                <CheckCircle2 className="w-5 h-5 text-green-600" /> Tiempos de Cierre Este Día
+                                            </h3>
+                                        </div>
+                                        <div className="overflow-y-auto flex-1 bg-gray-50/30">
+                                            {tasksCompletedTodayObj.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center p-8 text-center text-gray-400 h-full">
+                                                    <span className="text-sm font-medium">No se cerró ninguna operación en esta fecha.</span>
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 space-y-4">
+                                                    {tasksCompletedTodayObj.sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime()).map(task => (
+                                                        <div key={`history-done-${task.id}`} className="p-4 bg-white border border-gray-100 shadow-sm rounded-xl hover:border-green-300 hover:shadow-md transition-all">
+                                                            <div className="flex items-start justify-between gap-2 mb-3">
+                                                                <span className="text-sm font-bold text-gray-900 line-clamp-2 leading-tight flex-1">{task.title}</span>
+                                                                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded shrink-0 ${task.status === 'Cancelada' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+                                                                    {task.status.substring(0, 4)}.
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Demora/Velocidad</span>
+                                                                    <span className="flex items-center gap-1.5 font-bold text-[#183C30] bg-[#183C30]/5 px-2.5 py-1 rounded-md border border-[#183C30]/10 text-xs">
+                                                                        <Clock className="w-3.5 h-3.5" />
+                                                                        {calculateTaskDuration(task.created_at, task.completed_at)}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Encargado</span>
+                                                                    <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">{task.assigned_to || 'N/A'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Card>
+                                </div>
+                            </>
+                        );
+                    })()}
                 </div>
             )}
         </div>
