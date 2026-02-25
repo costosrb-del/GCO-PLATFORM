@@ -39,8 +39,8 @@ export function useTasks() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchTasks = async () => {
-        setIsLoading(true);
+    const fetchTasks = async (background = false) => {
+        if (!background) setIsLoading(true);
         try {
             const response = await fetch(`${API_URL}/api/tasks/`);
             if (!response.ok) throw new Error("Failed to fetch tasks");
@@ -50,7 +50,7 @@ export function useTasks() {
         } catch (err: any) {
             setError(err.message);
         } finally {
-            setIsLoading(false);
+            if (!background) setIsLoading(false);
         }
     };
 
@@ -66,7 +66,7 @@ export function useTasks() {
                 body: JSON.stringify(taskData)
             });
             if (!response.ok) throw new Error("Failed to create task");
-            await fetchTasks();
+            await fetchTasks(true);
             return true;
         } catch (err) {
             console.error(err);
@@ -86,12 +86,12 @@ export function useTasks() {
             });
             if (!response.ok) throw new Error("Failed to update task");
             // Se sincroniza en background
-            fetchTasks();
+            fetchTasks(true);
             return true;
         } catch (err) {
             console.error(err);
             // Revert changes on error
-            fetchTasks();
+            fetchTasks(true);
             return false;
         }
     };
@@ -102,7 +102,7 @@ export function useTasks() {
                 method: "DELETE"
             });
             if (!response.ok) throw new Error("Failed to delete task");
-            await fetchTasks();
+            await fetchTasks(true);
             return true;
         } catch (err) {
             console.error(err);

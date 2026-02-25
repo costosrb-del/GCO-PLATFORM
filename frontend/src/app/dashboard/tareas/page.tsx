@@ -70,6 +70,7 @@ export default function TareasPage() {
     // Archivos y Usuario
     const [uploadingFile, setUploadingFile] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [isSaving, setIsSaving] = useState(false);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("Usuario");
 
     import("react").then((React) => {
@@ -217,6 +218,7 @@ export default function TareasPage() {
 
     const handleSave = async () => {
         if (!formData.title) return;
+        setIsSaving(true);
 
         const payload = { ...formData };
         const currentHistory = formData.history || [];
@@ -224,7 +226,7 @@ export default function TareasPage() {
         if (editingTask && editingTask.status !== formData.status) {
             currentHistory.push({
                 date: new Date().toISOString(),
-                action: `Estado cambiado a: ${formData.status}`,
+                action: formData.status === "Pausada" ? "Operación Pausada (Break/Reunión)" : `Estado cambiado a: ${formData.status}`,
                 user: currentUserEmail,
             });
             payload.history = currentHistory;
@@ -244,6 +246,7 @@ export default function TareasPage() {
             }];
             await createTask(payload);
         }
+        setIsSaving(false);
         setIsDialogOpen(false);
     };
 
@@ -303,6 +306,7 @@ export default function TareasPage() {
 
             let matchesAssignee = true;
             if (filterAssignee === "Mismo") matchesAssignee = task.assigned_to === currentUserEmail;
+            else if (filterAssignee === "Tercero") matchesAssignee = task.assigned_to !== currentUserEmail;
             else if (filterAssignee !== "Todos") matchesAssignee = task.assigned_to === filterAssignee;
 
             return matchesSearch && matchesPriority && matchesAssignee;
@@ -569,6 +573,7 @@ export default function TareasPage() {
                                                     <SelectContent>
                                                         <SelectItem value="Pendiente">Pendiente</SelectItem>
                                                         <SelectItem value="En Progreso">En Progreso</SelectItem>
+                                                        <SelectItem value="Pausada">Pausada (Almuerzos/Reunión)</SelectItem>
                                                         <SelectItem value="Completada">Completada</SelectItem>
                                                         <SelectItem value="Cancelada">Cancelada / Rechazada</SelectItem>
                                                     </SelectContent>
@@ -593,7 +598,7 @@ export default function TareasPage() {
                                                             <div key={idx} className="relative pl-3">
                                                                 <div className="absolute w-2 h-2 bg-gray-300 rounded-full -left-[5px] top-1.5 ring-2 ring-white" />
                                                                 <div className="text-[9px] text-gray-400 mb-0.5">{format(new Date(log.date), "dd MMM HH:mm", { locale: es })} • {log.user}</div>
-                                                                <div className="text-[10px] font-semibold text-gray-600">{log.action}</div>
+                                                                <div className={`text-[10px] font-semibold ${log.action.includes('Turno') ? 'text-indigo-600' : 'text-gray-600'}`}>{log.action}</div>
                                                                 {log.comment && (
                                                                     <div className="mt-0.5 text-[10px] text-gray-600 bg-orange-50/50 p-1.5 rounded border border-orange-100 italic">
                                                                         "{log.comment}"
@@ -612,6 +617,16 @@ export default function TareasPage() {
                                             </div>
 
                                             <div className="mt-auto bg-gray-50/50 p-2 rounded-lg border">
+                                                <div className="flex gap-2 mb-2 justify-center">
+                                                    <Button size="sm" variant="outline" className="h-6 text-[9px] font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex-1" onClick={() => {
+                                                        const log: TaskHistoryEntry = { date: new Date().toISOString(), action: "▶️ Inició Turno/Jornada", user: currentUserEmail };
+                                                        setFormData(prev => ({ ...prev, history: [...(prev.history || []), log] }));
+                                                    }}>Iniciar Turno</Button>
+                                                    <Button size="sm" variant="outline" className="h-6 text-[9px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 flex-1" onClick={() => {
+                                                        const log: TaskHistoryEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
+                                                        setFormData(prev => ({ ...prev, history: [...(prev.history || []), log] }));
+                                                    }}>Terminar Turno</Button>
+                                                </div>
                                                 <div className="flex gap-2 relative">
                                                     <Input
                                                         value={newComment}
@@ -649,8 +664,8 @@ export default function TareasPage() {
                                         </div>
                                     )}
 
-                                    <Button className="w-full bg-[#183C30] hover:bg-[#122e24] shadow-md py-6 text-md font-bold mt-auto" onClick={handleSave} disabled={!formData.title}>
-                                        {editingTask ? "Guardar Operación" : "Crear Operación y Lanzar"}
+                                    <Button className="w-full bg-[#183C30] hover:bg-[#122e24] shadow-md py-6 text-md font-bold mt-auto" onClick={handleSave} disabled={!formData.title || isSaving}>
+                                        {isSaving ? <span className="flex items-center gap-2"><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</span> : (editingTask ? "Guardar Operación" : "Crear Operación y Lanzar")}
                                     </Button>
                                 </div>
                             </div>
@@ -722,6 +737,7 @@ export default function TareasPage() {
                             <SelectContent>
                                 <SelectItem value="Todos">Todo Asignado</SelectItem>
                                 <SelectItem value="Mismo" className="font-bold text-[#183C30]">Mi Bandeja de Trabajo</SelectItem>
+                                <SelectItem value="Tercero">Terceros / Delegadas</SelectItem>
                                 <SelectItem value="Asesora">Comercial</SelectItem>
                                 <SelectItem value="Logistica">Logística</SelectItem>
                                 <SelectItem value="Administracion">Admin</SelectItem>
@@ -763,10 +779,11 @@ export default function TareasPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-4 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-4 animate-in fade-in slide-in-from-bottom-4">
                         {[
                             { id: "Pendiente", color: "bg-slate-100/50", dot: "bg-slate-400", border: 'border-slate-200', show: true },
                             { id: "En Progreso", color: "bg-blue-50/30", dot: "bg-blue-500", border: 'border-blue-200', show: true },
+                            { id: "Pausada", color: "bg-amber-50/30", dot: "bg-amber-500", border: 'border-amber-200', show: true },
                             { id: "Completada", color: "bg-green-50/40", dot: "bg-green-500", border: 'border-green-200', show: showCompletedColumn },
                             { id: "Cancelada", color: "bg-red-50/30", dot: "bg-red-500", border: 'border-red-200', show: true }
                         ].filter(g => g.show).map(statusGroup => (
