@@ -12,7 +12,7 @@ import {
     Plus, Trash2, Edit2, Calendar as CalendarIcon, User, Flag, CheckCircle,
     Search, Clock, AlertCircle, PlayCircle, Columns, CalendarDays, LineChart,
     XCircle, MessageSquare, History, AlignLeft, ArrowDownAZ, ListTodo, Paperclip,
-    Tags, Video, Repeat, Activity, Layers, CheckCircle2
+    Tags, Video, Repeat, Activity, Layers, CheckCircle2, Download, Copy, PaperclipIcon
 } from "lucide-react";
 import {
     format, isPast, isToday, formatDistanceToNow, addDays,
@@ -24,6 +24,8 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import { GCOProgress } from "@/components/ui/GCOProgress";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 export default function TareasPage() {
     const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks();
@@ -64,6 +66,18 @@ export default function TareasPage() {
 
     // Filtros Histórico
     const [historyDate, setHistoryDate] = useState<string>("");
+
+    // Archivos y Usuario
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [currentUserEmail, setCurrentUserEmail] = useState<string>("Usuario");
+
+    import("react").then((React) => {
+        React.useEffect(() => {
+            const email = localStorage.getItem("gco_user") || "Usuario";
+            setCurrentUserEmail(email);
+        }, []);
+    });
 
     const handleOpenDialog = (task?: Task) => {
         if (task) {
@@ -109,13 +123,57 @@ export default function TareasPage() {
         const newEntry: TaskHistoryEntry = {
             date: new Date().toISOString(),
             action: "Comentario/Justificación agregada",
-            user: "Usuario",
+            user: currentUserEmail,
             comment: newComment.trim()
         };
 
         const updatedHistory = [...(formData.history || []), newEntry];
         setFormData({ ...formData, history: updatedHistory });
         setNewComment("");
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0 || !editingTask) return;
+        const file = e.target.files[0];
+
+        setUploadingFile(true);
+        setUploadProgress(0);
+
+        try {
+            const fileRef = ref(storage, `tareas_evidencias/${editingTask.id}/${Date.now()}_${file.name}`);
+            const uploadTask = uploadBytesResumable(fileRef, file);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                    setUploadProgress(progress);
+                },
+                (error) => {
+                    console.error("Upload error", error);
+                    setUploadingFile(false);
+                },
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+                    const newEntry: TaskHistoryEntry = {
+                        date: new Date().toISOString(),
+                        action: "Archivo Adjunto de Evidencia",
+                        user: currentUserEmail,
+                        comment: `Se subió: ${file.name}`,
+                        attachment_url: downloadURL,
+                        attachment_name: file.name
+                    };
+
+                    const updatedHistory = [...(formData.history || []), newEntry];
+                    setFormData(prev => ({ ...prev, history: updatedHistory }));
+                    await updateTask(editingTask.id, { history: updatedHistory });
+                    setUploadingFile(false);
+                }
+            );
+        } catch (error) {
+            console.error(error);
+            setUploadingFile(false);
+        }
     };
 
     const handleAddSubtask = () => {
@@ -167,7 +225,7 @@ export default function TareasPage() {
             currentHistory.push({
                 date: new Date().toISOString(),
                 action: `Estado cambiado a: ${formData.status}`,
-                user: "Usuario",
+                user: currentUserEmail,
             });
             payload.history = currentHistory;
         }
@@ -181,8 +239,8 @@ export default function TareasPage() {
         } else {
             payload.history = [{
                 date: new Date().toISOString(),
-                action: "Tarea creada",
-                user: "Usuario"
+                action: "Operación creada e inicializada",
+                user: currentUserEmail
             }];
             await createTask(payload);
         }
@@ -219,7 +277,7 @@ export default function TareasPage() {
             const logEntry: TaskHistoryEntry = {
                 date: new Date().toISOString(),
                 action: `Movida a: ${newStatus}`,
-                user: "Usuario"
+                user: currentUserEmail
             };
 
             const updates: Partial<Task> = {
@@ -242,7 +300,10 @@ export default function TareasPage() {
                 task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (task.tags && task.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
             const matchesPriority = filterPriority === "Todas" || task.priority === filterPriority;
-            const matchesAssignee = filterAssignee === "Todos" || task.assigned_to === filterAssignee;
+
+            let matchesAssignee = true;
+            if (filterAssignee === "Mismo") matchesAssignee = task.assigned_to === currentUserEmail;
+            else if (filterAssignee !== "Todos") matchesAssignee = task.assigned_to === filterAssignee;
 
             return matchesSearch && matchesPriority && matchesAssignee;
         });
@@ -538,6 +599,12 @@ export default function TareasPage() {
                                                                         "{log.comment}"
                                                                     </div>
                                                                 )}
+                                                                {log.attachment_url && (
+                                                                    <a href={log.attachment_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50/80 p-1.5 rounded border border-blue-200 hover:bg-blue-100 transition-colors">
+                                                                        <PaperclipIcon className="w-3 h-3" />
+                                                                        {log.attachment_name || "Ver Archivo Adjunto"}
+                                                                    </a>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -545,18 +612,39 @@ export default function TareasPage() {
                                             </div>
 
                                             <div className="mt-auto bg-gray-50/50 p-2 rounded-lg border">
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2 relative">
                                                     <Input
                                                         value={newComment}
                                                         onChange={(e) => setNewComment(e.target.value)}
-                                                        placeholder="Razón de retraso, justificación, u otra nota..."
-                                                        className="bg-white text-[10px] h-7 px-2"
+                                                        placeholder="Razón de retraso, justificación..."
+                                                        className="bg-white text-[10px] h-8 px-2 pr-10"
                                                         onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                                                     />
-                                                    <Button size="sm" onClick={handleAddComment} className="h-7 bg-gray-800 hover:bg-gray-700 text-[10px] px-2 h-7 py-0">
+
+                                                    {/* Boton Oculto Upload */}
+                                                    <input
+                                                        type="file"
+                                                        id={`file-upload-ev-${editingTask.id}`}
+                                                        className="hidden"
+                                                        onChange={handleFileUpload}
+                                                    />
+                                                    <label
+                                                        htmlFor={`file-upload-ev-${editingTask.id}`}
+                                                        className="absolute right-14 top-1 cursor-pointer bg-white border border-gray-200 text-gray-400 hover:text-blue-600 w-6 h-6 flex items-center justify-center rounded transition-colors"
+                                                        title="Adjuntar Archivo (PDF, Imagen, Excel)"
+                                                    >
+                                                        {uploadingFile ? <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> : <PaperclipIcon className="w-3 h-3" />}
+                                                    </label>
+
+                                                    <Button size="sm" onClick={handleAddComment} className="h-8 bg-gray-800 hover:bg-gray-700 text-[10px] px-2 py-0 min-w-[50px]">
                                                         Enviar
                                                     </Button>
                                                 </div>
+                                                {uploadingFile && (
+                                                    <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden w-full">
+                                                        <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -633,7 +721,7 @@ export default function TareasPage() {
                             <SelectTrigger className="w-[130px] h-9 bg-gray-50/50 text-sm"><SelectValue placeholder="Asignado" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="Todos">Todo Asignado</SelectItem>
-                                <SelectItem value="Mismo">Mismo</SelectItem>
+                                <SelectItem value="Mismo" className="font-bold text-[#183C30]">Mi Bandeja de Trabajo</SelectItem>
                                 <SelectItem value="Asesora">Comercial</SelectItem>
                                 <SelectItem value="Logistica">Logística</SelectItem>
                                 <SelectItem value="Administracion">Admin</SelectItem>
@@ -753,7 +841,8 @@ export default function TareasPage() {
                                                 draggable
                                                 onDragStart={(e) => handleDragStart(e, task.id)}
                                                 onDragEnd={(e) => handleDragEnd(e, task.id)}
-                                                className="group bg-white hover:shadow-lg transition-all duration-200 border-gray-200/60 overflow-hidden relative cursor-grab active:cursor-grabbing hover:-translate-y-0.5"
+                                                onClick={() => handleOpenDialog(task)}
+                                                className="group bg-white hover:shadow-lg transition-all duration-200 border-gray-200/60 overflow-hidden relative cursor-pointer active:cursor-grabbing hover:-translate-y-0.5"
                                             >
 
                                                 {/* Checklist Top Progress Bar (subtle) */}
@@ -837,7 +926,13 @@ export default function TareasPage() {
 
                                                         {hasComments && (
                                                             <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold bg-orange-50 text-orange-600 border border-orange-200" title="Contiene justificaciones/notas">
-                                                                <MessageSquare className="w-2.5 h-2.5" /> Nota
+                                                                <MessageSquare className="w-2.5 h-2.5" /> Bitácora
+                                                            </span>
+                                                        )}
+
+                                                        {task.history && task.history.some(h => h.attachment_url) && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold bg-blue-50 text-blue-600 border border-blue-200" title="Contiene evidencias o archivos adjuntos">
+                                                                <PaperclipIcon className="w-2.5 h-2.5" /> Evidencia
                                                             </span>
                                                         )}
 
@@ -867,7 +962,7 @@ export default function TareasPage() {
                                                     </div>
 
                                                     <button
-                                                        onClick={() => handleOpenDialog(task)}
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenDialog(task); }}
                                                         className="absolute bottom-2 right-2 p-1.5 text-[#183C30] hover:text-white bg-[#183C30]/10 hover:bg-[#183C30] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all border border-[#183C30]/20 shadow-sm"
                                                         title="Expandir Panel / Editar"
                                                     >

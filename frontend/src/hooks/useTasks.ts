@@ -6,6 +6,8 @@ export interface TaskHistoryEntry {
     action: string;
     user: string;
     comment?: string;
+    attachment_url?: string;
+    attachment_name?: string;
 }
 
 export interface TaskSubtask {
