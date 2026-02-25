@@ -12,7 +12,7 @@ import {
     Plus, Trash2, Edit2, Calendar as CalendarIcon, User, Flag, CheckCircle,
     Search, Clock, AlertCircle, PlayCircle, Columns, CalendarDays, LineChart,
     XCircle, MessageSquare, History, AlignLeft, ArrowDownAZ, ListTodo, Paperclip,
-    Tags, Video, Repeat, Activity, Layers, CheckCircle2, Download, Copy, PaperclipIcon, Coffee
+    Tags, Video, Repeat, Activity, Layers, CheckCircle2, Download, Copy, PaperclipIcon, Coffee, X
 } from "lucide-react";
 import {
     format, isPast, isToday, formatDistanceToNow, addDays,
@@ -76,6 +76,7 @@ export default function TareasPage() {
     const [breakReason, setBreakReason] = useState("");
     const [isOnBreak, setIsOnBreak] = useState(false);
     const [isShiftActive, setIsShiftActive] = useState(false);
+    const [customAssignee, setCustomAssignee] = useState(false);
 
     import("react").then((React) => {
         React.useEffect(() => {
@@ -551,15 +552,37 @@ export default function TareasPage() {
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-gray-700 mb-1.5 block">Asignado a</label>
-                                                <Select value={formData.assigned_to} onValueChange={v => setFormData({ ...formData, assigned_to: v })}>
-                                                    <SelectTrigger className="bg-gray-50 h-9"><SelectValue placeholder="Usuario" /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Mismo">Para mí mismo</SelectItem>
-                                                        <SelectItem value="Asesora">Equipo Comercial</SelectItem>
-                                                        <SelectItem value="Logistica">Logística/Inventario</SelectItem>
-                                                        <SelectItem value="Administracion">Administración</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                {!customAssignee ? (
+                                                    <div className="flex gap-2">
+                                                        <Select value={formData.assigned_to === currentUserEmail ? "Mismo" : (["Asesora", "Logistica", "Administracion"].includes(formData.assigned_to || "") ? formData.assigned_to : "Otro")} onValueChange={v => {
+                                                            if (v === "Mismo") { setFormData({ ...formData, assigned_to: currentUserEmail }); setCustomAssignee(false); }
+                                                            else if (v === "Otro") { setCustomAssignee(true); setFormData({ ...formData, assigned_to: "" }); }
+                                                            else { setFormData({ ...formData, assigned_to: v }); setCustomAssignee(false); }
+                                                        }}>
+                                                            <SelectTrigger className="bg-gray-50 h-9 flex-1"><SelectValue placeholder="Usuario" /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="Mismo">Para mí mismo</SelectItem>
+                                                                <SelectItem value="Asesora">Equipo Comercial</SelectItem>
+                                                                <SelectItem value="Logistica">Logística/Inventario</SelectItem>
+                                                                <SelectItem value="Administracion">Administración</SelectItem>
+                                                                <SelectItem value="Otro">Otro Tercero Específico...</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex gap-2 relative">
+                                                        <Input
+                                                            value={formData.assigned_to}
+                                                            onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}
+                                                            placeholder="Escribe el nombre o correo..."
+                                                            className="bg-gray-50 h-9 text-xs"
+                                                            autoFocus
+                                                        />
+                                                        <Button variant="ghost" size="sm" onClick={() => { setCustomAssignee(false); setFormData({ ...formData, assigned_to: currentUserEmail }); }} className="absolute right-1 top-1.5 h-6 w-6 p-0 rounded-full hover:bg-gray-200">
+                                                            <X className="w-3 h-3 text-gray-500" />
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
