@@ -822,9 +822,11 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
         destination_address: "",
         carrier: "",
         scheduled_load_date: "",
+        scheduled_load_time: "",
         vehicle_type: "",
         merchandise_value: "",
         transport_cost: "",
+        requires_helpers: "No",
         observations: ""
     });
     const [loading, setLoading] = useState(false);
@@ -841,9 +843,11 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
                     destination_address: editingItem.destination_address || "",
                     carrier: editingItem.carrier || "",
                     scheduled_load_date: editingItem.scheduled_load_date || "",
+                    scheduled_load_time: editingItem.scheduled_load_time || "",
                     vehicle_type: editingItem.vehicle_type || "",
                     merchandise_value: editingItem.merchandise_value || "",
                     transport_cost: editingItem.transport_cost || "",
+                    requires_helpers: editingItem.requires_helpers || "No",
                     observations: editingItem.observations || ""
                 });
             } else {
@@ -855,9 +859,11 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
                     destination_address: "",
                     carrier: "",
                     scheduled_load_date: "",
+                    scheduled_load_time: "",
                     vehicle_type: "",
                     merchandise_value: "",
                     transport_cost: "",
+                    requires_helpers: "No",
                     observations: ""
                 });
             }
@@ -991,18 +997,33 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
                             )}
                         </div>
 
-                        {/* SCHEDULED DATE */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">F. Programada Cargue <span className="text-red-500">*</span></label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="date"
-                                    className="w-full pl-9 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
-                                    value={formData.scheduled_load_date}
-                                    onChange={e => setFormData({ ...formData, scheduled_load_date: e.target.value })}
-                                    required
-                                />
+                        {/* SCHEDULED DATE & TIME */}
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">F. Programada Cargue <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                    <input
+                                        type="date"
+                                        className="w-full pl-9 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                        value={formData.scheduled_load_date}
+                                        onChange={e => setFormData({ ...formData, scheduled_load_date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="w-1/3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Hora <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                    <input
+                                        type="time"
+                                        className="w-full pl-8 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                        value={formData.scheduled_load_time}
+                                        onChange={e => setFormData({ ...formData, scheduled_load_time: e.target.value })}
+                                        required
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -1034,6 +1055,18 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
                                 <option value="Patineta (15 ton)">Patineta (15 ton)</option>
                                 <option value="Mula (32.5 ton)">Mula (32.5 ton)</option>
                                 <option value="Particular / Otro">Particular / Otro</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">¿Requiere Auxiliares de Cargue?</label>
+                            <select
+                                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#183C30] outline-none"
+                                value={formData.requires_helpers}
+                                onChange={e => setFormData({ ...formData, requires_helpers: e.target.value })}
+                            >
+                                <option value="No">No requiere (Cargue estándar)</option>
+                                <option value="Si">Sí requiere (Auxiliares necesarios)</option>
                             </select>
                         </div>
 
