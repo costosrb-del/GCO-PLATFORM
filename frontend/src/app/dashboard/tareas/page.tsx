@@ -450,14 +450,28 @@ export default function TareasPage() {
 
     const calculateTaskDuration = (start?: string, end?: string) => {
         if (!start || !end) return "N/A";
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        const hours = Math.abs(differenceInHours(endDate, startDate));
-        if (hours < 24) {
-            const mins = Math.abs(differenceInMinutes(endDate, startDate));
-            return hours === 0 ? `${mins} min` : `${hours}h ${mins % 60}m`;
-        }
-        return `${Math.abs(differenceInDays(endDate, startDate))} días`;
+
+        const normalizeDate = (dateStr: string) => {
+            let str = dateStr.replace(' ', 'T');
+            if (!str.endsWith('Z') && !str.match(/[+-]\d{2}(:\d{2})?$/)) {
+                str += 'Z';
+            }
+            return new Date(str);
+        };
+
+        const startDate = normalizeDate(start);
+        const endDate = normalizeDate(end);
+        let diffMinutes = differenceInMinutes(endDate, startDate);
+        if (diffMinutes < 0) diffMinutes = Math.abs(diffMinutes);
+
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+
+        if (hours === 0) return `${mins} min`;
+        if (hours < 24) return `${hours}h ${mins}m`;
+
+        const days = differenceInDays(endDate, startDate);
+        return `${Math.abs(days)} días`;
     };
 
     return (
@@ -873,7 +887,7 @@ export default function TareasPage() {
                                         ) : (
                                             <>
                                                 <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-amber-700 hover:bg-amber-100 px-2 border border-amber-200 bg-amber-50" onClick={() => setIsBreakDialogOpen(true)}>
-                                                    🍔 Salir (Break)
+                                                    ☕ Tomar un descanso
                                                 </Button>
                                                 <div className="w-px h-4 bg-indigo-200"></div>
                                                 <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-slate-600 hover:bg-slate-200 px-2" onClick={async () => {
@@ -1434,10 +1448,9 @@ export default function TareasPage() {
                                 <SelectValue placeholder="Selecciona un motivo..." />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Almuerzo">Desayuno / Almuerzo</SelectItem>
-                                <SelectItem value="Reunión Especial">Reunión Especial</SelectItem>
-                                <SelectItem value="Pausa Activa / Baño">Pausa Activa / Baño</SelectItem>
-                                <SelectItem value="Diligencia Personal">Diligencia Externa</SelectItem>
+                                <SelectItem value="Desayuno / Almuerzo">Desayuno / Almuerzo</SelectItem>
+                                <SelectItem value="Break / Pausa Activa">Break / Pausa Activa</SelectItem>
+                                <SelectItem value="Reunión Externa">Reunión Externa a mis funciones</SelectItem>
                             </SelectContent>
                         </Select>
                         <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-10 shadow-md transition-all" onClick={handleStartBreak} disabled={!breakReason || isSaving}>
