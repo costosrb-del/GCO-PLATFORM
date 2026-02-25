@@ -898,11 +898,17 @@ function CreateRequestModal({ isOpen, onClose, onSuccess, editingItem }: { isOpe
 
         try {
             setLoading(true);
+
+            const payload = {
+                ...formData,
+                created_by: localStorage.getItem("gco_user") || "Usuario"
+            };
+
             if (editingItem) {
-                await axios.put(`${API_URL}/transport/${editingItem.id}`, formData);
+                await axios.put(`${API_URL}/transport/${editingItem.id}`, payload);
                 alert("Solicitud actualizada exitosamente");
             } else {
-                await axios.post(`${API_URL}/transport/`, formData);
+                await axios.post(`${API_URL}/transport/`, payload);
                 alert("Solicitud creada exitosamente");
             }
 

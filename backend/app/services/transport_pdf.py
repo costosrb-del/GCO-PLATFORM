@@ -40,15 +40,15 @@ class TransportPDF(FPDF):
         
         # Column 2: Social / Web
         self.set_xy(80, 297-28)
-        self.cell(50, 4, "IG: @ritualbotanico.co", 0, 1, 'L')
+        self.cell(50, 4, "IG: @origenbotanico", 0, 1, 'L')
         self.set_x(80)
         self.cell(50, 4, "WA: +57 318 4626877", 0, 1, 'L')
         
         # Column 3: Email / Web
         self.set_xy(130, 297-28)
-        self.cell(60, 4, "sac@ritualbotanico.com", 0, 1, 'L')
+        self.cell(60, 4, "sac@origenbotanico.com", 0, 1, 'L')
         self.set_x(130)
-        self.cell(60, 4, "www.ritualbotanico.com", 0, 1, 'L')
+        self.cell(60, 4, "www.origenbotanico.com", 0, 1, 'L')
         
         # Column 4: Phone (Right aligned approx)
         self.set_xy(170, 297-28)
@@ -120,7 +120,7 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.set_xy(15, 33)
     pdf.set_font('Arial', '', 9)
     pdf.set_text_color(80, 80, 80)
-    request_date_raw = data.get("request_date")
+    request_date_raw = data.get("request_date") or data.get("created_at")
     date_str = str(request_date_raw)[:10] if request_date_raw else "N/A"
     pdf.cell(100, 5, f'Fecha de Emisión: {date_str}', 0, 1, 'L')
 
@@ -258,13 +258,17 @@ def generate_transport_pdf_bytes(data: dict):
     pdf.cell(70, 4, "Firma del Conductor / Transportista", 0, 0, 'C')
     
     # Right Box
+    creator = safe_str(data.get("created_by"), "Autorizador Oficial")
     pdf.rect(120, y_sig, 70, 25, 'D')
     pdf.set_xy(120, y_sig + 5)
     pdf.set_font('Arial', 'B', 9)
-    pdf.cell(70, 5, "Firma del Coordinador / Autorizador", 0, 1, 'C')
+    # Handle long names in the signature elegantly
+    if len(creator) > 28:
+        pdf.set_font('Arial', 'B', 8)
+    pdf.cell(70, 5, creator.upper(), 0, 1, 'C')
     pdf.set_x(120)
     pdf.set_font('Arial', '', 7)
-    pdf.cell(70, 4, "Orígen Botánico - Centro Logístico", 0, 1, 'C')
+    pdf.cell(70, 4, "Firma del Coordinador / Orígen Botánico", 0, 1, 'C')
 
     # Minimal Footer note
     pdf.set_y(-45)
