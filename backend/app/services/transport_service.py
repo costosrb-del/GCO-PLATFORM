@@ -101,11 +101,10 @@ try:
         if not firebase_admin._apps:
             cred = credentials.Certificate(CRED_PATH)
             firebase_admin.initialize_app(cred)
+        # Always try to attach firestore client if credentials exist
         db = firestore.client()
         DB_MODE = "Firebase (Connected)"
-        print(f"🔥 FIREBASE CONNECTED: {CRED_PATH}")
     else:
-        # Try finding it in CWD if relative path fails
         cwd_path = os.path.join(os.getcwd(), "serviceAccountKey.json")
         if os.path.exists(cwd_path):
              CRED_PATH = cwd_path
@@ -115,12 +114,18 @@ try:
              db = firestore.client()
              DB_MODE = "Firebase (Connected CWD)"
         else:
-             # Check ENV
              if not firebase_admin._apps:
                   try:
                       firebase_admin.initialize_app()
                       db = firestore.client()
                       DB_MODE = "Firebase (Env Var)"
+                  except:
+                      pass
+             else:
+                  # If app is already initialized elsewhere, attach firestore
+                  try:
+                      db = firestore.client()
+                      DB_MODE = "Firebase (Global App)"
                   except:
                       pass
 except Exception as e:

@@ -20,7 +20,7 @@ class TransportPDF(FPDF):
         self.set_x(10)
         self.set_font('Arial', 'I', 10)
         self.set_text_color(200, 220, 210)
-        self.cell(0, 5, 'División de Logística y Transporte Oficial', 0, 1, 'L')
+        self.cell(0, 5, 'Centro Logístico Operativo y Despachos', 0, 1, 'L')
         
         self.ln(10)
 
