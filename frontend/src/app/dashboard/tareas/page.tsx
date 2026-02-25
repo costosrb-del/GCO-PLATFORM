@@ -20,6 +20,8 @@ import {
     startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay
 } from "date-fns";
 import { es } from "date-fns/locale";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
@@ -132,9 +134,116 @@ export default function TareasPage() {
             await updateTask(t.id, { status: "En Progreso", history: historyUpdate });
         }
 
-        localStorage.setItem(`gco_break_${currentUserEmail}`, "false");
+        localStorage.removeItem(`gco_break_${currentUserEmail}`);
         setIsOnBreak(false);
         setIsSaving(false);
+    };
+
+    const generateShiftPDF = (currentEmail: string) => {
+        const doc = new jsPDF();
+        const todayStr = format(new Date(), "dd/MM/yyyy", { locale: es });
+
+        doc.setFillColor(24, 60, 48);
+        doc.rect(0, 0, 210, 40, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.text("Bitácora de Turno Operativo", 14, 25);
+
+        doc.setFontSize(10);
+        doc.text(`Fecha: ${todayStr}`, 140, 20);
+        doc.text(`Operador: ${currentEmail}`, 140, 26);
+
+        // Get completed tasks today for this user
+        const completedToday = tasks.filter(t =>
+            t.assigned_to === currentEmail &&
+            t.status === "Completada" &&
+            (t.completed_at ? isToday(new Date(t.completed_at)) : (t.history?.length && isToday(new Date(t.history[t.history.length - 1].date))))
+        );
+
+        // Get all pending/in progress tasks for this user
+        const pendingNow = tasks.filter(t => t.assigned_to === currentEmail && (t.status === "En Progreso" || t.status === "Pausada"));
+
+        // Get shift history 
+        const shiftTask = tasks.find(t => t.title === `Registro de Asistencia - ${currentEmail}`);
+        const shiftHistoryToday = shiftTask?.history?.filter(h => isToday(new Date(h.date))) || [];
+
+        let yPos = 50;
+
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(14);
+        doc.text("1. Resumen de Actividad del Turno", 14, yPos);
+        yPos += 8;
+
+        if (shiftHistoryToday.length > 0) {
+            const historyTableBody = shiftHistoryToday.map(h => [
+                format(new Date(h.date), "HH:mm"),
+                h.action.replace(/[▶️⏹️⏸️]/g, "").trim()
+            ]);
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Hora", "Evento de Asistencia"]],
+                body: historyTableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255] },
+                styles: { fontSize: 9 }
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 15;
+        }
+
+        doc.setFontSize(14);
+        doc.text("2. Tareas Completadas Durante el Turno", 14, yPos);
+        yPos += 8;
+
+        if (completedToday.length > 0) {
+            const completedTableBody = completedToday.map(t => [
+                t.title,
+                t.priority,
+                calculateTaskDuration(t.created_at, t.completed_at)
+            ]);
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Operación / Tarea", "Prioridad", "Tiempo Invertido"]],
+                body: completedTableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255] },
+                styles: { fontSize: 9 }
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 15;
+        } else {
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text("No se completaron operaciones en este turno.", 14, yPos);
+            yPos += 15;
+        }
+
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(14);
+        doc.text("3. Tareas que quedan en Tránsito / Pendientes", 14, yPos);
+        yPos += 8;
+
+        if (pendingNow.length > 0) {
+            const pendingTableBody = pendingNow.map(t => [
+                t.title,
+                t.status,
+                t.priority
+            ]);
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Operación / Tarea", "Estado Actual", "Prioridad"]],
+                body: pendingTableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [200, 100, 50], textColor: [255, 255, 255] },
+                styles: { fontSize: 9 }
+            });
+        } else {
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text("No quedaron tareas pendientes asignadas al operador.", 14, yPos);
+        }
+
+        const fileNameDate = format(new Date(), "yyyy-MM-dd_HH-mm");
+        doc.save(`Bitacora_Turno_${fileNameDate}.pdf`);
     };
 
     const handleOpenDialog = (task?: Task) => {
@@ -898,8 +1007,12 @@ export default function TareasPage() {
                                                     const newEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
                                                     if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
                                                     else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
+
+                                                    // Trigger PDF Generation
+                                                    generateShiftPDF(currentUserEmail);
+
+                                                    localStorage.removeItem(`gco_shift_${currentUserEmail}`);
                                                     setIsShiftActive(false);
-                                                    localStorage.setItem(`gco_shift_${currentUserEmail}`, "false");
                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 }}>⏹️ Terminar Turno</Button>
                                             </>
