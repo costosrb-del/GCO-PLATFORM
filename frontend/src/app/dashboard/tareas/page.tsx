@@ -454,12 +454,12 @@ export default function TareasPage() {
         if (!start || !end) return "N/A";
         const startDate = new Date(start);
         const endDate = new Date(end);
-        const hours = differenceInHours(endDate, startDate);
+        const hours = Math.abs(differenceInHours(endDate, startDate));
         if (hours < 24) {
-            const mins = differenceInMinutes(endDate, startDate);
+            const mins = Math.abs(differenceInMinutes(endDate, startDate));
             return hours === 0 ? `${mins} min` : `${hours}h ${mins % 60}m`;
         }
-        return `${differenceInDays(endDate, startDate)} días`;
+        return `${Math.abs(differenceInDays(endDate, startDate))} días`;
     };
 
     return (
