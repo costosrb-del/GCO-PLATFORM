@@ -324,8 +324,18 @@ def extract_movements_from_doc(doc, doc_type):
         price = item.get("price", 0)
         description = item.get("description", "")
         
-        # Discounts & Taxes (Line Level)
         discount = item.get("discount", 0)
+        
+        # FIX: The user noted that FV unit/total values were wrong, but FC were correct.
+        # For FC (Purchases), the base cost (qty * price) is correct because taxes are handled separately.
+        # For FV (Sales) / NC, users usually expect the final line total (including tax/discounts) to match the invoice UI.
+        if friendly_type in ["FV", "NC"]:
+            line_total = item.get("total", (qty * price) - discount)
+            eff_price = line_total / qty if qty else 0
+        else:
+            line_total = (qty * price) - discount
+            eff_price = price - (discount / qty if qty else 0)
+
         taxes = item.get("taxes", [])
         tax_str = "0%"
         if taxes and isinstance(taxes, list):
@@ -355,8 +365,8 @@ def extract_movements_from_doc(doc, doc_type):
             "name": description,
             "warehouse": warehouse_name,
             "quantity": qty,
-            "price": price,
-            "total": qty * price,
+            "price": round(eff_price, 2),
+            "total": round(line_total, 2),
             "type": mov_type,
             "observations": observation,
             # Audit Fields

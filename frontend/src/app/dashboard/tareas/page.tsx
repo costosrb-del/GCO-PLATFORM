@@ -504,6 +504,7 @@ export default function TareasPage() {
                 subtasks: task.subtasks || [],
                 meeting_link: task.meeting_link || "",
                 recurrence: task.recurrence || "none",
+                blocked_by: task.blocked_by || "",
                 blocked_reason: task.blocked_reason || "",
             });
         } else {
@@ -520,6 +521,7 @@ export default function TareasPage() {
                 subtasks: [],
                 meeting_link: "",
                 recurrence: "none",
+                blocked_by: "",
                 blocked_reason: "",
             });
         }
@@ -692,7 +694,15 @@ export default function TareasPage() {
 
         const task = tasks.find(t => t.id === draggedTaskId);
         if (task && task.status !== newStatus) {
-            if (newStatus === "En Progreso" && task.blocked_reason) {
+            if (task.blocked_by && (newStatus === "En Progreso" || newStatus === "Completada")) {
+                const blockingTask = tasks.find(t => t.id === task.blocked_by);
+                if (blockingTask && blockingTask.status !== "Completada" && blockingTask.status !== "Cancelada") {
+                    alert(`⚠️ Tarea Bloqueada: Depende de "${blockingTask.title}" que aún no está completada.`);
+                    setDraggedTaskId(null);
+                    return;
+                }
+            }
+            if (newStatus === "En Progreso" && task.blocked_reason && !task.blocked_by) {
                 alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${task.blocked_reason}".`);
                 setDraggedTaskId(null);
                 return;
@@ -727,6 +737,55 @@ export default function TareasPage() {
         setDraggedTaskId(null);
     };
 
+    const handleTaskDrop = async (e: React.DragEvent, targetTask: Task) => {
+        e.preventDefault();
+        e.stopPropagation(); // prevent column drop
+        if (!draggedTaskId || !isShiftActive || isOnBreak || draggedTaskId === targetTask.id) return;
+
+        const draggedTask = tasks.find(t => t.id === draggedTaskId);
+        if (!draggedTask) return;
+
+        const newStatus = targetTask.status;
+        const updates: Partial<Task> = { status: newStatus };
+        const logEntry: TaskHistoryEntry = {
+            date: new Date().toISOString(),
+            action: `Movida/Reordenada a: ${newStatus}`,
+            user: currentUserEmail
+        };
+
+        if (draggedTask.status !== newStatus) {
+            if (draggedTask.blocked_by && (newStatus === "En Progreso" || newStatus === "Completada")) {
+                const blockingTask = tasks.find(t => t.id === draggedTask.blocked_by);
+                if (blockingTask && blockingTask.status !== "Completada" && blockingTask.status !== "Cancelada") {
+                    alert(`⚠️ Tarea Bloqueada: Depende de "${blockingTask.title}" que aún no está completada.`);
+                    setDraggedTaskId(null);
+                    return;
+                }
+            }
+            if (newStatus === "En Progreso" && draggedTask.blocked_reason && !draggedTask.blocked_by) {
+                alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${draggedTask.blocked_reason}".`);
+                setDraggedTaskId(null);
+                return;
+            }
+            if (newStatus === "Cancelada") {
+                const reason = prompt(`Indica el motivo por el cual estás rechazando/cancelando la tarea "${draggedTask.title}":`);
+                if (!reason) {
+                    setDraggedTaskId(null);
+                    return;
+                }
+                logEntry.comment = `Motivo de Rechazo: ${reason}`;
+            }
+            updates.history = [...(draggedTask.history || []), logEntry];
+            if (newStatus === "Completada") {
+                updates.completed_at = new Date().toISOString();
+            }
+        }
+
+        updates.order = (targetTask.order || 0) - 0.5;
+        await updateTask(draggedTaskId, updates);
+        setDraggedTaskId(null);
+    };
+
     // Filtrar y Ordenar
     const filteredTasks = useMemo(() => {
         let result = tasks.filter(task => {
@@ -754,6 +813,9 @@ export default function TareasPage() {
                 const valB = pValue[b.priority as keyof typeof pValue] || 0;
                 return valB - valA;
             } else {
+                if ((a.order || 0) !== (b.order || 0)) {
+                    return (a.order || 0) - (b.order || 0);
+                }
                 return (new Date(b.created_at || 0).getTime()) - (new Date(a.created_at || 0).getTime());
             }
         });
@@ -801,7 +863,7 @@ export default function TareasPage() {
             const diffHours = differenceInMinutes(date, new Date()) / 60;
 
             if (diffHours >= 0 && diffHours <= 1) {
-                return { text: "¡Vence en menos de 1h!", color: "text-red-700 bg-red-100 border border-red-300 font-extrabold", icon: <AlertCircle className="w-3 h-3 animate-pulse" />, isUrgent: true };
+                return { text: "¡Vencerá pronto!", color: "text-red-600 bg-red-50 border border-red-200 font-bold", icon: <AlertCircle className="w-3 h-3" />, isUrgent: true };
             }
             if (isToday(date)) return { text: "Vence hoy", color: "text-amber-700 bg-amber-100 border border-amber-200", icon: <Clock className="w-3 h-3" /> };
             if (isPast(addDays(date, 1))) return { text: "Vencida", color: "text-red-700 bg-red-100 border border-red-200", icon: <AlertCircle className="w-3 h-3" /> };
@@ -1019,12 +1081,29 @@ export default function TareasPage() {
                                             <label className="text-[11px] font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
                                                 <AlertCircle className="w-3 h-3 text-red-500" /> Dependencias o Bloqueadores
                                             </label>
-                                            <Input
-                                                value={formData.blocked_reason || ""}
-                                                onChange={e => setFormData({ ...formData, blocked_reason: e.target.value })}
-                                                placeholder="Ej: Esperando autorización, Falta factura de X usuario..."
-                                                className={`h-8 text-xs ${formData.blocked_reason ? 'bg-red-50 border-red-200 text-red-800 font-medium placeholder:text-red-300' : 'bg-gray-50'}`}
-                                            />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1.5">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">Razón del Bloqueo</label>
+                                                    <Input
+                                                        value={formData.blocked_reason || ""}
+                                                        onChange={e => setFormData({ ...formData, blocked_reason: e.target.value })}
+                                                        placeholder="Ej: Esperando autorización..."
+                                                        className={`h-8 text-xs ${formData.blocked_reason ? 'bg-red-50 border-red-200 text-red-800 font-medium placeholder:text-red-300' : 'bg-gray-50'}`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">Depende de Tarea</label>
+                                                    <Select value={formData.blocked_by || "none"} onValueChange={v => setFormData({ ...formData, blocked_by: v === "none" ? "" : v })}>
+                                                        <SelectTrigger className="bg-gray-50 h-8 text-xs w-full [&>span]:truncate"><SelectValue placeholder="Ninguna" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">Ninguna</SelectItem>
+                                                            {tasks.filter(t => t.id !== editingTask?.id && t.status !== "Completada" && t.status !== "Cancelada").map(t => (
+                                                                <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1101,7 +1180,14 @@ export default function TareasPage() {
                                             <div>
                                                 <label className="text-[11px] font-semibold text-gray-700 mb-1.5 block flex items-center gap-1"><Flag className="w-3 h-3" /> Cambio de Estado Manual</label>
                                                 <Select value={formData.status} onValueChange={v => {
-                                                    if (v === "En Progreso" && formData.blocked_reason) {
+                                                    if (formData.blocked_by && (v === "En Progreso" || v === "Completada")) {
+                                                        const blockingTask = tasks.find(t => t.id === formData.blocked_by);
+                                                        if (blockingTask && blockingTask.status !== "Completada" && blockingTask.status !== "Cancelada") {
+                                                            alert(`⚠️ Tarea Bloqueada: Depende de "${blockingTask.title}" que aún no está completada.`);
+                                                            return;
+                                                        }
+                                                    }
+                                                    if (v === "En Progreso" && formData.blocked_reason && !formData.blocked_by) {
                                                         alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${formData.blocked_reason}".`);
                                                         return;
                                                     }
@@ -1447,8 +1533,10 @@ export default function TareasPage() {
                                                 draggable
                                                 onDragStart={(e) => handleDragStart(e, task.id)}
                                                 onDragEnd={(e) => handleDragEnd(e, task.id)}
+                                                onDragOver={handleDragOver}
+                                                onDrop={(e) => handleTaskDrop(e, task)}
                                                 onClick={() => handleOpenDialog(task)}
-                                                className={`group bg-white hover:shadow-lg transition-all duration-200 border-gray-200/60 overflow-hidden relative cursor-pointer active:cursor-grabbing hover:-translate-y-0.5 ${timeStatus?.isUrgent ? 'ring-2 ring-red-500 shadow-red-200 shadow-md animate-pulse border-red-300 z-10' : ''} ${task.blocked_reason ? 'border-r-4 border-r-red-400' : ''}`}
+                                                className={`group bg-white hover:shadow-lg transition-all duration-200 border-gray-200/60 overflow-hidden relative cursor-pointer active:cursor-grabbing hover:-translate-y-0.5 ${timeStatus?.isUrgent ? 'border-l-4 border-l-red-400 shadow-sm shadow-red-100' : ''} ${(task.blocked_reason || task.blocked_by) ? 'border-r-4 border-r-red-400 opacity-90' : ''}`}
                                             >
 
                                                 {/* Checklist Top Progress Bar (subtle) */}

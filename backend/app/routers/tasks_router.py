@@ -21,6 +21,8 @@ class TaskCreate(BaseModel):
     subtasks: Optional[List[Dict[str, Any]]] = []
     meeting_link: Optional[str] = ""
     recurrence: Optional[str] = "none"
+    blocked_by: Optional[str] = ""
+    order: Optional[int] = 0
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -36,6 +38,8 @@ class TaskUpdate(BaseModel):
     subtasks: Optional[List[Dict[str, Any]]] = None
     meeting_link: Optional[str] = None
     recurrence: Optional[str] = None
+    blocked_by: Optional[str] = None
+    order: Optional[int] = None
 
 @router.get("/")
 def get_tasks():

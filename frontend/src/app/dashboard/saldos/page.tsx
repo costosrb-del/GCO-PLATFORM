@@ -731,13 +731,6 @@ export default function SaldosPage() {
         </div>
       )}
 
-      {inventoryError && (
-        <GCOError
-          message="No se pudo cargar el inventario"
-          details={inventoryError.toString()}
-          onRetry={() => queryClient.invalidateQueries({ queryKey: ['inventory'] })}
-        />
-      )}
 
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#183C30]/10 backdrop-blur-sm p-6">

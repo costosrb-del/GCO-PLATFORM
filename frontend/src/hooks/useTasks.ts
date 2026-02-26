@@ -34,6 +34,7 @@ export interface Task {
     recurrence?: string;
     blocked_by?: string;
     blocked_reason?: string;
+    order?: number;
 }
 
 export function useTasks() {
