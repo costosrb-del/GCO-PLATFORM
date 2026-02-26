@@ -32,6 +32,8 @@ export interface Task {
     subtasks?: TaskSubtask[];
     meeting_link?: string;
     recurrence?: string;
+    blocked_by?: string;
+    blocked_reason?: string;
 }
 
 export function useTasks() {
