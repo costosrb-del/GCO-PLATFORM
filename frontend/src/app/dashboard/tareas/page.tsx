@@ -695,12 +695,19 @@ export default function TareasPage() {
         const task = tasks.find(t => t.id === draggedTaskId);
         if (task && task.status !== newStatus) {
             if (task.blocked_by && (newStatus === "En Progreso" || newStatus === "Completada")) {
-                const blockingTask = tasks.find(t => t.id === task.blocked_by);
-                if (blockingTask && blockingTask.status !== "Completada" && blockingTask.status !== "Cancelada") {
-                    alert(`⚠️ Tarea Bloqueada: Depende de "${blockingTask.title}" que aún no está completada.`);
+                const blockingIds = task.blocked_by.split(',').filter(Boolean);
+                const unfinishedBlockers = blockingIds.map(id => tasks.find(t => t.id === id)).filter(t => t && t.status !== "Completada" && t.status !== "Cancelada");
+                if (unfinishedBlockers.length > 0) {
+                    const titles = unfinishedBlockers.map(t => `"${t?.title}"`).join(", ");
+                    alert(`⚠️ Tarea Bloqueada: Depende de ${titles} que aún no están completadas.`);
                     setDraggedTaskId(null);
                     return;
                 }
+            }
+            if (newStatus === "Completada" && task.subtasks && task.subtasks.some(st => !st.completed)) {
+                alert(`⚠️ Tarea Incompleta: Debes finalizar todas las subtareas para dar como terminada "${task.title}".`);
+                setDraggedTaskId(null);
+                return;
             }
             if (newStatus === "En Progreso" && task.blocked_reason && !task.blocked_by) {
                 alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${task.blocked_reason}".`);
@@ -755,12 +762,19 @@ export default function TareasPage() {
 
         if (draggedTask.status !== newStatus) {
             if (draggedTask.blocked_by && (newStatus === "En Progreso" || newStatus === "Completada")) {
-                const blockingTask = tasks.find(t => t.id === draggedTask.blocked_by);
-                if (blockingTask && blockingTask.status !== "Completada" && blockingTask.status !== "Cancelada") {
-                    alert(`⚠️ Tarea Bloqueada: Depende de "${blockingTask.title}" que aún no está completada.`);
+                const blockingIds = draggedTask.blocked_by.split(',').filter(Boolean);
+                const unfinishedBlockers = blockingIds.map(id => tasks.find(t => t.id === id)).filter(t => t && t.status !== "Completada" && t.status !== "Cancelada");
+                if (unfinishedBlockers.length > 0) {
+                    const titles = unfinishedBlockers.map(t => `"${t?.title}"`).join(", ");
+                    alert(`⚠️ Tarea Bloqueada: Depende de ${titles} que aún no están completadas.`);
                     setDraggedTaskId(null);
                     return;
                 }
+            }
+            if (newStatus === "Completada" && draggedTask.subtasks && draggedTask.subtasks.some(st => !st.completed)) {
+                alert(`⚠️ Tarea Incompleta: Debes finalizar todas las subtareas para dar como terminada "${draggedTask.title}".`);
+                setDraggedTaskId(null);
+                return;
             }
             if (newStatus === "En Progreso" && draggedTask.blocked_reason && !draggedTask.blocked_by) {
                 alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${draggedTask.blocked_reason}".`);
@@ -1092,12 +1106,34 @@ export default function TareasPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">Depende de Tarea</label>
-                                                    <Select value={formData.blocked_by || "none"} onValueChange={v => setFormData({ ...formData, blocked_by: v === "none" ? "" : v })}>
-                                                        <SelectTrigger className="bg-gray-50 h-8 text-xs w-full [&>span]:truncate"><SelectValue placeholder="Ninguna" /></SelectTrigger>
+                                                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">Depende de Tareas</label>
+                                                    <div className="flex flex-wrap gap-1 mb-1.5">
+                                                        {(formData.blocked_by ? formData.blocked_by.split(',').filter(Boolean) : []).map(id => {
+                                                            const t = tasks.find(x => x.id === id);
+                                                            if (!t) return null;
+                                                            return (
+                                                                <span key={id} className="bg-red-100 text-red-700 text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1 shadow-sm">
+                                                                    {t.title.substring(0, 20)}
+                                                                    <X className="w-2.5 h-2.5 cursor-pointer hover:text-red-900 transition-colors" onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        const newIds = formData.blocked_by!.split(',').filter(x => x && x !== id).join(',');
+                                                                        setFormData({ ...formData, blocked_by: newIds });
+                                                                    }} />
+                                                                </span>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                    <Select value="none" onValueChange={v => {
+                                                        if (v === "none") return;
+                                                        const currentIds = formData.blocked_by ? formData.blocked_by.split(',').filter(Boolean) : [];
+                                                        if (!currentIds.includes(v)) {
+                                                            setFormData({ ...formData, blocked_by: [...currentIds, v].join(',') });
+                                                        }
+                                                    }}>
+                                                        <SelectTrigger className="bg-gray-50 h-8 text-xs w-full [&>span]:truncate"><SelectValue placeholder="Añadir Dependencia..." /></SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="none">Ninguna</SelectItem>
-                                                            {tasks.filter(t => t.id !== editingTask?.id && t.status !== "Completada" && t.status !== "Cancelada").map(t => (
+                                                            <SelectItem value="none">Seleccionar...</SelectItem>
+                                                            {tasks.filter(t => t.id !== editingTask?.id && t.status !== "Completada" && t.status !== "Cancelada" && !(formData.blocked_by || "").includes(t.id || "")).map(t => (
                                                                 <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -1181,11 +1217,17 @@ export default function TareasPage() {
                                                 <label className="text-[11px] font-semibold text-gray-700 mb-1.5 block flex items-center gap-1"><Flag className="w-3 h-3" /> Cambio de Estado Manual</label>
                                                 <Select value={formData.status} onValueChange={v => {
                                                     if (formData.blocked_by && (v === "En Progreso" || v === "Completada")) {
-                                                        const blockingTask = tasks.find(t => t.id === formData.blocked_by);
-                                                        if (blockingTask && blockingTask.status !== "Completada" && blockingTask.status !== "Cancelada") {
-                                                            alert(`⚠️ Tarea Bloqueada: Depende de "${blockingTask.title}" que aún no está completada.`);
+                                                        const blockingIds = formData.blocked_by.split(',').filter(Boolean);
+                                                        const unfinishedBlockers = blockingIds.map(id => tasks.find(t => t.id === id)).filter(t => t && t.status !== "Completada" && t.status !== "Cancelada");
+                                                        if (unfinishedBlockers.length > 0) {
+                                                            const titles = unfinishedBlockers.map(t => `"${t?.title}"`).join(", ");
+                                                            alert(`⚠️ Tarea Bloqueada: Depende de ${titles} que aún no están completadas.`);
                                                             return;
                                                         }
+                                                    }
+                                                    if (v === "Completada" && formData.subtasks && formData.subtasks.some(st => !st.completed)) {
+                                                        alert(`⚠️ Tarea Incompleta: Faltan pasos (subtareas) por completar revisa el checklist.`);
+                                                        return;
                                                     }
                                                     if (v === "En Progreso" && formData.blocked_reason && !formData.blocked_by) {
                                                         alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${formData.blocked_reason}".`);

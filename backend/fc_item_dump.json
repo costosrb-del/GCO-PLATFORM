@@ -1,0 +1,260 @@
+[
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 13320000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 13320000.0
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 19402000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 19402000.0
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 641176.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 641176.0
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 1500000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 1500000.0
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 139453.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 139453.0
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 450000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 486000.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 85500.0
+      },
+      {
+        "id": 2826,
+        "name": "Retefuente 11%",
+        "type": "Retefuente",
+        "percentage": 11.0,
+        "value": 49500.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 2.0,
+    "price": 6000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 13800.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 2280.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 480.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 2.0,
+    "price": 40000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 92000.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 15200.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 3200.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 40000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 46000.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 7600.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 1600.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 40000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 46000.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 7600.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 1600.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 90000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 103500.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 17100.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 3600.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 220000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 253000.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 41800.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 8800.0
+      }
+    ]
+  },
+  {
+    "id": "701702",
+    "type": "Account",
+    "code": "51351001",
+    "quantity": 1.0,
+    "price": 25000.0,
+    "discount": 0.0,
+    "description": "Servicios temporales",
+    "total": 28750.0,
+    "taxes": [
+      {
+        "id": 19340,
+        "name": "Iva servicios 19%",
+        "type": "IVA",
+        "percentage": 19.0,
+        "value": 4750.0
+      },
+      {
+        "id": 2829,
+        "name": "Retefuente 4%",
+        "type": "Retefuente",
+        "percentage": 4.0,
+        "value": 1000.0
+      }
+    ]
+  }
+]

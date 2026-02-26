@@ -1,0 +1,348 @@
+{
+  "id": "afe0055c-fe98-4409-a67e-1b1c075ee634",
+  "document": {
+    "id": 5258
+  },
+  "prefix": "FEVP",
+  "number": 1382,
+  "name": "FV-2-1382",
+  "date": "2026-02-25",
+  "customer": {
+    "id": "5e3ec314-b8e6-4ce9-a5b7-1033c34b40aa",
+    "identification": "43188449",
+    "branch_office": 0
+  },
+  "seller": 833,
+  "total": 27475252.3,
+  "balance": 0.0,
+  "observations": "PEDIDO pw73798, DIRECCION ; Calle 31A #26-60 Oficina 204 Edificio Irake Floridablanca Santander Barrio Caaveral, FLORIDABLANCA (STDER)",
+  "items": [
+    {
+      "id": "deda777b-71b2-4171-8352-80fe1575688d",
+      "code": "7007",
+      "quantity": 100.0,
+      "price": 17424.369748,
+      "description": "SHAMPOO DE CEBOLLA SOS",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 331063.03
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 43560.92
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 2029939.08
+    },
+    {
+      "id": "85570fb2-3fd7-47ef-98e6-28aa2a5e97f1",
+      "code": "7008",
+      "quantity": 100.0,
+      "price": 17424.369748,
+      "description": "SHAMPOO DE ROMERO CONTROL GRASA",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 331063.03
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 43560.92
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 2029939.08
+    },
+    {
+      "id": "e11b48e6-c7b9-4f99-964b-396e0fc6495e",
+      "code": "7009",
+      "quantity": 150.0,
+      "price": 17424.369748,
+      "description": "SHAMPOO DE AJI CONTROL CASPA",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 496594.54
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 65341.39
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 3044908.61
+    },
+    {
+      "id": "a2255e64-8ba4-4df7-9b0c-053dfd98d5ed",
+      "code": "7101",
+      "quantity": 100.0,
+      "price": 14147.058824,
+      "description": "MANTEQUILLA PERFUMADA RITUAL DE SEDUCCION",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 268794.12
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 35367.65
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 1648132.35
+    },
+    {
+      "id": "f98a1f50-a7f2-4439-a901-af73a8a7f851",
+      "code": "7210",
+      "quantity": 200.0,
+      "price": 17424.369748,
+      "description": "TRATAMIENTO INTENSIVO PLEX DE AGUACATE",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 662126.05
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 87121.85
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 4059878.15
+    },
+    {
+      "id": "cee3bcf3-4841-4e77-af60-7c1bfcdc687c",
+      "code": "7299",
+      "quantity": 210.0,
+      "price": 18516.806723,
+      "description": "MASCARILLA BOMBA BOTANICA SOS 400 ML",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 738820.59
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 97213.24
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 4530136.76
+    },
+    {
+      "id": "3357788b-88df-41d0-8150-1f73f96779a1",
+      "code": "EVO-7703",
+      "quantity": 100.0,
+      "price": 18529.411765,
+      "description": "KIT EVOLUCI\u00d3N DE LA KERATINA 120 ML",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 352058.82
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 46323.53
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 2158676.47
+    },
+    {
+      "id": "4e4afa29-38be-4680-b16c-18f2e8534224",
+      "code": "EVO-7702",
+      "quantity": 100.0,
+      "price": 31764.705882,
+      "description": "KIT EVOLUCI\u00d3N DE LA KERATINA 250 ML",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 603529.41
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 79411.76
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 3700588.24
+    },
+    {
+      "id": "c8eeb9ca-3deb-4125-bb12-94336a1b911a",
+      "code": "7901",
+      "quantity": 100.0,
+      "price": 11415.966387,
+      "description": "PERFUME TERMOPROTECTOR ROSADO RITUAL DE SEDUCCION",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 216903.36
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 28539.92
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 1329960.08
+    },
+    {
+      "id": "954c9a35-8544-4b89-955b-f5d08f755fdc",
+      "code": "7957",
+      "quantity": 100.0,
+      "price": 11415.966387,
+      "description": "Perfume termoprotector ritual de tentacion 120 ml",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 216903.36
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 28539.92
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 1329960.08
+    },
+    {
+      "id": "7aa89989-4d95-48ef-b9fd-9d618de92660",
+      "code": "3012",
+      "quantity": 150.0,
+      "price": 9231.092437,
+      "description": "D\u00daO PERFUMES MINI CON PROTECCI\u00d3N T\u00c9RMICA",
+      "taxes": [
+        {
+          "id": 2824,
+          "name": "IVA 19%",
+          "type": "IVA",
+          "percentage": 19.0,
+          "value": 263086.13
+        },
+        {
+          "id": 2830,
+          "name": "Retefuente 2.5%",
+          "type": "Retefuente",
+          "percentage": 2.5,
+          "value": 34616.6
+        }
+      ],
+      "warehouse": {
+        "id": 2,
+        "name": "BODEGA PRINCIPAL RIONEGRO"
+      },
+      "total": 1613133.4
+    }
+  ],
+  "payments": [
+    {
+      "id": 11553,
+      "name": "Cuenta ahorros bancolombia 7542",
+      "value": 27475252.3
+    }
+  ],
+  "stamp": {
+    "status": "Accepted",
+    "cufe": "d9237020741e5b45bd8183c10f8d9bc2e7b84dbeaecd583e9b05dfb2f3d426a6abc26350cd1b814401712b645d99c361"
+  },
+  "mail": {
+    "status": "sent",
+    "observations": "The invoice was sent to your customer successfully"
+  },
+  "metadata": {
+    "created": "2026-02-25T14:17:20.5"
+  },
+  "public_url": "https://documentview.siigo.com/document?data=S8GwbSWwTSokkZRbtDfHjvxhu0csuxJ3BsKPhTdjebT4vS5XWcGcM3JH8wZb9OMCkHnuzOD1OZhHU%2fUsxdUKPA%3d%3d"
+}
