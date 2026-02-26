@@ -602,10 +602,29 @@ export default function TareasPage() {
     };
 
     const toggleSubtask = (id: string) => {
-        const updated = (formData.subtasks || []).map(st =>
-            st.id === id ? { ...st, completed: !st.completed } : st
-        );
-        setFormData({ ...formData, subtasks: updated });
+        let toggledTaskName = "";
+        let isNowCompleted = false;
+        const updated = (formData.subtasks || []).map(st => {
+            if (st.id === id) {
+                toggledTaskName = st.title;
+                isNowCompleted = !st.completed;
+                return { ...st, completed: !st.completed };
+            }
+            return st;
+        });
+
+        const newEntry: TaskHistoryEntry = {
+            date: new Date().toISOString(),
+            action: isNowCompleted ? "Paso de checklist completado" : "Paso de checklist desmarcado",
+            user: currentUserEmail,
+            comment: `Checklist: ${toggledTaskName}`
+        };
+
+        setFormData({
+            ...formData,
+            subtasks: updated,
+            history: [...(formData.history || []), newEntry]
+        });
     };
 
     const deleteSubtask = (id: string) => {
