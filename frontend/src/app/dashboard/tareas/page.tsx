@@ -290,10 +290,58 @@ export default function TareasPage() {
                 headStyles: { fillColor: [200, 100, 50], textColor: [255, 255, 255] },
                 styles: { fontSize: 9 }
             });
+            yPos = (doc as any).lastAutoTable.finalY + 15;
         } else {
             doc.setFontSize(10);
             doc.setTextColor(100, 100, 100);
             doc.text("No quedaron tareas pendientes asignadas al operador.", 14, yPos);
+            yPos += 15;
+        }
+
+        const checkNewPage = (needed: number) => {
+            if (yPos + needed > 280) {
+                doc.addPage();
+                yPos = 20;
+            }
+        };
+
+        checkNewPage(40);
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(14);
+        doc.text("4. Movimientos y Novedades del Día (Bitácora Detallada)", 14, yPos);
+        yPos += 8;
+
+        const allEventsToday: any[] = [];
+        tasks.forEach(task => {
+            if (task.history) {
+                task.history.forEach(h => {
+                    if (isToday(new Date(h.date)) && h.user === currentEmail) {
+                        allEventsToday.push({ ...h, taskTitle: task.title });
+                    }
+                });
+            }
+        });
+        allEventsToday.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        if (allEventsToday.length > 0) {
+            const evBody = allEventsToday.map(e => [
+                format(new Date(e.date), "HH:mm"),
+                e.taskTitle,
+                e.action,
+                e.comment || ""
+            ]);
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Hora", "Operación / Tarea", "Acción", "Detalle / Comentario"]],
+                body: evBody,
+                theme: 'grid',
+                headStyles: { fillColor: [50, 50, 150], textColor: [255, 255, 255] },
+                styles: { fontSize: 8 }
+            });
+        } else {
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text("Sin registros adicionales en el movimiento diario.", 14, yPos);
         }
 
         const fileNameDate = format(new Date(), "yyyy-MM-dd_HH-mm");
@@ -713,6 +761,10 @@ export default function TareasPage() {
 
         const task = tasks.find(t => t.id === draggedTaskId);
         if (task && task.status !== newStatus) {
+            const updates: Partial<Task> = {
+                status: newStatus
+            };
+
             if (task.blocked_by && (newStatus === "En Progreso" || newStatus === "Completada")) {
                 const blockingIds = task.blocked_by.split(',').filter(Boolean);
                 const unfinishedBlockers = blockingIds.map(id => tasks.find(t => t.id === id)).filter(t => t && t.status !== "Completada" && t.status !== "Cancelada");
@@ -729,19 +781,14 @@ export default function TareasPage() {
                 return;
             }
             if (newStatus === "En Progreso" && task.blocked_reason && !task.blocked_by) {
-                alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${task.blocked_reason}".`);
-                setDraggedTaskId(null);
-                return;
+                // Remove the strict blocking alert. Clear it instead.
+                updates.blocked_reason = "";
             }
 
             const logEntry: TaskHistoryEntry = {
                 date: new Date().toISOString(),
                 action: `Movida a: ${newStatus}`,
                 user: currentUserEmail
-            };
-
-            const updates: Partial<Task> = {
-                status: newStatus
             };
 
             if (newStatus === "Cancelada") {
@@ -796,9 +843,8 @@ export default function TareasPage() {
                 return;
             }
             if (newStatus === "En Progreso" && draggedTask.blocked_reason && !draggedTask.blocked_by) {
-                alert(`⚠️ Tarea Bloqueada: No puedes iniciarla porque "${draggedTask.blocked_reason}".`);
-                setDraggedTaskId(null);
-                return;
+                // Remove the strict blocking alert. Clear it instead.
+                updates.blocked_reason = "";
             }
             if (newStatus === "Cancelada") {
                 const reason = prompt(`Indica el motivo por el cual estás rechazando/cancelando la tarea "${draggedTask.title}":`);

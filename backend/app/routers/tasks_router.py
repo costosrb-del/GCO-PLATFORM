@@ -22,7 +22,8 @@ class TaskCreate(BaseModel):
     meeting_link: Optional[str] = ""
     recurrence: Optional[str] = "none"
     blocked_by: Optional[str] = ""
-    order: Optional[int] = 0
+    blocked_reason: Optional[str] = ""
+    order: Optional[float] = 0.0
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -39,7 +40,8 @@ class TaskUpdate(BaseModel):
     meeting_link: Optional[str] = None
     recurrence: Optional[str] = None
     blocked_by: Optional[str] = None
-    order: Optional[int] = None
+    blocked_reason: Optional[str] = None
+    order: Optional[float] = None
 
 @router.get("/")
 def get_tasks():
