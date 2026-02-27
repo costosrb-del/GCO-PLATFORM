@@ -175,6 +175,20 @@ export function useCompras() {
         }
     };
 
+    const deleteOrden = async (id: string) => {
+        try {
+            const res = await fetch(`${API_URL}/api/compras/ordenes/${id}`, {
+                method: "DELETE"
+            });
+            if (!res.ok) throw new Error("Failed to delete orden");
+            await fetchData(true);
+            return true;
+        } catch (err) {
+            console.error(err);
+            return false;
+        }
+    };
+
     const createInsumo = async (data: Partial<Insumo>) => {
         try {
             const res = await fetch(`${API_URL}/api/compras/insumos`, {
@@ -251,5 +265,5 @@ export function useCompras() {
         }
     };
 
-    return { terceros, insumos, ordenes, productos, isLoading, error, createTercero, updateTercero, deleteTercero, createInsumo, deleteInsumo, createOrden, updateOrden, createProducto, updateProducto, deleteProducto, fetchData };
+    return { terceros, insumos, ordenes, productos, isLoading, error, createTercero, updateTercero, deleteTercero, createInsumo, deleteInsumo, createOrden, updateOrden, deleteOrden, createProducto, updateProducto, deleteProducto, fetchData };
 }

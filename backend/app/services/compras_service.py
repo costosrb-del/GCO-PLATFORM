@@ -140,6 +140,14 @@ def update_orden_compra(orden_id: str, data: dict):
             print(f"Error updating orden Firebase: {e}")
     return False
 
+def delete_orden_compra(orden_id: str):
+    if db:
+        try:
+            db.collection(COLLECTION_ORDENES).document(orden_id).delete()
+        except Exception as e:
+            print(f"Error deleting orden: {e}")
+    return True
+
 COLLECTION_PRODUCTOS_FABRICADOS = "productos_fabricados"
 
 def get_productos_fabricados():

@@ -19,7 +19,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function ComprasPage() {
-    const { terceros, ordenes, insumos, productos, isLoading, createTercero, updateTercero, deleteTercero, createOrden, updateOrden, createInsumo, deleteInsumo, createProducto, updateProducto, deleteProducto } = useCompras();
+    const { terceros, ordenes, insumos, productos, isLoading, createTercero, updateTercero, deleteTercero, createOrden, updateOrden, deleteOrden, createInsumo, deleteInsumo, createProducto, updateProducto, deleteProducto } = useCompras();
     const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos">("ordenes");
 
     // Terceros state
@@ -98,55 +98,87 @@ export default function ComprasPage() {
     const handleSaveOrden = async () => {
         // Validate provider selected
         if (!ordenForm.terceroId) return;
-        // Ensure at least one item is filled
-        const validItems = orderItems.filter(it => it.insumoId && it.cantidad > 0);
-        if (validItems.length === 0) return;
 
-        let basePedido = ordenForm.numeroPedido || "GEN";
-        basePedido = basePedido.replace(/\s+/g, '-').toUpperCase();
+        // If editing an existing order
+        if (ordenForm.id) {
+            const item = orderItems[0];
+            const insumoSeleccionado = insumos.find(i => i.id === item.insumoId);
 
-        const existingForPedido = ordenes.filter(o => o.numeroPedido === ordenForm.numeroPedido || o.numeroPedido === basePedido);
-        let maxSeq = 0;
-        existingForPedido.forEach(o => {
-            if (o.id) {
-                const parts = o.id.split('-');
-                if (parts.length >= 2) {
-                    const num = parseInt(parts[parts.length - 1], 10);
-                    if (!isNaN(num) && num > maxSeq) {
-                        maxSeq = num;
-                    }
-                }
-            }
-        });
-
-        // For each item, create a separate order entry (backend currently expects single item)
-        for (const it of validItems) {
-            const insumoSeleccionado = insumos.find(i => i.id === it.insumoId);
-            if (!insumoSeleccionado) continue;
-
-            maxSeq++;
-            const newId = `${basePedido}-${maxSeq.toString().padStart(3, '0')}`;
-
-            await createOrden({
-                id: newId,
+            await updateOrden(ordenForm.id, {
                 terceroId: ordenForm.terceroId,
-                insumoId: it.insumoId,
-                insumo: insumoSeleccionado.nombre,
-                cantidad: it.cantidad,
-                unidad: it.unidad,
-                precio_estimado: it.precio_estimado,
-                estado: "Pendiente",
+                insumoId: item.insumoId,
+                insumo: insumoSeleccionado?.nombre || ordenForm.insumo,
+                cantidad: item.cantidad,
+                unidad: item.unidad,
+                precio_estimado: item.precio_estimado,
                 tiempoEntrega: ordenForm.tiempoEntrega || "",
                 fechaSolicitada: ordenForm.fechaSolicitada || format(new Date(), 'yyyy-MM-dd'),
                 numeroPedido: ordenForm.numeroPedido || "",
                 notas: ordenForm.notas || "",
                 entregasParciales: ordenForm.entregasParciales || ""
             });
+        } else {
+            // Ensure at least one item is filled for new orders
+            const validItems = orderItems.filter(it => it.insumoId && it.cantidad > 0);
+            if (validItems.length === 0) return;
+
+            let basePedido = ordenForm.numeroPedido || "GEN";
+            basePedido = basePedido.replace(/\s+/g, '-').toUpperCase();
+
+            const existingForPedido = ordenes.filter(o => o.numeroPedido === ordenForm.numeroPedido || o.numeroPedido === basePedido);
+            let maxSeq = 0;
+            existingForPedido.forEach(o => {
+                if (o.id) {
+                    const parts = o.id.split('-');
+                    if (parts.length >= 2) {
+                        const num = parseInt(parts[parts.length - 1], 10);
+                        if (!isNaN(num) && num > maxSeq) {
+                            maxSeq = num;
+                        }
+                    }
+                }
+            });
+
+            // For each item, create a separate order entry (backend currently expects single item)
+            for (const it of validItems) {
+                const insumoSeleccionado = insumos.find(i => i.id === it.insumoId);
+                if (!insumoSeleccionado) continue;
+
+                maxSeq++;
+                const newId = `${basePedido}-${maxSeq.toString().padStart(3, '0')}`;
+
+                await createOrden({
+                    id: newId,
+                    terceroId: ordenForm.terceroId,
+                    insumoId: it.insumoId,
+                    insumo: insumoSeleccionado.nombre,
+                    cantidad: it.cantidad,
+                    unidad: it.unidad,
+                    precio_estimado: it.precio_estimado,
+                    estado: "Pendiente",
+                    tiempoEntrega: ordenForm.tiempoEntrega || "",
+                    fechaSolicitada: ordenForm.fechaSolicitada || format(new Date(), 'yyyy-MM-dd'),
+                    numeroPedido: ordenForm.numeroPedido || "",
+                    notas: ordenForm.notas || "",
+                    entregasParciales: ordenForm.entregasParciales || ""
+                });
+            }
         }
         // Reset forms
         setOrdenForm({ terceroId: "", insumoId: "", insumo: "", cantidad: 0, unidad: "Unidad", estado: "Pendiente", tiempoEntrega: "" });
         setOrderItems([{ insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }]);
         setIsOrdenDialogOpen(false);
+    };
+
+    const editOrden = (o: OrdenCompra) => {
+        setOrdenForm({ ...o });
+        setOrderItems([{
+            insumoId: o.insumoId || "",
+            cantidad: o.cantidad,
+            unidad: o.unidad,
+            precio_estimado: o.precio_estimado || 0
+        }]);
+        setIsOrdenDialogOpen(true);
     };
 
     const handleReceiveOrder = async (ordenId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -524,50 +556,71 @@ export default function ComprasPage() {
                                 />
                                 <Dialog open={isOrdenDialogOpen} onOpenChange={setIsOrdenDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md">
+                                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md" onClick={() => {
+                                            setOrdenForm({ terceroId: "", insumoId: "", insumo: "", cantidad: 0, unidad: "Unidad", estado: "Pendiente", tiempoEntrega: "", fechaSolicitada: format(new Date(), 'yyyy-MM-dd'), numeroPedido: "", notas: "", entregasParciales: "" });
+                                            setOrderItems([{ insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }]);
+                                        }}>
                                             <Plus className="w-4 h-4 mr-2" />
                                             Nueva Orden
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[450px]">
+                                    <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
                                         <DialogHeader>
-                                            <DialogTitle>ORDEN DE COMPRA ORIGEN BOTÁNICO - {format(new Date(), 'dd/MM/yyyy')}</DialogTitle>
+                                            <DialogTitle>{ordenForm.id ? `EDITAR ORDEN ${ordenForm.id}` : 'NUEVA ORDEN DE COMPRA ORIGEN BOTÁNICO'} - {format(new Date(), 'dd/MM/yyyy')}</DialogTitle>
                                         </DialogHeader>
-                                        <div className="text-sm text-gray-600 mb-2">
-                                            ZN E CENTRO LOGISTICO BG 16 DEL CRUCE DEL TABLAZO 900 MTS VIA ZONA FRANCA<br />
-                                            Tel: (604) 2966310<br />
-                                            Rionegro - Colombia
+                                        <div className="text-sm text-gray-600 mb-2 p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                                            <div>
+                                                <span className="font-bold">ZN E CENTRO LOGISTICO BG 16</span><br />
+                                                Tel: (604) 2966310 | Rionegro - Colombia
+                                            </div>
+                                            <Building2 className="w-8 h-8 text-gray-300" />
                                         </div>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-semibold text-gray-600">Proveedor</label>
-                                                <Select value={ordenForm.terceroId} onValueChange={v => setOrdenForm({ ...ordenForm, terceroId: v })}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Seleccione proveedor" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {terceros.map(t => (
-                                                            <SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex gap-4">
-                                                <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">No. de Pedido Interno (Ej: 55)</label>
-                                                    <Input value={ordenForm.numeroPedido || ''} onChange={e => setOrdenForm({ ...ordenForm, numeroPedido: e.target.value })} placeholder="Ej. 55" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                                            <div className="space-y-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Proveedor Seleccionado</label>
+                                                    <Select value={ordenForm.terceroId} onValueChange={v => setOrdenForm({ ...ordenForm, terceroId: v })} disabled={!!ordenForm.id}>
+                                                        <SelectTrigger className="h-11 bg-white border-gray-200">
+                                                            <SelectValue placeholder="Seleccione proveedor" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {terceros.map(t => (
+                                                                <SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
-                                                <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">Fecha Solicitada</label>
-                                                    <Input type="date" value={ordenForm.fechaSolicitada || ''} onChange={e => setOrdenForm({ ...ordenForm, fechaSolicitada: e.target.value })} />
+                                                <div className="flex gap-4">
+                                                    <div className="space-y-1 flex-1">
+                                                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">No. Pedido Interno</label>
+                                                        <Input className="h-11" value={ordenForm.numeroPedido || ''} onChange={e => setOrdenForm({ ...ordenForm, numeroPedido: e.target.value })} placeholder="Ej. 55" />
+                                                    </div>
+                                                    <div className="space-y-1 flex-1">
+                                                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha Solicitada</label>
+                                                        <Input className="h-11" type="date" value={ordenForm.fechaSolicitada || ''} onChange={e => setOrdenForm({ ...ordenForm, fechaSolicitada: e.target.value })} />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tiempo de Entrega / Parciales</label>
+                                                    <div className="flex gap-2">
+                                                        <Input className="h-11 flex-1" value={ordenForm.tiempoEntrega} onChange={e => setOrdenForm({ ...ordenForm, tiempoEntrega: e.target.value })} placeholder="Ej. 3 días hábiles" />
+                                                        <Input className="h-11 flex-1" value={ordenForm.entregasParciales || ''} onChange={e => setOrdenForm({ ...ordenForm, entregasParciales: e.target.value })} placeholder="Fases de entrega" />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Notas Adicionales</label>
+                                                    <Input className="h-11" value={ordenForm.notas || ''} onChange={e => setOrdenForm({ ...ordenForm, notas: e.target.value })} placeholder="Ej. Entregar en portería principal" />
                                                 </div>
                                             </div>
+
                                             <div className="space-y-3 p-4 border rounded-xl bg-gray-50/50">
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <label className="text-sm font-bold text-gray-800">Insumos a Pedir</label>
-                                                    <Button variant="outline" size="sm" onClick={() => setOrderItems([...orderItems, { insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }])}>
-                                                        <Plus className="w-4 h-4 mr-1" /> Agregar Insumo
-                                                    </Button>
+                                                    <label className="text-sm font-bold text-gray-800 uppercase tracking-wider">Insumos del Pedido</label>
+                                                    {!ordenForm.id && (
+                                                        <Button variant="outline" size="sm" className="h-8 bg-white" onClick={() => setOrderItems([...orderItems, { insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }])}>
+                                                            <Plus className="w-3 h-3 mr-1" /> Agregar
+                                                        </Button>
+                                                    )}
                                                 </div>
                                                 {orderItems.map((item, index) => (
                                                     <div key={index} className="space-y-3 p-4 bg-white border border-gray-100 rounded-lg relative">
@@ -648,23 +701,15 @@ export default function ComprasPage() {
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="flex gap-4">
-                                                <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">Tiempo de Entrega</label>
-                                                    <Input value={ordenForm.tiempoEntrega} onChange={e => setOrdenForm({ ...ordenForm, tiempoEntrega: e.target.value })} placeholder="Ej. 3 días hábiles" />
-                                                </div>
-                                                <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">Entregas Parciales</label>
-                                                    <Input value={ordenForm.entregasParciales || ''} onChange={e => setOrdenForm({ ...ordenForm, entregasParciales: e.target.value })} placeholder="Opcional." />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-semibold text-gray-600">Notas Adicionales</label>
-                                                <Input value={ordenForm.notas || ''} onChange={e => setOrdenForm({ ...ordenForm, notas: e.target.value })} placeholder="Ej. Entregar en portería principal" />
-                                            </div>
+                                        </div>
 
-                                            <Button onClick={handleSaveOrden} className="mt-4 bg-[#183C30] hover:bg-[#122e24]">Generar Orden</Button>
-                                            <p className="text-xs text-gray-500 mt-2">Esta orden será facturada a las empresas que vayamos indicando a medida que entreguen.</p>
+                                        <div className="flex flex-col gap-3 border-t pt-4">
+                                            <Button onClick={handleSaveOrden} className="w-full bg-[#183C30] hover:bg-[#122e24] h-12 text-lg font-bold">
+                                                {ordenForm.id ? "Actualizar Orden" : "Generar Orden de Compra"}
+                                            </Button>
+                                            <p className="text-[11px] text-center text-gray-500">
+                                                Al {ordenForm.id ? 'actualizar' : 'generar'} esta orden, se notificará al sistema de inventarios y proveedores correspondientes.
+                                            </p>
                                         </div>
                                     </DialogContent>
                                 </Dialog>
@@ -678,7 +723,7 @@ export default function ComprasPage() {
                                 <div className="text-center">Cantidad</div>
                                 <div className="text-center">Estimado</div>
                                 <div className="text-center">Estado</div>
-                                <div className="w-[140px] text-center">Acciones</div>
+                                <div className="w-[180px] text-center">Acciones</div>
                             </div>
                             <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
                                 {filteredOrdenes.map(o => {
@@ -711,10 +756,10 @@ export default function ComprasPage() {
                                                     {o.estado}
                                                 </span>
                                             </div>
-                                            <div className="w-[140px] flex justify-center gap-2">
+                                            <div className="w-[180px] flex justify-center gap-1">
                                                 {!isRecibido ? (
                                                     <div className="flex gap-1 justify-center items-center">
-                                                        <div className="relative flex-1">
+                                                        <div className="relative">
                                                             <Input
                                                                 type="file"
                                                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -723,25 +768,32 @@ export default function ComprasPage() {
                                                                 accept="image/*,.pdf"
                                                                 title="Subir Comprobante / Recibir"
                                                             />
-                                                            <Button size="sm" variant="outline" className={`h-8 w-full ${uploadingFile ? 'opacity-50' : ''}`}>
-                                                                <UploadCloud className="w-4 h-4 md:mr-2" />
-                                                                <span className="hidden md:inline">{uploadingFile ? 'Subiendo' : 'Recibir'}</span>
+                                                            <Button size="icon" variant="outline" className={`h-8 w-8 text-emerald-600 border-emerald-100 hover:bg-emerald-50 ${uploadingFile ? 'opacity-50' : ''}`}>
+                                                                <UploadCloud className="w-4 h-4" />
                                                             </Button>
                                                         </div>
-                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-indigo-600 hover:text-indigo-700 flex-shrink-0" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} title="Descargar PDF de Orden">
+                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-indigo-600 border-indigo-100 hover:bg-indigo-50" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} title="Descargar PDF">
                                                             <Download className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50" onClick={() => editOrden(o)} title="Editar Orden">
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-red-500 border-red-100 hover:bg-red-50" onClick={() => deleteOrden(o.id)} title="Eliminar Orden">
+                                                            <Trash2 className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 ) : (
                                                     <div className="flex gap-1 justify-center items-center">
-                                                        <Button size="sm" variant="ghost" asChild className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex-1">
-                                                            <a href={o.comprobanteUrl} target="_blank" rel="noreferrer">
-                                                                <FileText className="w-4 h-4 md:mr-2" />
-                                                                <span className="hidden md:inline">Ver Factura</span>
+                                                        <Button size="icon" variant="ghost" asChild className="h-8 w-8 text-emerald-600 hover:bg-emerald-50">
+                                                            <a href={o.comprobanteUrl} target="_blank" rel="noreferrer" title="Ver Factura">
+                                                                <FileText className="w-4 h-4" />
                                                             </a>
                                                         </Button>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} title="Descargar PDF">
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-indigo-600 hover:bg-indigo-50" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} title="Descargar PDF">
                                                             <Download className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteOrden(o.id)} title="Eliminar Orden">
+                                                            <Trash2 className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 )}
@@ -872,7 +924,7 @@ export default function ComprasPage() {
                                 </div>
                             )}
                         </div>
-                    </div >
+                    </div>
                 ) : (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

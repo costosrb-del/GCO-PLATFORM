@@ -160,3 +160,11 @@ def update_orden(orden_id: str, updates: Dict[str, Any]):
         return {"message": "Orden actualizada"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/ordenes/{orden_id}")
+def delete_orden(orden_id: str):
+    try:
+        compras_service.delete_orden_compra(orden_id)
+        return {"message": "Orden eliminada"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
