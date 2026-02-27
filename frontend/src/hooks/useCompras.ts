@@ -49,6 +49,7 @@ export interface OrdenCompra {
     notas?: string;
     entregasParciales?: string;
     items?: OrdenItem[];
+    total_bruto?: number;
     created_at?: string;
 }
 

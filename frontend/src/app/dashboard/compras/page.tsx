@@ -58,6 +58,10 @@ export default function ComprasPage() {
     // NEW filters for orders
     const [filterProviderId, setFilterProviderId] = useState("");
     const [filterInsumoId, setFilterInsumoId] = useState("");
+    const [filterPedidoNum, setFilterPedidoNum] = useState("");
+
+    const [viewingOrden, setViewingOrden] = useState<OrdenCompra | null>(null);
+    const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
     // Receipt logic
     const [uploadingFile, setUploadingFile] = useState(false);
@@ -114,6 +118,7 @@ export default function ComprasPage() {
             : itemsToSave[0].insumo;
 
         const totalQty = itemsToSave.reduce((sum, i) => sum + i.cantidad, 0);
+        const totalBruto = itemsToSave.reduce((sum, i) => sum + (i.cantidad * i.precio_estimado), 0);
 
         if (ordenForm.id) {
             await updateOrden(ordenForm.id, {
@@ -121,10 +126,11 @@ export default function ComprasPage() {
                 items: itemsToSave,
                 insumo: summaryLabel,
                 cantidad: totalQty,
+                total_bruto: totalBruto,
                 precio_estimado: itemsToSave[0].precio_estimado // Default backcomp
             });
         } else {
-            let basePedido = ordenForm.numeroPedido || "GEN";
+            let basePedido = (ordenForm.numeroPedido || "GEN").toString();
             basePedido = basePedido.replace(/\s+/g, '-').toUpperCase();
 
             // Get max seq for this basePedido
@@ -144,6 +150,7 @@ export default function ComprasPage() {
                 items: itemsToSave,
                 insumo: summaryLabel,
                 cantidad: totalQty,
+                total_bruto: totalBruto,
                 precio_estimado: itemsToSave[0].precio_estimado,
                 estado: "Pendiente"
             });
@@ -231,12 +238,20 @@ export default function ComprasPage() {
         doc.setFillColor(24, 60, 48); // GCO color
         doc.rect(0, 0, 210, 40, "F");
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.text("AUTORIZACION DE COMPRA ORIGEN BOTANICO", 14, 25);
 
+        // Split title if too long
+        doc.setFontSize(18);
+        const title = "AUTORIZACION DE COMPRA ORIGEN BOTANICO";
+        const splitTitle = doc.splitTextToSize(title, 120);
+        doc.text(splitTitle, 14, 20);
+
+        doc.setFontSize(9);
+        doc.text(`Fecha: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy")}`, 150, 15);
+        doc.text(`No. Pedido: ${orden.numeroPedido || 'N/A'}`, 150, 21);
         doc.setFontSize(10);
-        doc.text(`Fecha: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy")}`, 150, 20);
-        doc.text(`ID Orden: ${orden.id.toUpperCase()}`, 150, 26);
+        doc.setFont("helvetica", "bold");
+        doc.text(`ID UNICO: ${orden.id.toUpperCase()}`, 150, 27);
+        doc.setFont("helvetica", "normal");
 
         // Proveedor Info
         doc.setTextColor(30, 30, 30);
@@ -352,11 +367,13 @@ export default function ComprasPage() {
             (o.numeroPedido || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (o.notas || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (o.fechaSolicitada || "").toLowerCase().includes(searchOrdenes.toLowerCase());
-        // Provider filter
+
+        // Field Filters
         const matchesProvider = filterProviderId ? (t?.id === filterProviderId) : true;
-        // Insumo filter
-        const matchesInsumo = filterInsumoId ? (o.insumoId === filterInsumoId) : true;
-        return matchesSearch && matchesProvider && matchesInsumo;
+        const matchesInsumo = filterInsumoId ? (o.items?.some(it => it.insumoId === filterInsumoId) || o.insumoId === filterInsumoId) : true;
+        const matchesPedidoNum = filterPedidoNum ? (o.numeroPedido === filterPedidoNum || o.id.includes(filterPedidoNum)) : true;
+
+        return matchesSearch && matchesProvider && matchesInsumo && matchesPedidoNum;
     });
     const filteredProductos = productos.filter(p =>
         p.nombre.toLowerCase().includes(searchProductos.toLowerCase()) ||
@@ -720,12 +737,54 @@ export default function ComprasPage() {
                             </div>
                         </div>
 
+                        {/* Fila de Filtros Avanzados */}
+                        <div className="flex flex-wrap gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-2">
+                            <div className="flex-1 min-w-[200px] flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-gray-400" />
+                                <Select value={filterProviderId} onValueChange={setFilterProviderId}>
+                                    <SelectTrigger className="bg-slate-50 border-gray-100">
+                                        <SelectValue placeholder="Filtrar por Proveedor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Todos los proveedores</SelectItem>
+                                        {terceros.map(t => <SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex-1 min-w-[200px] flex items-center gap-2">
+                                <Package className="w-4 h-4 text-gray-400" />
+                                <Select value={filterInsumoId} onValueChange={setFilterInsumoId}>
+                                    <SelectTrigger className="bg-slate-50 border-gray-100">
+                                        <SelectValue placeholder="Filtrar por Insumo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Todos los insumos</SelectItem>
+                                        {insumos.map(i => <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="w-40 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-gray-400" />
+                                <Input
+                                    className="bg-slate-50 border-gray-100"
+                                    placeholder="No. Pedido / ID"
+                                    value={filterPedidoNum}
+                                    onChange={e => setFilterPedidoNum(e.target.value)}
+                                />
+                            </div>
+                            {(filterProviderId || filterInsumoId || filterPedidoNum) && (
+                                <Button variant="ghost" onClick={() => { setFilterProviderId(""); setFilterInsumoId(""); setFilterPedidoNum(""); }} className="text-gray-400 hover:text-red-500">
+                                    <X className="w-4 h-4 mr-2" /> Limpiar
+                                </Button>
+                            )}
+                        </div>
+
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] p-4 bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase">
-                                <div>Detalle</div>
+                            <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] p-4 bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase">
+                                <div>Ítems / Detalle</div>
                                 <div>Proveedor</div>
-                                <div className="text-center">Cantidad</div>
-                                <div className="text-center">Estimado</div>
+                                <div className="text-center">Cant. Total</div>
+                                <div className="text-center">Total Bruto</div>
                                 <div className="text-center">Estado</div>
                                 <div className="w-[180px] text-center">Acciones</div>
                             </div>
@@ -734,25 +793,36 @@ export default function ComprasPage() {
                                     const tercero = terceros.find(t => t.id === o.terceroId);
                                     const isRecibido = o.estado === "Recibido";
                                     return (
-                                        <div key={o.id} className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] p-4 items-center hover:bg-slate-50 transition-colors">
+                                        <div key={o.id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] p-4 items-center hover:bg-slate-50 transition-colors border-b last:border-0">
                                             <div>
-                                                <p className="font-semibold text-gray-800 text-sm">{o.insumo}</p>
-                                                <div className="flex gap-2 items-center mt-0.5">
+                                                <div className="space-y-1">
+                                                    {(o.items && o.items.length > 0) ? (
+                                                        o.items.map((it, idx) => (
+                                                            <p key={idx} className="font-semibold text-gray-800 text-[13px] leading-tight flex items-start gap-1">
+                                                                <span className="text-teal-600 mt-1">•</span> {it.insumo} <span className="text-gray-400 font-normal">({it.cantidad} {it.unidad})</span>
+                                                            </p>
+                                                        ))
+                                                    ) : (
+                                                        <p className="font-semibold text-gray-800 text-[13px]">{o.insumo}</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 items-center mt-2">
                                                     <span className="text-[10px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-mono border border-gray-200" title="ID de Orden Secuencial">
                                                         {o.id}
                                                     </span>
+                                                    {o.numeroPedido && <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100">PED: {o.numeroPedido}</span>}
                                                     {o.created_at && <p className="text-[10px] text-gray-400">Creada: {format(new Date(o.created_at), 'dd/MM/yyyy')}</p>}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-700">{tercero?.nombre || "Desconocido"}</p>
-                                                <p className="text-xs text-gray-500">NIT: {tercero?.nit}</p>
+                                            <div className="overflow-hidden">
+                                                <p className="text-sm font-medium text-gray-700 truncate">{tercero?.nombre || "Desconocido"}</p>
+                                                <p className="text-[10px] text-gray-500">NIT/CC: {tercero?.nit}</p>
                                             </div>
                                             <div className="text-center font-bold text-gray-700 text-sm">
-                                                {o.cantidad} <span className="text-xs font-normal text-gray-500">{o.unidad}</span>
+                                                {o.items ? o.items.reduce((sum, i) => sum + i.cantidad, 0) : o.cantidad}
                                             </div>
                                             <div className="text-center font-bold text-teal-700 text-sm">
-                                                ${((o.precio_estimado || 0) * o.cantidad).toLocaleString()}
+                                                ${(o.total_bruto || ((o.precio_estimado || 0) * o.cantidad)).toLocaleString()}
                                             </div>
                                             <div className="flex justify-center">
                                                 <span className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1 w-max ${isRecibido ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -761,8 +831,14 @@ export default function ComprasPage() {
                                                 </span>
                                             </div>
                                             <div className="w-[180px] flex justify-center gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => { setViewingOrden(o); setIsViewDialogOpen(true); }} className="text-teal-600 hover:bg-teal-50 h-8 w-8" title="Visualizar Orden">
+                                                    <FileText className="w-4 h-4" />
+                                                </Button>
                                                 {!isRecibido ? (
-                                                    <div className="flex gap-1 justify-center items-center">
+                                                    <>
+                                                        <Button variant="ghost" size="icon" onClick={() => editOrden(o)} className="text-blue-500 hover:bg-blue-50 h-8 w-8" title="Editar Orden">
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </Button>
                                                         <div className="relative">
                                                             <Input
                                                                 type="file"
@@ -770,37 +846,23 @@ export default function ComprasPage() {
                                                                 onChange={(e) => handleReceiveOrder(o.id, e)}
                                                                 disabled={uploadingFile}
                                                                 accept="image/*,.pdf"
-                                                                title="Subir Comprobante / Recibir"
                                                             />
-                                                            <Button size="icon" variant="outline" className={`h-8 w-8 text-emerald-600 border-emerald-100 hover:bg-emerald-50 ${uploadingFile ? 'opacity-50' : ''}`}>
+                                                            <Button variant="ghost" size="icon" className="text-emerald-500 hover:bg-emerald-50 h-8 w-8" disabled={uploadingFile}>
                                                                 <UploadCloud className="w-4 h-4" />
                                                             </Button>
                                                         </div>
-                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-indigo-600 border-indigo-100 hover:bg-indigo-50" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} title="Descargar PDF">
-                                                            <Download className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50" onClick={() => editOrden(o)} title="Editar Orden">
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button size="icon" variant="outline" className="h-8 w-8 text-red-500 border-red-100 hover:bg-red-50" onClick={() => deleteOrden(o.id)} title="Eliminar Orden">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
+                                                    </>
                                                 ) : (
-                                                    <div className="flex gap-1 justify-center items-center">
-                                                        <Button size="icon" variant="ghost" asChild className="h-8 w-8 text-emerald-600 hover:bg-emerald-50">
-                                                            <a href={o.comprobanteUrl} target="_blank" rel="noreferrer" title="Ver Factura">
-                                                                <FileText className="w-4 h-4" />
-                                                            </a>
-                                                        </Button>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-indigo-600 hover:bg-indigo-50" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} title="Descargar PDF">
-                                                            <Download className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteOrden(o.id)} title="Eliminar Orden">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
+                                                    <Button variant="ghost" size="icon" onClick={() => o.comprobanteUrl && window.open(o.comprobanteUrl)} className="text-teal-500 hover:bg-teal-50 h-8 w-8" title="Ver Comprobante">
+                                                        <FileText className="w-4 h-4" />
+                                                    </Button>
                                                 )}
+                                                <Button variant="ghost" size="icon" onClick={() => exportarOrdenPDF(o, tercero || {} as Tercero)} className="text-amber-600 hover:bg-amber-50 h-8 w-8" title="Descargar PDF">
+                                                    <Download className="w-4 h-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => deleteOrden(o.id)} className="text-red-500 hover:bg-red-50 h-8 w-8" title="Eliminar Orden">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
                                             </div>
                                         </div>
                                     );
@@ -1061,8 +1123,120 @@ export default function ComprasPage() {
                             )}
                         </div>
                     </div>
-                )}
-            </div>
-        </div>
+                )
+                }
+
+                {/* --- DIALOGO DE VISTA PREVIA (SIN DESCARGAR) --- */}
+                <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-teal-600" />
+                                Vista Previa de Autorización de Compra
+                            </DialogTitle>
+                        </DialogHeader>
+                        {viewingOrden && (
+                            <div className="space-y-6 py-4">
+                                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">ID Único</p>
+                                        <p className="font-mono text-sm font-bold text-slate-700">{viewingOrden.id}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Fecha</p>
+                                        <p className="text-sm font-bold">{format(new Date(viewingOrden.created_at || new Date()), 'dd/MM/yyyy')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">No. Pedido Interno</p>
+                                        <p className="text-sm font-bold">{viewingOrden.numeroPedido || 'N/A'}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Estado</p>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${viewingOrden.estado === 'Recibido' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            {viewingOrden.estado}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="flex items-center gap-2 font-bold text-slate-800 mb-3 border-b pb-2">
+                                        <Building2 className="w-4 h-4 text-slate-400" /> Datos del Proveedor
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                                        <p className="text-slate-500">Razon Social:</p>
+                                        <p className="font-semibold">{terceros.find(t => t.id === viewingOrden.terceroId)?.nombre || 'Desconocido'}</p>
+                                        <p className="text-slate-500">Documento/NIT:</p>
+                                        <p className="font-semibold">{terceros.find(t => t.id === viewingOrden.terceroId)?.nit || 'N/A'}</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="flex items-center gap-2 font-bold text-slate-800 mb-3 border-b pb-2">
+                                        <Package className="w-4 h-4 text-slate-400" /> Detalle de Productos
+                                    </h4>
+                                    <div className="border rounded-xl overflow-hidden shadow-sm">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-[#183C30] text-white">
+                                                <tr>
+                                                    <th className="px-4 py-2 text-left">Insumo</th>
+                                                    <th className="px-4 py-2 text-center">Cantidad</th>
+                                                    <th className="px-4 py-2 text-right">Precio Un.</th>
+                                                    <th className="px-4 py-2 text-right">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {(viewingOrden.items && viewingOrden.items.length > 0) ? (
+                                                    viewingOrden.items.map((it, idx) => (
+                                                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="px-4 py-2 font-medium text-slate-700">{it.insumo}</td>
+                                                            <td className="px-4 py-2 text-center">{it.cantidad} {it.unidad}</td>
+                                                            <td className="px-4 py-2 text-right font-semibold text-slate-500">${(it.precio_estimado || 0).toLocaleString()}</td>
+                                                            <td className="px-4 py-2 text-right font-bold text-teal-700">${((it.cantidad || 0) * (it.precio_estimado || 0)).toLocaleString()}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td className="px-4 py-2 font-medium text-slate-700">{viewingOrden.insumo}</td>
+                                                        <td className="px-4 py-2 text-center">{viewingOrden.cantidad} {viewingOrden.unidad}</td>
+                                                        <td className="px-4 py-2 text-right font-semibold text-slate-500">${(viewingOrden.precio_estimado || 0).toLocaleString()}</td>
+                                                        <td className="px-4 py-2 text-right font-bold text-teal-700">${((viewingOrden.cantidad || 0) * (viewingOrden.precio_estimado || 0)).toLocaleString()}</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                            <tfoot className="bg-slate-50 font-bold border-t">
+                                                <tr>
+                                                    <td colSpan={3} className="px-4 py-3 text-right text-slate-600 uppercase tracking-wider text-xs">Total Bruto Estimado</td>
+                                                    <td className="px-4 py-3 text-right text-teal-800 text-lg">
+                                                        ${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {viewingOrden.notas && (
+                                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 italic text-sm text-amber-900 shadow-inner">
+                                        <p className="font-bold mb-1 non-italic uppercase text-[10px] tracking-widest text-amber-700">Notas:</p>
+                                        {viewingOrden.notas}
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end gap-3 pt-4 border-t">
+                                    <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Cerrar</Button>
+                                    <Button variant="default" onClick={() => {
+                                        const t = terceros.find(terc => terc.id === viewingOrden.terceroId);
+                                        if (t) exportarOrdenPDF(viewingOrden, t);
+                                    }} className="bg-[#183C30] hover:bg-[#122e24]">
+                                        <Download className="w-4 h-4 mr-2" /> Descargar PDF
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+            </div >
+        </div >
     );
 }
