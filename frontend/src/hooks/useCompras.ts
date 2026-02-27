@@ -24,6 +24,13 @@ export interface Insumo {
     precio?: number;
     created_at?: string;
 }
+export interface OrdenItem {
+    insumoId: string;
+    insumo: string;
+    cantidad: number;
+    unidad: string;
+    precio_estimado: number;
+}
 
 export interface OrdenCompra {
     id: string;
@@ -41,6 +48,7 @@ export interface OrdenCompra {
     numeroPedido?: string;
     notas?: string;
     entregasParciales?: string;
+    items?: OrdenItem[];
     created_at?: string;
 }
 

@@ -100,69 +100,53 @@ export default function ComprasPage() {
         if (!ordenForm.terceroId) return;
 
         // If editing an existing order
-        if (ordenForm.id) {
-            const item = orderItems[0];
-            const insumoSeleccionado = insumos.find(i => i.id === item.insumoId);
+        // Ensure at least one item is filled
+        const validItems = orderItems.filter(it => it.insumoId && it.cantidad > 0);
+        if (validItems.length === 0) return;
 
+        const itemsToSave = validItems.map(it => {
+            const ins = insumos.find(i => i.id === it.insumoId);
+            return { ...it, insumo: ins?.nombre || "" };
+        });
+
+        const summaryLabel = itemsToSave.length > 1
+            ? `${itemsToSave[0].insumo} +${itemsToSave.length - 1} más`
+            : itemsToSave[0].insumo;
+
+        const totalQty = itemsToSave.reduce((sum, i) => sum + i.cantidad, 0);
+
+        if (ordenForm.id) {
             await updateOrden(ordenForm.id, {
-                terceroId: ordenForm.terceroId,
-                insumoId: item.insumoId,
-                insumo: insumoSeleccionado?.nombre || ordenForm.insumo,
-                cantidad: item.cantidad,
-                unidad: item.unidad,
-                precio_estimado: item.precio_estimado,
-                tiempoEntrega: ordenForm.tiempoEntrega || "",
-                fechaSolicitada: ordenForm.fechaSolicitada || format(new Date(), 'yyyy-MM-dd'),
-                numeroPedido: ordenForm.numeroPedido || "",
-                notas: ordenForm.notas || "",
-                entregasParciales: ordenForm.entregasParciales || ""
+                ...ordenForm,
+                items: itemsToSave,
+                insumo: summaryLabel,
+                cantidad: totalQty,
+                precio_estimado: itemsToSave[0].precio_estimado // Default backcomp
             });
         } else {
-            // Ensure at least one item is filled for new orders
-            const validItems = orderItems.filter(it => it.insumoId && it.cantidad > 0);
-            if (validItems.length === 0) return;
-
             let basePedido = ordenForm.numeroPedido || "GEN";
             basePedido = basePedido.replace(/\s+/g, '-').toUpperCase();
 
-            const existingForPedido = ordenes.filter(o => o.numeroPedido === ordenForm.numeroPedido || o.numeroPedido === basePedido);
+            // Get max seq for this basePedido
+            const existingForPedido = ordenes.filter(o => o.id?.startsWith(basePedido));
             let maxSeq = 0;
             existingForPedido.forEach(o => {
-                if (o.id) {
-                    const parts = o.id.split('-');
-                    if (parts.length >= 2) {
-                        const num = parseInt(parts[parts.length - 1], 10);
-                        if (!isNaN(num) && num > maxSeq) {
-                            maxSeq = num;
-                        }
-                    }
-                }
+                const parts = o.id.split('-');
+                const num = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(num) && num > maxSeq) maxSeq = num;
             });
 
-            // For each item, create a separate order entry (backend currently expects single item)
-            for (const it of validItems) {
-                const insumoSeleccionado = insumos.find(i => i.id === it.insumoId);
-                if (!insumoSeleccionado) continue;
+            const newIdRow = `${basePedido}-${(maxSeq + 1).toString().padStart(3, '0')}`;
 
-                maxSeq++;
-                const newId = `${basePedido}-${maxSeq.toString().padStart(3, '0')}`;
-
-                await createOrden({
-                    id: newId,
-                    terceroId: ordenForm.terceroId,
-                    insumoId: it.insumoId,
-                    insumo: insumoSeleccionado.nombre,
-                    cantidad: it.cantidad,
-                    unidad: it.unidad,
-                    precio_estimado: it.precio_estimado,
-                    estado: "Pendiente",
-                    tiempoEntrega: ordenForm.tiempoEntrega || "",
-                    fechaSolicitada: ordenForm.fechaSolicitada || format(new Date(), 'yyyy-MM-dd'),
-                    numeroPedido: ordenForm.numeroPedido || "",
-                    notas: ordenForm.notas || "",
-                    entregasParciales: ordenForm.entregasParciales || ""
-                });
-            }
+            await createOrden({
+                ...ordenForm,
+                id: newIdRow,
+                items: itemsToSave,
+                insumo: summaryLabel,
+                cantidad: totalQty,
+                precio_estimado: itemsToSave[0].precio_estimado,
+                estado: "Pendiente"
+            });
         }
         // Reset forms
         setOrdenForm({ terceroId: "", insumoId: "", insumo: "", cantidad: 0, unidad: "Unidad", estado: "Pendiente", tiempoEntrega: "" });
@@ -172,12 +156,16 @@ export default function ComprasPage() {
 
     const editOrden = (o: OrdenCompra) => {
         setOrdenForm({ ...o });
-        setOrderItems([{
-            insumoId: o.insumoId || "",
-            cantidad: o.cantidad,
-            unidad: o.unidad,
-            precio_estimado: o.precio_estimado || 0
-        }]);
+        if (o.items && o.items.length > 0) {
+            setOrderItems([...o.items]);
+        } else {
+            setOrderItems([{
+                insumoId: o.insumoId || "",
+                cantidad: o.cantidad,
+                unidad: o.unidad,
+                precio_estimado: o.precio_estimado || 0
+            }]);
+        }
         setIsOrdenDialogOpen(true);
     };
 
@@ -243,8 +231,8 @@ export default function ComprasPage() {
         doc.setFillColor(24, 60, 48); // GCO color
         doc.rect(0, 0, 210, 40, "F");
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
-        doc.text("ORDEN DE COMPRA GCO", 14, 25);
+        doc.setFontSize(20);
+        doc.text("AUTORIZACION DE COMPRA ORIGEN BOTANICO", 14, 25);
 
         doc.setFontSize(10);
         doc.text(`Fecha: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy")}`, 150, 20);
@@ -264,17 +252,32 @@ export default function ComprasPage() {
         doc.setFontSize(14);
         doc.text("Detalle de la Orden", 14, 100);
 
-        autoTable(doc, {
-            startY: 105,
-            head: [["Insumo / Producto", "SKU Ref", "Cantidad", "Unidad", "Est. Unitario ($)", "Tiempo Requerido"]],
-            body: [[
+        const tableBody = (orden.items && orden.items.length > 0)
+            ? orden.items.map(it => [
+                it.insumo,
+                insumos.find(i => i.id === it.insumoId)?.sku || "N/A",
+                it.cantidad.toString(),
+                it.unidad,
+                `$${(it.precio_estimado || 0).toLocaleString()}`,
+                orden.tiempoEntrega || "A convenir"
+            ])
+            : [[
                 orden.insumo,
                 insumos.find(i => i.id === orden.insumoId)?.sku || "N/A",
                 orden.cantidad.toString(),
                 orden.unidad,
                 `$${(orden.precio_estimado || 0).toLocaleString()}`,
                 orden.tiempoEntrega || "A convenir"
-            ]],
+            ]];
+
+        const totalEstimado = (orden.items && orden.items.length > 0)
+            ? orden.items.reduce((sum, it) => sum + (it.cantidad * (it.precio_estimado || 0)), 0)
+            : (orden.cantidad * (orden.precio_estimado || 0));
+
+        autoTable(doc, {
+            startY: 105,
+            head: [["Insumo / Producto", "SKU Ref", "Cantidad", "Unidad", "Est. Unitario ($)", "Tiempo Requerido"]],
+            body: tableBody,
             theme: 'grid',
             headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255] }
         });
@@ -313,7 +316,7 @@ export default function ComprasPage() {
         // Totales Estimados
         doc.setFontSize(12);
         doc.setTextColor(24, 60, 48);
-        doc.text(`Valor Estimado Total: $${((orden.cantidad) * (orden.precio_estimado || 0)).toLocaleString()}`, 130, finalY);
+        doc.text(`Valor Estimado Total: $${totalEstimado.toLocaleString()}`, 130, finalY);
 
         // Firmas y notas
         finalY = finalY + 30;
