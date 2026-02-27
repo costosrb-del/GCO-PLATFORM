@@ -6,48 +6,56 @@ import { OrdenCompra, Tercero, Insumo } from "@/hooks/useCompras";
 export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]) => {
     const doc = new jsPDF();
 
-    // Header Background
-    doc.setFillColor(24, 60, 48); // GCO color
-    doc.rect(0, 0, 210, 45, "F");
-    doc.setTextColor(255, 255, 255);
+    // ── HEADER ────────────────────────────────────────────────────────────
+    // Fondo verde
+    doc.setFillColor(24, 60, 48);
+    doc.rect(0, 0, 210, 48, "F");
 
-    // White Box for logo fallback or backing
+    // ── ZONA IZQUIERDA: Logo + empresa (x: 12 → 120) ─────────────────────
+    // Caja blanca para el logo
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(12, 8, 30, 30, 5, 5, 'F');
+    doc.roundedRect(12, 7, 32, 34, 5, 5, 'F');
 
-    // Tentativo: logo
+    // Logo
     try {
-        // En Next.js public/logo.png suele estar en la raiz del servidor. 
-        // Si no carga con path relativo, intentamos con el origin si estamos en browser
         const logoPath = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : "/logo.png";
-        doc.addImage(logoPath, "PNG", 14, 10, 26, 26);
+        doc.addImage(logoPath, "PNG", 13, 8, 30, 32);
     } catch (e) {
         doc.setTextColor(24, 60, 48);
         doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
-        doc.text("G", 22, 28);
-        doc.setTextColor(255, 255, 255);
+        doc.text("G", 25, 28);
     }
 
-    // Titulo y Metadata
+    // Título de empresa y documento — limitado a x < 118
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
-    doc.text("ORDEN DE COMPRA", 50, 24);
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("ORIGEN BOTÁNICO S.A.S.", 50, 31);
-    doc.setFontSize(8);
-    doc.text("NIT: 901.401.558-1 | RIONEGRO - ANTIOQUIA", 50, 35);
+    doc.text("AUTORIZACIÓN DE COMPRA", 50, 20);
 
     doc.setFontSize(9);
-    doc.text(`EMISIÓN: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy HH:mm")}`, 196, 18, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.text("ORIGEN BOTÁNICO S.A.S.", 50, 28);
+    doc.setFontSize(7.5);
+    doc.text("NIT: 901.401.558-1  |  Rionegro, Antioquia", 50, 33);
+
+    // ── SEPARADOR VERTICAL ───────────────────────────────────────────────
+    doc.setDrawColor(200, 220, 210);
+    doc.setLineWidth(0.3);
+    doc.line(122, 8, 122, 40);
+
+    // ── ZONA DERECHA: Metadatos OC (x: 125 → 198, right-align a 197) ─────
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Fecha emisión: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy HH:mm")}`, 197, 14, { align: "right" });
+
+    doc.setFontSize(8);
+    doc.text(`Pedido No: ${orden.numeroPedido || 'N/A'}`, 197, 21, { align: "right" });
+
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(`OC No: ${orden.id.toUpperCase()}`, 196, 28, { align: "right" });
-    doc.setFontSize(10);
-    doc.text(`Ref Pedido: ${orden.numeroPedido || 'N/A'}`, 196, 35, { align: "right" });
+    doc.text(`O.C. ID: ${orden.id.toUpperCase()}`, 197, 33, { align: "right" });
+
     doc.setFont("helvetica", "normal");
 
     // Proveedor Info
@@ -161,23 +169,7 @@ export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: 
 
     finalY += 25;
 
-    // --- Términos y Condiciones ---
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.text("TÉRMINOS Y CONDICIONES:", 14, finalY);
-    doc.setFont("helvetica", "normal");
-    const terms = [
-        "1. La entrega debe realizarse en la dirección especificada en la fecha solicitada.",
-        "2. Todo producto debe venir con su respectivo Certificado de Análisis y Ficha Técnica.",
-        "3. No se aceptarán productos con vencimiento inferior a 12 meses.",
-        "4. Esta orden es una autorización formal de compra sujeta a revisión de calidad en recepción."
-    ];
-    terms.forEach((line, i) => {
-        doc.text(line, 14, finalY + 4 + (i * 4));
-    });
-
-    finalY += 25;
+    // (Términos y Condiciones temporalmente omitidos)
 
     // Firmas y notas
     doc.setTextColor(30, 30, 30);
