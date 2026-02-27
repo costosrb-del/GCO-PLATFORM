@@ -796,22 +796,21 @@ export default function ComprasPage() {
                                         <div key={o.id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] p-4 items-center hover:bg-slate-50 transition-colors border-b last:border-0">
                                             <div>
                                                 <div className="space-y-1">
-                                                    {(o.items && o.items.length > 0) ? (
-                                                        o.items.map((it, idx) => (
-                                                            <p key={idx} className="font-semibold text-gray-800 text-[13px] leading-tight flex items-start gap-1">
-                                                                <span className="text-teal-600 mt-1">•</span> {it.insumo} <span className="text-gray-400 font-normal">({it.cantidad} {it.unidad})</span>
-                                                            </p>
-                                                        ))
-                                                    ) : (
-                                                        <p className="font-semibold text-gray-800 text-[13px]">{o.insumo}</p>
-                                                    )}
+                                                    <p className="font-bold text-[#183C30] text-[15px] flex items-center gap-2">
+                                                        <ShoppingCart className="w-4 h-4" />
+                                                        Orden {o.numeroPedido || o.id}
+                                                    </p>
+                                                    <p className="text-[12px] text-gray-600 leading-relaxed max-w-md">
+                                                        Esta es la OC <span className="font-bold text-gray-800">{o.id}</span> del proveedor <span className="font-bold text-gray-800">{tercero?.nombre}</span> por un total de <span className="font-bold text-teal-700">${(o.total_bruto || (o.cantidad * (o.precio_estimado || 0))).toLocaleString()}</span>.
+                                                        <span className="block text-gray-400 mt-0.5 italic">Si desea ver el detalle de los productos, presione el botón de visualizar.</span>
+                                                    </p>
                                                 </div>
-                                                <div className="flex flex-wrap gap-2 items-center mt-2">
-                                                    <span className="text-[10px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-mono border border-gray-200" title="ID de Orden Secuencial">
-                                                        {o.id}
+                                                <div className="flex flex-wrap gap-2 items-center mt-3">
+                                                    <span className="text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-mono border border-gray-200">
+                                                        REF: {o.id}
                                                     </span>
-                                                    {o.numeroPedido && <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100">PED: {o.numeroPedido}</span>}
-                                                    {o.created_at && <p className="text-[10px] text-gray-400">Creada: {format(new Date(o.created_at), 'dd/MM/yyyy')}</p>}
+                                                    {o.numeroPedido && <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 uppercase">Pedido: {o.numeroPedido}</span>}
+                                                    {o.created_at && <p className="text-[10px] text-gray-400">📅 {format(new Date(o.created_at), 'dd/MM/yyyy')}</p>}
                                                 </div>
                                             </div>
                                             <div className="overflow-hidden">
