@@ -3,16 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, Trash2, Filter, X } from "lucide-react";
+import { Plus, Package, Trash2, Filter, X, Edit2 } from "lucide-react";
 import { Insumo } from "@/hooks/useCompras";
 
 interface InsumosSectionProps {
     insumos: Insumo[];
     createInsumo: (i: Partial<Insumo>) => Promise<boolean>;
+    updateInsumo: (id: string, i: Partial<Insumo>) => Promise<boolean>;
     deleteInsumo: (id: string) => Promise<boolean>;
 }
 
-export const InsumosSection = ({ insumos, createInsumo, deleteInsumo }: InsumosSectionProps) => {
+export const InsumosSection = ({ insumos, createInsumo, updateInsumo, deleteInsumo }: InsumosSectionProps) => {
     const [isInsumoDialogOpen, setIsInsumoDialogOpen] = useState(false);
     const [searchInsumos, setSearchInsumos] = useState("");
     const [filterClasificacion, setFilterClasificacion] = useState<string>("none");
@@ -22,10 +23,21 @@ export const InsumosSection = ({ insumos, createInsumo, deleteInsumo }: InsumosS
 
     const handleSaveInsumo = async () => {
         if (!insumoForm.nombre) return;
-        const autoSku = insumoForm.sku || `INS-${Math.floor(1000 + Math.random() * 9000)}`;
-        await createInsumo({ ...insumoForm, sku: autoSku });
+
+        if (insumoForm.id) {
+            await updateInsumo(insumoForm.id, insumoForm);
+        } else {
+            const autoSku = insumoForm.sku || `INS-${Math.floor(1000 + Math.random() * 9000)}`;
+            await createInsumo({ ...insumoForm, sku: autoSku });
+        }
+
         setInsumoForm({ sku: "", nombre: "", rendimiento: "", unidad: "Unidad", proveedores: [], clasificacion: "Materia Prima" });
         setIsInsumoDialogOpen(false);
+    };
+
+    const editInsumo = (i: Insumo) => {
+        setInsumoForm({ ...i });
+        setIsInsumoDialogOpen(true);
     };
 
     const clasificacionesUnicas = Array.from(new Set(insumos.map(i => i.clasificacion).filter(Boolean)));
@@ -61,7 +73,9 @@ export const InsumosSection = ({ insumos, createInsumo, deleteInsumo }: InsumosS
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[500px]">
                             <DialogHeader>
-                                <DialogTitle className="text-xl font-black text-slate-800 uppercase tracking-tight">Registrar Nuevo Insumo</DialogTitle>
+                                <DialogTitle className="text-xl font-black text-slate-800 uppercase tracking-tight">
+                                    {insumoForm.id ? "Actualizar Insumo" : "Registrar Nuevo Insumo"}
+                                </DialogTitle>
                             </DialogHeader>
                             <div className="grid gap-5 py-4">
                                 <div className="space-y-2">
@@ -112,7 +126,9 @@ export const InsumosSection = ({ insumos, createInsumo, deleteInsumo }: InsumosS
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Button onClick={handleSaveInsumo} className="mt-6 bg-[#183C30] hover:bg-emerald-900 h-12 rounded-xl text-lg font-black shadow-lg uppercase tracking-wider">Guardar Insumo</Button>
+                                <Button onClick={handleSaveInsumo} className="mt-6 bg-[#183C30] hover:bg-emerald-900 h-12 rounded-xl text-lg font-black shadow-lg uppercase tracking-wider">
+                                    {insumoForm.id ? "Guardar Cambios" : "Guardar Insumo"}
+                                </Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -156,7 +172,7 @@ export const InsumosSection = ({ insumos, createInsumo, deleteInsumo }: InsumosS
                     <div>Clasificación</div>
                     <div className="text-center">Unidad Def.</div>
                     <div className="text-center">Rendimiento</div>
-                    <div className="w-[80px] text-center">Acciones</div>
+                    <div className="w-[120px] text-center">Acciones</div>
                 </div>
                 <div className="divide-y divide-gray-50 max-h-[65vh] overflow-y-auto">
                     {filteredInsumos.map(i => (
@@ -178,7 +194,10 @@ export const InsumosSection = ({ insumos, createInsumo, deleteInsumo }: InsumosS
                             <div className="text-center">
                                 <span className="text-xs font-normal text-slate-500 italic">{i.rendimiento || 'N/A'}</span>
                             </div>
-                            <div className="w-[80px] flex justify-center opacity-50 group-hover:opacity-100 transition-opacity">
+                            <div className="w-[120px] flex justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" onClick={() => editInsumo(i)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 h-8 w-8" title="Editar Insumo">
+                                    <Edit2 className="w-4 h-4" />
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={() => deleteInsumo(i.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8 w-8" title="Eliminar Insumo">
                                     <Trash2 className="w-4 h-4" />
                                 </Button>

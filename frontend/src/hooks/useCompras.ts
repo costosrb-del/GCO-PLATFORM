@@ -30,6 +30,7 @@ export interface OrdenItem {
     cantidad: number;
     unidad: string;
     precio_estimado: number;
+    cantidad_recibida?: number; // Nueva propiedad para seguimiento parcial
 }
 
 export interface OrdenCompra {
@@ -214,6 +215,22 @@ export function useCompras() {
         }
     };
 
+    const updateInsumo = async (id: string, updates: Partial<Insumo>) => {
+        try {
+            const res = await fetch(`${API_URL}/api/compras/insumos/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates)
+            });
+            if (!res.ok) throw new Error("Failed to update insumo");
+            await fetchData(true);
+            return true;
+        } catch (err) {
+            console.error(err);
+            return false;
+        }
+    };
+
     const deleteInsumo = async (id: string) => {
         try {
             const res = await fetch(`${API_URL}/api/compras/insumos/${id}`, {
@@ -274,5 +291,5 @@ export function useCompras() {
         }
     };
 
-    return { terceros, insumos, ordenes, productos, isLoading, error, createTercero, updateTercero, deleteTercero, createInsumo, deleteInsumo, createOrden, updateOrden, deleteOrden, createProducto, updateProducto, deleteProducto, fetchData };
+    return { terceros, insumos, ordenes, productos, isLoading, error, createTercero, updateTercero, deleteTercero, createInsumo, updateInsumo, deleteInsumo, createOrden, updateOrden, deleteOrden, createProducto, updateProducto, deleteProducto, fetchData };
 }

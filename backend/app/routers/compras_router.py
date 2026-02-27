@@ -75,6 +75,14 @@ def delete_insumo(insumo_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.put("/insumos/{insumo_id}")
+def update_insumo(insumo_id: str, updates: Dict[str, Any]):
+    try:
+        compras_service.update_insumo(insumo_id, updates)
+        return {"message": "Insumo actualizado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/terceros")
 def get_terceros():
     try:

@@ -6,36 +6,48 @@ import { OrdenCompra, Tercero, Insumo } from "@/hooks/useCompras";
 export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]) => {
     const doc = new jsPDF();
 
-    // Header
+    // Header Background
     doc.setFillColor(24, 60, 48); // GCO color
-    doc.rect(0, 0, 210, 40, "F");
+    doc.rect(0, 0, 210, 45, "F");
     doc.setTextColor(255, 255, 255);
 
-    // logo
+    // White Box for logo fallback or backing
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(12, 8, 30, 30, 5, 5, 'F');
+
+    // Tentativo: logo
     try {
-        doc.addImage("/logo.png", "PNG", 14, 8, 25, 25);
+        // En Next.js public/logo.png suele estar en la raiz del servidor. 
+        // Si no carga con path relativo, intentamos con el origin si estamos en browser
+        const logoPath = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : "/logo.png";
+        doc.addImage(logoPath, "PNG", 14, 10, 26, 26);
     } catch (e) {
-        console.error("Logo not found for PDF");
+        doc.setTextColor(24, 60, 48);
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("G", 22, 28);
+        doc.setTextColor(255, 255, 255);
     }
 
-    // Split title if too long
-    doc.setFontSize(22);
+    // Titulo y Metadata
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
-    const title = "AUTORIZACIÓN DE COMPRA";
-    doc.text(title, 45, 18);
+    doc.text("ORDEN DE COMPRA", 50, 24);
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text("ORIGEN BOTÁNICO S.A.S.", 45, 24);
+    doc.text("ORIGEN BOTÁNICO S.A.S.", 50, 31);
     doc.setFontSize(8);
-    doc.text("NIT: 901.401.558-1", 45, 28);
+    doc.text("NIT: 901.401.558-1 | RIONEGRO - ANTIOQUIA", 50, 35);
 
     doc.setFontSize(9);
-    doc.text(`Fecha Emisión: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy")}`, 150, 15);
-    doc.text(`Pedido No: ${orden.numeroPedido || 'N/A'}`, 150, 21);
-    doc.setFontSize(11);
+    doc.text(`EMISIÓN: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy HH:mm")}`, 196, 18, { align: "right" });
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(`O.C. ID: ${orden.id.toUpperCase()}`, 150, 29);
+    doc.text(`OC No: ${orden.id.toUpperCase()}`, 196, 28, { align: "right" });
+    doc.setFontSize(10);
+    doc.text(`Ref Pedido: ${orden.numeroPedido || 'N/A'}`, 196, 35, { align: "right" });
     doc.setFont("helvetica", "normal");
 
     // Proveedor Info

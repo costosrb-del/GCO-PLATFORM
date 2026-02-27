@@ -14,7 +14,7 @@ export default function ComprasPage() {
         terceros, ordenes, insumos, productos, isLoading,
         createTercero, updateTercero, deleteTercero,
         createOrden, updateOrden, deleteOrden,
-        createInsumo, deleteInsumo,
+        createInsumo, updateInsumo, deleteInsumo,
         createProducto, updateProducto, deleteProducto
     } = useCompras();
 
@@ -137,6 +137,7 @@ export default function ComprasPage() {
                     <InsumosSection
                         insumos={insumos}
                         createInsumo={createInsumo}
+                        updateInsumo={updateInsumo}
                         deleteInsumo={deleteInsumo}
                     />
                 )}
@@ -157,6 +158,7 @@ export default function ComprasPage() {
                     viewingOrden={viewingOrden}
                     terceros={terceros}
                     insumos={insumos}
+                    updateOrden={updateOrden}
                 />
             </div>
         </div>
