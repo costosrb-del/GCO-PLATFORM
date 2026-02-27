@@ -239,11 +239,18 @@ export default function ComprasPage() {
         doc.rect(0, 0, 210, 40, "F");
         doc.setTextColor(255, 255, 255);
 
+        // logo
+        try {
+            doc.addImage("/logo.png", "PNG", 14, 8, 25, 25);
+        } catch (e) {
+            console.error("Logo not found for PDF");
+        }
+
         // Split title if too long
         doc.setFontSize(18);
         const title = "AUTORIZACION DE COMPRA ORIGEN BOTANICO";
-        const splitTitle = doc.splitTextToSize(title, 120);
-        doc.text(splitTitle, 14, 20);
+        const splitTitle = doc.splitTextToSize(title, 100);
+        doc.text(splitTitle, 45, 20);
 
         doc.setFontSize(9);
         doc.text(`Fecha: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy")}`, 150, 15);
@@ -1153,11 +1160,16 @@ export default function ComprasPage() {
                             <div className="bg-white rounded-lg overflow-hidden flex flex-col h-full">
                                 {/* Header estilizado */}
                                 <div className="bg-[#183C30] p-8 text-white flex justify-between items-start relative">
-                                    <div className="space-y-2">
-                                        <h2 className="text-3xl font-black tracking-tight uppercase">Autorización de Compra</h2>
-                                        <div className="flex items-center gap-4 text-emerald-100/80 text-sm font-medium">
-                                            <span className="bg-white/10 px-3 py-1 rounded-full border border-white/10 tracking-widest">ID: {viewingOrden.id}</span>
-                                            <span className="bg-white/10 px-3 py-1 rounded-full border border-white/10 uppercase tracking-widest">Pedido: {viewingOrden.numeroPedido || 'N/A'}</span>
+                                    <div className="flex items-start gap-6">
+                                        <div className="bg-white p-3 rounded-2xl shadow-xl flex-shrink-0 border-4 border-emerald-900/20">
+                                            <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h2 className="text-3xl font-black tracking-tight uppercase">Autorización de Compra</h2>
+                                            <div className="flex items-center gap-4 text-emerald-100/80 text-sm font-medium">
+                                                <span className="bg-white/10 px-3 py-1 rounded-full border border-white/10 tracking-widest">ID: {viewingOrden.id}</span>
+                                                <span className="bg-white/10 px-3 py-1 rounded-full border border-white/10 uppercase tracking-widest">Pedido: {viewingOrden.numeroPedido || 'N/A'}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="text-right flex flex-col items-end gap-3">
