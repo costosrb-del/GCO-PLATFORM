@@ -268,21 +268,23 @@ export default function ComprasPage() {
         doc.text("Detalle de la Orden", 14, 100);
 
         const tableBody = (orden.items && orden.items.length > 0)
-            ? orden.items.map(it => [
+            ? orden.items.map((it, idx) => [
+                (idx + 1).toString(),
                 it.insumo,
                 insumos.find(i => i.id === it.insumoId)?.sku || "N/A",
-                it.cantidad.toString(),
+                it.cantidad.toLocaleString(),
                 it.unidad,
                 `$${(it.precio_estimado || 0).toLocaleString()}`,
-                orden.tiempoEntrega || "A convenir"
+                `$${((it.cantidad || 0) * (it.precio_estimado || 0)).toLocaleString()}`
             ])
             : [[
-                orden.insumo,
+                "1",
+                orden.insumo.replace(/ \+\d+ más$/, ""),
                 insumos.find(i => i.id === orden.insumoId)?.sku || "N/A",
-                orden.cantidad.toString(),
+                orden.cantidad.toLocaleString(),
                 orden.unidad,
                 `$${(orden.precio_estimado || 0).toLocaleString()}`,
-                orden.tiempoEntrega || "A convenir"
+                `$${(orden.cantidad * (orden.precio_estimado || 0)).toLocaleString()}`
             ]];
 
         const totalEstimado = (orden.items && orden.items.length > 0)
@@ -291,10 +293,22 @@ export default function ComprasPage() {
 
         autoTable(doc, {
             startY: 105,
-            head: [["Insumo / Producto", "SKU Ref", "Cantidad", "Unidad", "Est. Unitario ($)", "Tiempo Requerido"]],
+            head: [["Item", "Descripción / Producto", "SKU Ref", "Cantidad", "Unidad", "Vr. Unitario", "Vr. Total"]],
             body: tableBody,
             theme: 'grid',
-            headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255] }
+            headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 9 },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                3: { halign: 'center' },
+                4: { halign: 'center' },
+                5: { halign: 'right' },
+                6: { halign: 'right', fontStyle: 'bold' }
+            },
+            foot: [[
+                { content: 'TOTAL BRUTO A PAGAR COP', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `$${totalEstimado.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [24, 60, 48] } }
+            ]]
         });
 
         let finalY = (doc as any).lastAutoTable.finalY + 10;
@@ -1177,7 +1191,8 @@ export default function ComprasPage() {
                                         <table className="w-full text-sm">
                                             <thead className="bg-[#183C30] text-white">
                                                 <tr>
-                                                    <th className="px-4 py-2 text-left">Insumo</th>
+                                                    <th className="px-4 py-2 text-center w-12">Item</th>
+                                                    <th className="px-4 py-2 text-left">Insumo / Descripción</th>
                                                     <th className="px-4 py-2 text-center">Cantidad</th>
                                                     <th className="px-4 py-2 text-right">Precio Un.</th>
                                                     <th className="px-4 py-2 text-right">Subtotal</th>
@@ -1187,16 +1202,18 @@ export default function ComprasPage() {
                                                 {(viewingOrden.items && viewingOrden.items.length > 0) ? (
                                                     viewingOrden.items.map((it, idx) => (
                                                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="px-4 py-2 text-slate-500 text-xs text-center">{idx + 1}</td>
                                                             <td className="px-4 py-2 font-medium text-slate-700">{it.insumo}</td>
-                                                            <td className="px-4 py-2 text-center">{it.cantidad} {it.unidad}</td>
+                                                            <td className="px-4 py-2 text-center">{it.cantidad.toLocaleString()} {it.unidad}</td>
                                                             <td className="px-4 py-2 text-right font-semibold text-slate-500">${(it.precio_estimado || 0).toLocaleString()}</td>
                                                             <td className="px-4 py-2 text-right font-bold text-teal-700">${((it.cantidad || 0) * (it.precio_estimado || 0)).toLocaleString()}</td>
                                                         </tr>
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td className="px-4 py-2 font-medium text-slate-700">{viewingOrden.insumo}</td>
-                                                        <td className="px-4 py-2 text-center">{viewingOrden.cantidad} {viewingOrden.unidad}</td>
+                                                        <td className="px-4 py-2 text-slate-500 text-xs text-center">1</td>
+                                                        <td className="px-4 py-2 font-medium text-slate-700">{viewingOrden.insumo.replace(/ \+\d+ más$/, "")}</td>
+                                                        <td className="px-4 py-2 text-center">{viewingOrden.cantidad.toLocaleString()} {viewingOrden.unidad}</td>
                                                         <td className="px-4 py-2 text-right font-semibold text-slate-500">${(viewingOrden.precio_estimado || 0).toLocaleString()}</td>
                                                         <td className="px-4 py-2 text-right font-bold text-teal-700">${((viewingOrden.cantidad || 0) * (viewingOrden.precio_estimado || 0)).toLocaleString()}</td>
                                                     </tr>
