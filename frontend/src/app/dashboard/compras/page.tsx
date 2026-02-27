@@ -14,7 +14,7 @@ import {
 import { Plus, Building2, ShoppingCart, CheckCircle, FileText, UploadCloud, Trash2, Package, Download, Factory, Edit2, X } from "lucide-react";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -269,6 +269,17 @@ export default function ComprasPage() {
         doc.text(`NIT / Documento: ${tercero.nit}`, 14, 69);
         doc.text(`Contacto: ${tercero.personaContacto} - ${tercero.numeroContacto}`, 14, 75);
         doc.text(`Correo: ${tercero.correo}`, 14, 81);
+
+        // Columna derecha: Logística
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Detalles de Entrega", 120, 55);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        const fSolicitada = orden.fechaSolicitada ? format(parseISO(orden.fechaSolicitada), "dd/MM/yyyy") : "POR DEFINIR";
+        doc.text(`Fecha Solicitada: ${fSolicitada}`, 120, 63);
+        doc.text(`Tiempo Estimado: ${orden.tiempoEntrega || 'N/A'}`, 120, 69);
+        doc.text(`Entregas Parciales: ${orden.entregasParciales || 'N/A'}`, 120, 75);
 
         // Orden de compra Detalle
         doc.setFontSize(14);
@@ -1215,7 +1226,7 @@ export default function ComprasPage() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-1">
                                                     <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Fecha Entrega</span>
-                                                    <p className="font-black text-slate-800 text-lg">{viewingOrden.fechaSolicitada ? format(new Date(viewingOrden.fechaSolicitada), 'dd/MM/yyyy') : 'POR DEFINIR'}</p>
+                                                    <p className="font-black text-slate-800 text-lg">{viewingOrden.fechaSolicitada ? format(parseISO(viewingOrden.fechaSolicitada), 'dd/MM/yyyy') : 'POR DEFINIR'}</p>
                                                 </div>
                                                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-1">
                                                     <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Tiempo</span>
@@ -1239,12 +1250,12 @@ export default function ComprasPage() {
                                         <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-200/50 bg-white">
                                             <table className="w-full text-sm">
                                                 <thead>
-                                                    <tr className="bg-slate-50 border-b border-slate-100">
-                                                        <th className="px-6 py-5 text-center w-20 text-slate-400 font-black uppercase text-[10px] tracking-widest">Item</th>
-                                                        <th className="px-6 py-5 text-left text-slate-400 font-black uppercase text-[10px] tracking-widest">Descripción / Producto</th>
-                                                        <th className="px-6 py-5 text-center text-slate-400 font-black uppercase text-[10px] tracking-widest">Cantidad</th>
-                                                        <th className="px-6 py-5 text-right text-slate-400 font-black uppercase text-[10px] tracking-widest">Vr. Unitario</th>
-                                                        <th className="px-6 py-5 text-right text-slate-400 font-black uppercase text-[10px] tracking-widest bg-emerald-50/50">Subtotal</th>
+                                                    <tr className="bg-[#183C30] border-b border-emerald-900">
+                                                        <th className="px-6 py-5 text-center w-20 text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Item</th>
+                                                        <th className="px-6 py-5 text-left text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Descripción / Producto</th>
+                                                        <th className="px-6 py-5 text-center text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Cantidad</th>
+                                                        <th className="px-6 py-5 text-right text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Vr. Unitario</th>
+                                                        <th className="px-6 py-5 text-right text-emerald-100/60 font-black uppercase text-[10px] tracking-widest border-l border-emerald-900/50">Subtotal</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
@@ -1259,7 +1270,7 @@ export default function ComprasPage() {
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-6 py-5 text-right font-bold text-slate-500">${(it.precio_estimado || 0).toLocaleString()}</td>
-                                                                <td className="px-6 py-5 text-right font-black text-emerald-700 text-xl bg-emerald-50/30">
+                                                                <td className="px-6 py-5 text-right font-black text-emerald-700 text-xl bg-emerald-50/30 border-l border-slate-100">
                                                                     ${((it.cantidad || 0) * (it.precio_estimado || 0)).toLocaleString()}
                                                                 </td>
                                                             </tr>
@@ -1274,16 +1285,16 @@ export default function ComprasPage() {
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-5 text-right font-bold text-slate-500">${(viewingOrden.precio_estimado || 0).toLocaleString()}</td>
-                                                            <td className="px-6 py-5 text-right font-black text-emerald-700 text-xl bg-emerald-50/30">
+                                                            <td className="px-6 py-5 text-right font-black text-emerald-700 text-xl bg-emerald-50/30 border-l border-slate-100">
                                                                 ${(viewingOrden.cantidad * (viewingOrden.precio_estimado || 0)).toLocaleString()}
                                                             </td>
                                                         </tr>
                                                     )}
                                                 </tbody>
-                                                <tfoot className="border-t-2 border-emerald-900 bg-[#183C30]">
+                                                <tfoot className="bg-[#183C30] border-t-4 border-emerald-900">
                                                     <tr>
-                                                        <td colSpan={4} className="px-8 py-6 text-right font-black uppercase tracking-[0.3em] text-[10px] text-white/60">Total Bruto de la Operación</td>
-                                                        <td className="px-8 py-6 text-right font-black text-3xl text-white">
+                                                        <td colSpan={4} className="px-8 py-8 text-right font-black uppercase tracking-[0.3em] text-[11px] text-emerald-100/60">Total Bruto a Pagar COP</td>
+                                                        <td className="px-8 py-8 text-right font-black text-4xl text-white border-l border-emerald-900/50">
                                                             ${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}
                                                         </td>
                                                     </tr>
