@@ -33,6 +33,10 @@ export default function ComprasPage() {
     const [ordenForm, setOrdenForm] = useState<Partial<OrdenCompra>>({
         terceroId: "", insumoId: "", insumo: "", cantidad: 0, unidad: "Unidad", estado: "Pendiente", tiempoEntrega: "", fechaSolicitada: format(new Date(), 'yyyy-MM-dd'), numeroPedido: "", notas: "", entregasParciales: ""
     });
+    // State for multiple order items
+    const [orderItems, setOrderItems] = useState<Array<{ insumoId: string; cantidad: number; unidad: string; precio_estimado: number }>>([
+        { insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }
+    ]);
 
     // Insumos state
     const [isInsumoDialogOpen, setIsInsumoDialogOpen] = useState(false);
@@ -51,6 +55,9 @@ export default function ComprasPage() {
     const [searchOrdenes, setSearchOrdenes] = useState("");
     const [searchInsumos, setSearchInsumos] = useState("");
     const [searchProductos, setSearchProductos] = useState("");
+    // NEW filters for orders
+    const [filterProviderId, setFilterProviderId] = useState("");
+    const [filterInsumoId, setFilterInsumoId] = useState("");
 
     // Receipt logic
     const [uploadingFile, setUploadingFile] = useState(false);
@@ -89,15 +96,56 @@ export default function ComprasPage() {
 
     // ---- ORDENES ----
     const handleSaveOrden = async () => {
-        if (!ordenForm.terceroId || !ordenForm.insumoId || !ordenForm.cantidad) return;
-        const insumoSeleccionado = insumos.find(i => i.id === ordenForm.insumoId);
-        if (!insumoSeleccionado) return;
+        // Validate provider selected
+        if (!ordenForm.terceroId) return;
+        // Ensure at least one item is filled
+        const validItems = orderItems.filter(it => it.insumoId && it.cantidad > 0);
+        if (validItems.length === 0) return;
 
-        await createOrden({
-            ...ordenForm,
-            insumo: insumoSeleccionado.nombre
+        let basePedido = ordenForm.numeroPedido || "GEN";
+        basePedido = basePedido.replace(/\s+/g, '-').toUpperCase();
+
+        const existingForPedido = ordenes.filter(o => o.numeroPedido === ordenForm.numeroPedido || o.numeroPedido === basePedido);
+        let maxSeq = 0;
+        existingForPedido.forEach(o => {
+            if (o.id) {
+                const parts = o.id.split('-');
+                if (parts.length >= 2) {
+                    const num = parseInt(parts[parts.length - 1], 10);
+                    if (!isNaN(num) && num > maxSeq) {
+                        maxSeq = num;
+                    }
+                }
+            }
         });
+
+        // For each item, create a separate order entry (backend currently expects single item)
+        for (const it of validItems) {
+            const insumoSeleccionado = insumos.find(i => i.id === it.insumoId);
+            if (!insumoSeleccionado) continue;
+
+            maxSeq++;
+            const newId = `${basePedido}-${maxSeq.toString().padStart(3, '0')}`;
+
+            await createOrden({
+                id: newId,
+                terceroId: ordenForm.terceroId,
+                insumoId: it.insumoId,
+                insumo: insumoSeleccionado.nombre,
+                cantidad: it.cantidad,
+                unidad: it.unidad,
+                precio_estimado: it.precio_estimado,
+                estado: "Pendiente",
+                tiempoEntrega: ordenForm.tiempoEntrega || "",
+                fechaSolicitada: ordenForm.fechaSolicitada || format(new Date(), 'yyyy-MM-dd'),
+                numeroPedido: ordenForm.numeroPedido || "",
+                notas: ordenForm.notas || "",
+                entregasParciales: ordenForm.entregasParciales || ""
+            });
+        }
+        // Reset forms
         setOrdenForm({ terceroId: "", insumoId: "", insumo: "", cantidad: 0, unidad: "Unidad", estado: "Pendiente", tiempoEntrega: "" });
+        setOrderItems([{ insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }]);
         setIsOrdenDialogOpen(false);
     };
 
@@ -168,7 +216,7 @@ export default function ComprasPage() {
 
         doc.setFontSize(10);
         doc.text(`Fecha: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy")}`, 150, 20);
-        doc.text(`ID Orden: ${orden.id.substring(0, 8).toUpperCase()}`, 150, 26);
+        doc.text(`ID Orden: ${orden.id.toUpperCase()}`, 150, 26);
 
         // Proveedor Info
         doc.setTextColor(30, 30, 30);
@@ -261,13 +309,19 @@ export default function ComprasPage() {
     );
     const filteredOrdenes = ordenes.filter(o => {
         const t = terceros.find(terc => terc.id === o.terceroId);
-        return o.insumo.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+        // Apply search filter
+        const matchesSearch = o.insumo.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             o.estado.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (t?.nombre || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (o.id || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (o.numeroPedido || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (o.notas || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
             (o.fechaSolicitada || "").toLowerCase().includes(searchOrdenes.toLowerCase());
+        // Provider filter
+        const matchesProvider = filterProviderId ? (t?.id === filterProviderId) : true;
+        // Insumo filter
+        const matchesInsumo = filterInsumoId ? (o.insumoId === filterInsumoId) : true;
+        return matchesSearch && matchesProvider && matchesInsumo;
     });
     const filteredProductos = productos.filter(p =>
         p.nombre.toLowerCase().includes(searchProductos.toLowerCase()) ||
@@ -477,8 +531,13 @@ export default function ComprasPage() {
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-[450px]">
                                         <DialogHeader>
-                                            <DialogTitle>Crear Orden de Compra</DialogTitle>
+                                            <DialogTitle>ORDEN DE COMPRA ORIGEN BOTÁNICO - {format(new Date(), 'dd/MM/yyyy')}</DialogTitle>
                                         </DialogHeader>
+                                        <div className="text-sm text-gray-600 mb-2">
+                                            ZN E CENTRO LOGISTICO BG 16 DEL CRUCE DEL TABLAZO 900 MTS VIA ZONA FRANCA<br />
+                                            Tel: (604) 2966310<br />
+                                            Rionegro - Colombia
+                                        </div>
                                         <div className="grid gap-4 py-4">
                                             <div className="space-y-1">
                                                 <label className="text-xs font-semibold text-gray-600">Proveedor</label>
@@ -493,75 +552,101 @@ export default function ComprasPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-semibold text-gray-600">Insumo / Producto a pedir</label>
-                                                <Select value={ordenForm.insumoId} onValueChange={v => {
-                                                    const selectedInsumo = insumos.find(i => i.id === v);
-                                                    const provSelect = terceros.find(t => t.id === ordenForm.terceroId);
-                                                    const precioProv = provSelect?.insumosPrecios?.find(ip => ip.insumoId === v)?.precio || selectedInsumo?.precio || 0;
-                                                    setOrdenForm({
-                                                        ...ordenForm,
-                                                        insumoId: v,
-                                                        unidad: selectedInsumo?.unidad || "Unidad",
-                                                        precio_estimado: precioProv
-                                                    });
-                                                }} disabled={!ordenForm.terceroId}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder={!ordenForm.terceroId ? "Seleccione un proveedor primero" : "Seleccione Insumo Registrado"} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {insumos.filter(i => {
-                                                            if (!ordenForm.terceroId) return false;
-                                                            const prov = terceros.find(t => t.id === ordenForm.terceroId);
-                                                            if (!prov) return false;
-                                                            return (prov.insumos || "").toLowerCase().includes(`[${i.sku.toLowerCase()}]`);
-                                                        }).map(i => {
-                                                            const prov = terceros.find(t => t.id === ordenForm.terceroId);
-                                                            const currentPx = prov?.insumosPrecios?.find(ip => ip.insumoId === i.id)?.precio;
-                                                            if (currentPx !== undefined) {
-                                                                return (
-                                                                    <SelectItem key={i.id} value={i.id} className="text-indigo-700 font-medium bg-indigo-50/30">
-                                                                        ★ {i.sku} - {i.nombre} (${currentPx.toLocaleString()})
-                                                                    </SelectItem>
-                                                                );
-                                                            }
-                                                            return (
-                                                                <SelectItem key={i.id} value={i.id}>{i.sku} - {i.nombre}</SelectItem>
-                                                            )
-                                                        })}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
                                             <div className="flex gap-4">
                                                 <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">No. de Pedido</label>
-                                                    <Input value={ordenForm.numeroPedido || ''} onChange={e => setOrdenForm({ ...ordenForm, numeroPedido: e.target.value })} placeholder="Ej. PED-2023-01" />
+                                                    <label className="text-xs font-semibold text-gray-600">No. de Pedido Interno (Ej: 55)</label>
+                                                    <Input value={ordenForm.numeroPedido || ''} onChange={e => setOrdenForm({ ...ordenForm, numeroPedido: e.target.value })} placeholder="Ej. 55" />
                                                 </div>
                                                 <div className="space-y-1 flex-1">
                                                     <label className="text-xs font-semibold text-gray-600">Fecha Solicitada</label>
                                                     <Input type="date" value={ordenForm.fechaSolicitada || ''} onChange={e => setOrdenForm({ ...ordenForm, fechaSolicitada: e.target.value })} />
                                                 </div>
                                             </div>
-                                            <div className="flex gap-4">
-                                                <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">Val. Unitario ($)</label>
-                                                    <Input type="number" value={ordenForm.precio_estimado || ''} onChange={e => setOrdenForm({ ...ordenForm, precio_estimado: Number(e.target.value) })} />
+                                            <div className="space-y-3 p-4 border rounded-xl bg-gray-50/50">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <label className="text-sm font-bold text-gray-800">Insumos a Pedir</label>
+                                                    <Button variant="outline" size="sm" onClick={() => setOrderItems([...orderItems, { insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }])}>
+                                                        <Plus className="w-4 h-4 mr-1" /> Agregar Insumo
+                                                    </Button>
                                                 </div>
-                                                <div className="space-y-1 flex-1">
-                                                    <label className="text-xs font-semibold text-gray-600">Cant. / Und.</label>
-                                                    <div className="flex gap-2">
-                                                        <Input className="flex-1" type="number" value={ordenForm.cantidad || ''} onChange={e => setOrdenForm({ ...ordenForm, cantidad: Number(e.target.value) })} />
-                                                        <Select value={ordenForm.unidad} onValueChange={v => setOrdenForm({ ...ordenForm, unidad: v })}>
-                                                            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="Unidad">Und</SelectItem>
-                                                                <SelectItem value="Kilogramo">Kg</SelectItem>
-                                                                <SelectItem value="Litro">Lt</SelectItem>
-                                                                <SelectItem value="Caja">Caja</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                {orderItems.map((item, index) => (
+                                                    <div key={index} className="space-y-3 p-4 bg-white border border-gray-100 rounded-lg relative">
+                                                        {orderItems.length > 1 && (
+                                                            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => setOrderItems(orderItems.filter((_, i) => i !== index))}>
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
+                                                        <div className="space-y-1 pr-6">
+                                                            <label className="text-xs font-semibold text-gray-600">Insumo / Producto a pedir</label>
+                                                            <Select value={item.insumoId} onValueChange={v => {
+                                                                const selectedInsumo = insumos.find(i => i.id === v);
+                                                                const provSelect = terceros.find(t => t.id === ordenForm.terceroId);
+                                                                const precioProv = provSelect?.insumosPrecios?.find(ip => ip.insumoId === v)?.precio || selectedInsumo?.precio || 0;
+                                                                const newItems = [...orderItems];
+                                                                newItems[index] = { ...newItems[index], insumoId: v, unidad: selectedInsumo?.unidad || "Unidad", precio_estimado: precioProv };
+                                                                setOrderItems(newItems);
+                                                            }} disabled={!ordenForm.terceroId}>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder={!ordenForm.terceroId ? "Seleccione proveedor primero" : "Seleccione Insumo"} />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {insumos.filter(i => {
+                                                                        if (!ordenForm.terceroId) return false;
+                                                                        const prov = terceros.find(t => t.id === ordenForm.terceroId);
+                                                                        if (!prov) return false;
+                                                                        return (prov.insumos || "").toLowerCase().includes(`[${i.sku.toLowerCase()}]`);
+                                                                    }).map(i => {
+                                                                        const prov = terceros.find(t => t.id === ordenForm.terceroId);
+                                                                        const currentPx = prov?.insumosPrecios?.find(ip => ip.insumoId === i.id)?.precio;
+                                                                        if (currentPx !== undefined) {
+                                                                            return (
+                                                                                <SelectItem key={i.id} value={i.id} className="text-indigo-700 font-medium bg-indigo-50/30">
+                                                                                    ★ {i.sku} - {i.nombre} (${currentPx.toLocaleString()})
+                                                                                </SelectItem>
+                                                                            );
+                                                                        }
+                                                                        return (
+                                                                            <SelectItem key={i.id} value={i.id}>{i.sku} - {i.nombre}</SelectItem>
+                                                                        )
+                                                                    })}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="flex gap-4">
+                                                            <div className="space-y-1 flex-1">
+                                                                <label className="text-xs font-semibold text-gray-600">Val. Unitario ($)</label>
+                                                                <Input type="number" value={item.precio_estimado || ''} onChange={e => {
+                                                                    const newItems = [...orderItems];
+                                                                    newItems[index].precio_estimado = Number(e.target.value);
+                                                                    setOrderItems(newItems);
+                                                                }} />
+                                                            </div>
+                                                            <div className="space-y-1 flex-1">
+                                                                <label className="text-xs font-semibold text-gray-600">Cant. / Und.</label>
+                                                                <div className="flex gap-2">
+                                                                    <Input className="flex-1" type="number" value={item.cantidad || ''} onChange={e => {
+                                                                        const newItems = [...orderItems];
+                                                                        newItems[index].cantidad = Number(e.target.value);
+                                                                        setOrderItems(newItems);
+                                                                    }} />
+                                                                    <Select value={item.unidad} onValueChange={v => {
+                                                                        const newItems = [...orderItems];
+                                                                        newItems[index].unidad = v;
+                                                                        setOrderItems(newItems);
+                                                                    }}>
+                                                                        <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Unidad">Und</SelectItem>
+                                                                            <SelectItem value="Kilogramo">Kg</SelectItem>
+                                                                            <SelectItem value="Litro">Lt</SelectItem>
+                                                                            <SelectItem value="Caja">Caja</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                ))}
                                             </div>
                                             <div className="flex gap-4">
                                                 <div className="space-y-1 flex-1">
@@ -579,6 +664,7 @@ export default function ComprasPage() {
                                             </div>
 
                                             <Button onClick={handleSaveOrden} className="mt-4 bg-[#183C30] hover:bg-[#122e24]">Generar Orden</Button>
+                                            <p className="text-xs text-gray-500 mt-2">Esta orden será facturada a las empresas que vayamos indicando a medida que entreguen.</p>
                                         </div>
                                     </DialogContent>
                                 </Dialog>
@@ -602,7 +688,12 @@ export default function ComprasPage() {
                                         <div key={o.id} className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] p-4 items-center hover:bg-slate-50 transition-colors">
                                             <div>
                                                 <p className="font-semibold text-gray-800 text-sm">{o.insumo}</p>
-                                                {o.created_at && <p className="text-xs text-gray-400">Creada: {format(new Date(o.created_at), 'dd/MM/yyyy')}</p>}
+                                                <div className="flex gap-2 items-center mt-0.5">
+                                                    <span className="text-[10px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-mono border border-gray-200" title="ID de Orden Secuencial">
+                                                        {o.id}
+                                                    </span>
+                                                    {o.created_at && <p className="text-[10px] text-gray-400">Creada: {format(new Date(o.created_at), 'dd/MM/yyyy')}</p>}
+                                                </div>
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium text-gray-700">{tercero?.nombre || "Desconocido"}</p>

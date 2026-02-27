@@ -47,6 +47,15 @@ def create_insumo(data: dict):
             print(f"Error saving insumo Firebase: {e}")
     return data
 
+def update_insumo(insumo_id: str, data: dict):
+    if db:
+        try:
+            db.collection(COLLECTION_INSUMOS).document(insumo_id).update(data)
+            return True
+        except Exception as e:
+            print(f"Error updating insumo Firebase: {e}")
+    return False
+
 def delete_insumo(insumo_id: str):
     if db:
         try:
