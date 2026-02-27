@@ -42,7 +42,7 @@ export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: 
     // ── SEPARADOR VERTICAL ───────────────────────────────────────────────
     doc.setDrawColor(200, 220, 210);
     doc.setLineWidth(0.3);
-    doc.line(122, 8, 122, 40);
+    doc.line(148, 8, 148, 40);
 
     // ── ZONA DERECHA: Metadatos OC (x: 125 → 198, right-align a 197) ─────
     doc.setFontSize(7.5);
