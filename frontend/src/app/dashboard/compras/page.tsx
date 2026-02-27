@@ -665,37 +665,38 @@ export default function ComprasPage() {
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
-                                                        <div className="flex gap-4">
-                                                            <div className="space-y-1 flex-1">
+                                                        <div className="grid grid-cols-12 gap-3">
+                                                            <div className="col-span-4 space-y-1">
                                                                 <label className="text-xs font-semibold text-gray-600">Val. Unitario ($)</label>
-                                                                <Input type="number" value={item.precio_estimado || ''} onChange={e => {
+                                                                <Input className="h-10" type="number" value={item.precio_estimado || ''} onChange={e => {
                                                                     const newItems = [...orderItems];
                                                                     newItems[index].precio_estimado = Number(e.target.value);
                                                                     setOrderItems(newItems);
                                                                 }} />
                                                             </div>
-                                                            <div className="space-y-1 flex-1">
-                                                                <label className="text-xs font-semibold text-gray-600">Cant. / Und.</label>
-                                                                <div className="flex gap-2">
-                                                                    <Input className="flex-1" type="number" value={item.cantidad || ''} onChange={e => {
-                                                                        const newItems = [...orderItems];
-                                                                        newItems[index].cantidad = Number(e.target.value);
-                                                                        setOrderItems(newItems);
-                                                                    }} />
-                                                                    <Select value={item.unidad} onValueChange={v => {
-                                                                        const newItems = [...orderItems];
-                                                                        newItems[index].unidad = v;
-                                                                        setOrderItems(newItems);
-                                                                    }}>
-                                                                        <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="Unidad">Und</SelectItem>
-                                                                            <SelectItem value="Kilogramo">Kg</SelectItem>
-                                                                            <SelectItem value="Litro">Lt</SelectItem>
-                                                                            <SelectItem value="Caja">Caja</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
+                                                            <div className="col-span-4 space-y-1">
+                                                                <label className="text-xs font-semibold text-gray-600">Cantidad</label>
+                                                                <Input className="h-10" type="number" value={item.cantidad || ''} onChange={e => {
+                                                                    const newItems = [...orderItems];
+                                                                    newItems[index].cantidad = Number(e.target.value);
+                                                                    setOrderItems(newItems);
+                                                                }} />
+                                                            </div>
+                                                            <div className="col-span-4 space-y-1">
+                                                                <label className="text-xs font-semibold text-gray-600">Und.</label>
+                                                                <Select value={item.unidad} onValueChange={v => {
+                                                                    const newItems = [...orderItems];
+                                                                    newItems[index].unidad = v;
+                                                                    setOrderItems(newItems);
+                                                                }}>
+                                                                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="Unidad">Und</SelectItem>
+                                                                        <SelectItem value="Kilogramo">Kg</SelectItem>
+                                                                        <SelectItem value="Litro">Lt</SelectItem>
+                                                                        <SelectItem value="Caja">Caja</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </div>
                                                         </div>
                                                     </div>
