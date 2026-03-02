@@ -41,6 +41,7 @@ export interface BorradorMRP {
     lineas?: { productoId: string; cantidad: number }[];
     cantidadesOverride?: Record<string, number>;
     proveedoresOverride?: Record<string, string>;
+    empaquesSplit?: Record<string, Record<string, number>>;
     updated_at?: string;
     created_at?: string;
 }

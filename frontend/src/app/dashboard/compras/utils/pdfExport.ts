@@ -2,11 +2,10 @@ import { OrdenCompra, Tercero, Insumo } from "@/hooks/useCompras";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
-
-// ── PDF Export (existente) ─────────────────────────────────────────────────────
+import { parseISO } from "date-fns";
+// jsPDF importado en el módulo (lazy-chunked vía webpack)
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { parseISO } from "date-fns";
 
 export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]) => {
     const doc = new jsPDF();
@@ -280,3 +279,191 @@ export const exportarOrdenesExcel = (ordenes: OrdenCompra[], terceros: Tercero[]
 
     XLSX.writeFile(wb, `Ordenes_Compra_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
 };
+
+// ── Generación de PDF como Blob (sin auto-descarga) ──────────────────────────
+/**
+ * Igual que exportarOrdenPDF pero devuelve un Blob en lugar de descargar.
+ * Lo usa descargarZIPPedido para empaquetar todos los PDFs en un ZIP.
+ */
+export const generarPDFOrdenBlob = (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]): Blob => {
+    const doc = new jsPDF();
+
+    doc.setFillColor(24, 60, 48);
+    doc.rect(0, 0, 210, 48, "F");
+    try {
+        const logoPath = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png";
+        doc.addImage(logoPath, "PNG", 12, 6, 36, 36);
+    } catch {
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("OB", 18, 28);
+    }
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.setFont("helvetica", "bold");
+    doc.text("AUTORIZACIÓN DE COMPRA", 52, 20);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("ORIGEN BOTÁNICO", 52, 30);
+    doc.setDrawColor(200, 220, 210);
+    doc.setLineWidth(0.3);
+    doc.line(148, 8, 148, 40);
+    doc.setFontSize(7.5);
+    doc.text(`Fecha emisión: ${format(new Date(orden.created_at || new Date()), "dd/MM/yyyy HH:mm")}`, 197, 14, { align: "right" });
+    doc.setFontSize(8);
+    doc.text(`Pedido No: ${orden.numeroPedido || "N/A"}`, 197, 21, { align: "right" });
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`O.C. ID: ${orden.id.toUpperCase()}`, 197, 33, { align: "right" });
+    doc.setFont("helvetica", "normal");
+
+    const estadoColors: Record<string, [number, number, number]> = {
+        "Aprobada": [16, 185, 129], "Pendiente": [245, 158, 11],
+        "Cancelada": [239, 68, 68], "Recibido": [59, 130, 246],
+    };
+    const estadoColor = estadoColors[orden.estado] || [100, 100, 100];
+    doc.setFillColor(...estadoColor);
+    doc.roundedRect(52, 33, 40, 8, 2, 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(orden.estado.toUpperCase(), 72, 38.5, { align: "center" });
+
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Datos del Proveedor", 14, 55);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Razón Social: ${tercero.nombre}`, 14, 63);
+    doc.text(`NIT / Documento: ${tercero.nit}`, 14, 69);
+    doc.text(`Contacto: ${tercero.personaContacto} - ${tercero.numeroContacto}`, 14, 75);
+    doc.text(`Correo: ${tercero.correo}`, 14, 81);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detalles de Entrega", 120, 55);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const fSolicitada = orden.fechaSolicitada ? format(parseISO(orden.fechaSolicitada), "dd/MM/yyyy") : "POR DEFINIR";
+    doc.text(`Fecha Solicitada: ${fSolicitada}`, 120, 63);
+    doc.text(`Tiempo Estimado: ${orden.tiempoEntrega || "N/A"}`, 120, 69);
+    if (orden.aprobadoPor) {
+        doc.setTextColor(16, 185, 129);
+        doc.setFont("helvetica", "bold");
+        doc.text(`✓ Aprobado por: ${orden.aprobadoPor}`, 120, 75);
+        doc.setTextColor(30, 30, 30);
+        doc.setFont("helvetica", "normal");
+    }
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detalle de la Orden", 14, 100);
+
+    const tableBody = (orden.items && orden.items.length > 0)
+        ? orden.items.map((it, idx) => [
+            (idx + 1).toString(), it.insumo,
+            insumos.find(i => i.id === it.insumoId)?.sku || "N/A",
+            it.cantidad.toLocaleString(), it.unidad,
+            `$${(it.precio_estimado || 0).toLocaleString()}`,
+            `$${((it.cantidad || 0) * (it.precio_estimado || 0)).toLocaleString()}`
+        ])
+        : [["1", (orden.insumo || "").replace(/ \+\d+ más$/, ""),
+            insumos.find(i => i.id === orden.insumoId)?.sku || "N/A",
+            (orden.cantidad || 0).toLocaleString(), orden.unidad,
+            `$${(orden.precio_estimado || 0).toLocaleString()}`,
+            `$${((orden.cantidad || 0) * (orden.precio_estimado || 0)).toLocaleString()}`]];
+
+    const totalEstimado = (orden.items && orden.items.length > 0)
+        ? orden.items.reduce((sum, it) => sum + (it.cantidad * (it.precio_estimado || 0)), 0)
+        : ((orden.cantidad || 0) * (orden.precio_estimado || 0));
+
+    autoTable(doc, {
+        startY: 105,
+        head: [["Item", "Descripción / Producto", "SKU Ref", "Cantidad", "Unidad", "Vr. Unitario", "Vr. Total"]],
+        body: tableBody,
+        theme: "grid",
+        headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: "bold" },
+        styles: { fontSize: 9 },
+        columnStyles: {
+            0: { cellWidth: 10 }, 3: { halign: "center" }, 4: { halign: "center" },
+            5: { halign: "right" }, 6: { halign: "right", fontStyle: "bold" }
+        },
+        foot: [[
+            { content: "TOTAL BRUTO A PAGAR COP", colSpan: 6, styles: { halign: "right", fontStyle: "bold", fillColor: [24, 60, 48], textColor: [255, 255, 255] } },
+            { content: `$${totalEstimado.toLocaleString()}`, styles: { halign: "right", fontStyle: "bold", fillColor: [24, 60, 48], textColor: [255, 255, 255] } }
+        ]]
+    });
+
+    let finalY = (doc as any).lastAutoTable.finalY + 10;
+    if (orden.notas) {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "italic");
+        const splitNotes = doc.splitTextToSize(`Notas: ${orden.notas}`, 180);
+        doc.text(splitNotes, 14, finalY);
+        finalY += (splitNotes.length * 5) + 8;
+    }
+
+    doc.setFillColor(24, 60, 48);
+    doc.rect(120, finalY - 8, 76, 15, "F");
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL: $${totalEstimado.toLocaleString()}`, 125, finalY + 1.5);
+
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(24, 60, 48);
+        doc.rect(0, 285, 210, 15, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text("ORIGEN BOTÁNICO - ZN E CENTRO LOGISTICO BG 16 Rionegro, Antioquia", 14, 292);
+        doc.text(`Página ${i} de ${pageCount}`, 180, 292);
+    }
+
+    return doc.output("blob") as unknown as Blob;
+};
+
+// ── Descarga ZIP con todos los PDFs del pedido ────────────────────────────────
+export const descargarZIPPedido = async (
+    ordenes: OrdenCompra[],
+    terceros: Tercero[],
+    insumos: Insumo[],
+    numeroPedido: string,
+    onProgress?: (pct: number) => void
+): Promise<void> => {
+    // Carga JSZip de forma dinámica (chunk separado, no aumenta bundle inicial)
+    const JSZip = (await import("jszip" as any)).default as any;
+    const zip = new JSZip();
+
+    const folder = zip.folder(`Pedido_${numeroPedido}`);
+    let done = 0;
+
+    for (const orden of ordenes) {
+        const tercero = terceros.find(t => t.id === orden.terceroId);
+        if (!tercero) { done++; continue; }
+
+        const blob = generarPDFOrdenBlob(orden, tercero, insumos);
+        const safeName = tercero.nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g, "_");
+        folder.file(`OC_${orden.id}_${safeName}.pdf`, blob);
+
+        done++;
+        onProgress?.(Math.round((done / ordenes.length) * 100));
+    }
+
+    const content = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+    });
+
+    const url = URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `MRP_Pedido_${numeroPedido}_${format(new Date(), "yyyyMMdd_HHmm")}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,21 +7,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
     Sparkles, Plus, X, ChevronRight, ShoppingCart, Package, Building2,
     AlertCircle, CheckCircle2, Wand2, FileDown, Trash2, Save, FolderOpen,
-    RefreshCw, Settings2, Info, Edit3, ChevronDown, ChevronUp, History,
-    ArrowRightLeft, Clock, Boxes, TrendingUp
+    Settings2, ArrowRightLeft, Clock, Boxes, TrendingUp, Archive, Loader2
 } from "lucide-react";
 import { ProductoFabricado, Insumo, Tercero, OrdenCompra, BorradorMRP } from "@/hooks/useCompras";
 import { useOCSnapshot, useInventoryStock, useBorradores } from "@/hooks/useMRP";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { exportarOrdenesExcel } from "../utils/pdfExport";
+import { exportarOrdenesExcel, descargarZIPPedido } from "../utils/pdfExport";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-/** Parsea el campo rendimiento de Insumo. "80%" → 0.8 | "1.5" → usa directamente como divisor */
-function parseRendimiento(raw: string | undefined): number {
+/**
+ * Parsea el campo rendimiento:
+ * - "80%"  → 0.8  (eficiencia: pedir 25% más para compensar merma)
+ * - "12"   → 12  (empaque: 12 unidades por caja → dividir para saber # cajas)
+ * - "0.85" → 0.85 (fracción directa de eficiencia)
+ * En todos los casos: cantidadFinal = cantBruta / factor
+ */
+function parseRendimientoFactor(raw: string | undefined): number {
     if (!raw || raw.trim() === "" || raw === "N/A") return 1;
     const s = raw.trim();
     if (s.includes("%")) {
@@ -29,15 +34,24 @@ function parseRendimiento(raw: string | undefined): number {
         if (!isNaN(n) && n > 0) return n / 100;
     }
     const n = parseFloat(s);
-    if (!isNaN(n) && n > 0 && n <= 1) return n;   // ya es fracción (ej. 0.85)
-    return 1; // texto libre — sin ajuste
+    if (!isNaN(n) && n > 0) return n;   // <1 = eficiencia | >1 = unidades/empaque
+    return 1;
 }
 
-/** Redondea hacia arriba al múltiplo de loteMinimo. Si loteMinimo <=0, devuelve qty tal cual. */
+/** Devuelve true si el campo rendimiento indica "unidades por empaque" (n > 1) */
+function esEmpaque(raw: string | undefined): boolean {
+    if (!raw) return false;
+    if (raw.includes("%")) return false;
+    const n = parseFloat(raw.trim());
+    return !isNaN(n) && n > 1;
+}
+
+/** Redondea hacia arriba al múltiplo de loteMinimo. */
 function redondearLote(qty: number, loteMinimo: number): number {
     if (!loteMinimo || loteMinimo <= 0) return Math.ceil(qty);
     return Math.ceil(qty / loteMinimo) * loteMinimo;
 }
+
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 interface LineaPedido { uuid: string; productoId: string; cantidad: number }
@@ -46,22 +60,28 @@ interface InsumoRequerido {
     insumoId: string;
     insumoNombre: string;
     insumoSku: string;
-    cantidadBruta: number;        // solo BOM
-    cantidadConRendimiento: number; // ajustada por yield
-    stockDisponible: number;      // actual en bodega
-    ocPendiente: number;          // en tránsito
-    cantidadNeta: number;         // bruta - stock - OC
-    cantidadConColchon: number;   // neta * (1 + colchon%)
-    cantidadLote: number;         // redondeada a lote mínimo
-    cantidadFinal: number;        // override o cantidadLote
+    cantidadBruta: number;
+    cantidadConRendimiento: number;
+    rendimientoFactor: number;      // el divisor real usado
+    esEmpaqueInsumo: boolean;       // true si rendimiento > 1 (unidades/caja)
+    unidadesPorEmpaque: number;     // si es empaque: cuántas unidades caben
+    stockDisponible: number;
+    ocPendiente: number;
+    cantidadNeta: number;
+    cantidadConColchon: number;
+    cantidadLote: number;
+    cantidadFinal: number;
     unidad: string;
     precioUnitario: number;
     subtotal: number;
     loteMinimo: number;
-    origenProductos: { nombre: string; cantidad: number; cantUnitaria: number }[];
+    origenProductos: { nombre: string; cantidad: number; cantUnitaria: number; totalUnidades: number }[];
     proveedoresDisponibles: { terceroId: string; nombre: string; precio: number }[];
     terceroIdAsignado: string;
     terceroNombreAsignado: string;
+    // Para empaques alternativos del mismo grupo producto+clasificacion
+    grupoEmpaque?: string;  // key = productoId:clasificacion
+    pctSplit?: number;      // % asignado a este empaque (0-100)
 }
 
 interface OrdenPorProveedor {
@@ -100,15 +120,19 @@ export const GeneradorPedidoSection = ({
     const [proveedoresOverride, setProveedoresOverride] = useState<Record<string, string>>({});
     const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set(["__ALL__"]));
 
-    // ── UI state ─────────────────────────────────────────────────────────────
+    // ── UI state ───────────────────────────────────────────────────────────────────────
     const [generando, setGenerando] = useState(false);
+    const [generandoZIP, setGenerandoZIP] = useState(false);
+    const [zipProgress, setZipProgress] = useState(0);
     const [ordenesGeneradas, setOrdenesGeneradas] = useState<string[]>([]);
+    const [ordenesGeneradasObj, setOrdenesGeneradasObj] = useState<OrdenCompra[]>([]);
     const [showConfirm, setShowConfirm] = useState(false);
     const [showBorradores, setShowBorradores] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
-    const [borradoresExpandida, setBorradoresExpandida] = useState(false);
     const [borradorNombre, setBorradorNombre] = useState("");
     const [borradorActualId, setBorradorActualId] = useState<string | null>(null);
+    // Split % para empaques alternativos: key = grupoeId, value = Record<insumoId, pct>
+    const [empaquesSplit, setEmpaquesSplit] = useState<Record<string, Record<string, number>>>({});
 
     // ── Data externa ─────────────────────────────────────────────────────────
     const { data: ocSnapshot = {} } = useOCSnapshot();
@@ -128,6 +152,8 @@ export const GeneradorPedidoSection = ({
 
         // PASO 1: Explosión BOM
         const insumoMap = new Map<string, InsumoRequerido>();
+        // grupoEmpaque: por producto + clasificación → [insumoId, ...]
+        const gruposEmpaque = new Map<string, string[]>();
 
         for (const linea of validas) {
             const prod = productos.find(p => p.id === linea.productoId);
@@ -137,17 +163,32 @@ export const GeneradorPedidoSection = ({
                 const ins = insumos.find(i => i.id === ia.insumoId);
                 if (!ins) continue;
 
-                const cantBruta = ia.cantidadRequerida * linea.cantidad;
-                const rend = parseRendimiento(ins.rendimiento);
-                const cantConRend = cantBruta / rend;
+                const rendFactor = parseRendimientoFactor(ins.rendimiento);
+                const esEmpq = esEmpaque(ins.rendimiento);
+                const unidadesPorEmpq = esEmpq ? rendFactor : 1;
+
+                // Para empaques: cantBruta = unidades del producto a fabricar
+                // Para materia prima normal: cantBruta = cantidadRequerida * cantidad
+                let cantBruta: number;
+                let cantConRend: number;
+
+                if (esEmpq) {
+                    // El campo cantidadRequerida en BOM puede ser 1 (relativo a la unidad de producto)
+                    // La cantidad de cajas = ceil(unidades / unidadesPorCaja * pctSplit)
+                    // Acumulamos unidades brutas para luego aplicar el split
+                    cantBruta = linea.cantidad;      // unidades de producto
+                    cantConRend = linea.cantidad;    // se calculará al aplicar split
+                } else {
+                    cantBruta = ia.cantidadRequerida * linea.cantidad;
+                    cantConRend = cantBruta / rendFactor;
+                }
 
                 if (insumoMap.has(ia.insumoId)) {
                     const ex = insumoMap.get(ia.insumoId)!;
                     ex.cantidadBruta += cantBruta;
                     ex.cantidadConRendimiento += cantConRend;
-                    ex.origenProductos.push({ nombre: prod.nombre, cantidad: linea.cantidad, cantUnitaria: ia.cantidadRequerida });
+                    ex.origenProductos.push({ nombre: prod.nombre, cantidad: linea.cantidad, cantUnitaria: ia.cantidadRequerida, totalUnidades: linea.cantidad });
                 } else {
-                    // Buscar todos los proveedores disponibles para este insumo
                     const provsDisponibles = terceros
                         .filter(t => (t.insumos || "").toLowerCase().includes(`[${ins.sku.toLowerCase()}]`) ||
                             t.insumosPrecios?.some(ip => ip.insumoId === ia.insumoId))
@@ -156,7 +197,16 @@ export const GeneradorPedidoSection = ({
                             nombre: t.nombre,
                             precio: t.insumosPrecios?.find(ip => ip.insumoId === ia.insumoId)?.precio ?? ins.precio ?? 0,
                         }))
-                        .sort((a, b) => a.precio - b.precio); // orden por precio (más barato primero)
+                        .sort((a, b) => a.precio - b.precio);
+
+                    // Detectar grupo de empaques alternativos
+                    const clasificacion = ins.clasificacion || "General";
+                    const grupoKey = esEmpq ? `${prod.id}:${clasificacion}` : undefined;
+                    if (grupoKey) {
+                        const arr = gruposEmpaque.get(grupoKey) ?? [];
+                        arr.push(ia.insumoId);
+                        gruposEmpaque.set(grupoKey, arr);
+                    }
 
                     insumoMap.set(ia.insumoId, {
                         insumoId: ia.insumoId,
@@ -164,6 +214,9 @@ export const GeneradorPedidoSection = ({
                         insumoSku: ins.sku,
                         cantidadBruta: cantBruta,
                         cantidadConRendimiento: cantConRend,
+                        rendimientoFactor: rendFactor,
+                        esEmpaqueInsumo: esEmpq,
+                        unidadesPorEmpaque: unidadesPorEmpq,
                         stockDisponible: 0,
                         ocPendiente: 0,
                         cantidadNeta: 0,
@@ -174,12 +227,51 @@ export const GeneradorPedidoSection = ({
                         precioUnitario: provsDisponibles[0]?.precio ?? ins.precio ?? 0,
                         subtotal: 0,
                         loteMinimo: ins.loteMinimo ?? 0,
-                        origenProductos: [{ nombre: prod.nombre, cantidad: linea.cantidad, cantUnitaria: ia.cantidadRequerida }],
+                        origenProductos: [{ nombre: prod.nombre, cantidad: linea.cantidad, cantUnitaria: ia.cantidadRequerida, totalUnidades: linea.cantidad }],
                         proveedoresDisponibles: provsDisponibles,
                         terceroIdAsignado: proveedoresOverride[ia.insumoId] ?? provsDisponibles[0]?.terceroId ?? "__SIN_PROVEEDOR__",
                         terceroNombreAsignado: "",
+                        grupoEmpaque: grupoKey,
+                        pctSplit: 100,
                     });
                 }
+            }
+        }
+
+        // PASO 1b: Aplicar splits a grupos de empaques alternativos
+        for (const [grupoKey, insumoIds] of gruposEmpaque) {
+            if (insumoIds.length < 2) continue;  // solo 1 caja → no hay split
+
+            const splitUser = empaquesSplit[grupoKey]; // Record<insumoId, pct> del usuario
+
+            // Calcular splits: si el usuario no configuró, distribuir equitativamente
+            let totalPct = 0;
+            const splits: Record<string, number> = {};
+            for (const iid of insumoIds) {
+                splits[iid] = splitUser?.[iid] ?? Math.round(100 / insumoIds.length);
+                totalPct += splits[iid];
+            }
+            // Normalizar a 100%
+            const factor100 = 100 / totalPct;
+            for (const iid of insumoIds) splits[iid] = Math.round(splits[iid] * factor100);
+
+            // Aplicar al cálculo de cada empaque
+            for (const iid of insumoIds) {
+                const req = insumoMap.get(iid);
+                if (!req) continue;
+                const pct = splits[iid];
+                req.pctSplit = pct;
+                // Unidades que va a manejar este empaque = totalUnidades * pct%
+                const unidadesParaEsteEmpaque = req.cantidadBruta * (pct / 100);
+                // Cantidad de cajas necesarias = ceil(unidades / unidadesPorCaja)
+                req.cantidadConRendimiento = Math.ceil(unidadesParaEsteEmpaque / req.unidadesPorEmpaque);
+            }
+        }
+
+        // Para empaques que NO tienen alternativas (grupo de 1), calcular normalmente
+        for (const [, req] of insumoMap) {
+            if (req.esEmpaqueInsumo && (req.pctSplit === 100 || !req.grupoEmpaque)) {
+                req.cantidadConRendimiento = Math.ceil(req.cantidadBruta / req.unidadesPorEmpaque);
             }
         }
 
@@ -226,13 +318,13 @@ export const GeneradorPedidoSection = ({
         }
         return Array.from(provMap.values()).sort((a, b) => b.totalEstimado - a.totalEstimado);
     }, [lineas, productos, insumos, terceros, ocSnapshot, stockSnapshot, colchonSeguridad,
-        considerarStock, considerarOCPendientes, cantidadesOverride, proveedoresOverride]);
+        considerarStock, considerarOCPendientes, cantidadesOverride, proveedoresOverride, empaquesSplit]);
 
     const totalGeneral = useMemo(() =>
         requisicion.filter(r => seleccionados.has("__ALL__") || seleccionados.has(r.terceroId))
             .reduce((s, p) => s + p.totalEstimado, 0), [requisicion, seleccionados]);
 
-    // ── Toggle selección de proveedores ─────────────────────────────────────
+    // ── Toggle selección de proveedores ───────────────────────────────────
     const toggleSeleccionado = (id: string) => {
         setSeleccionados(prev => {
             const next = new Set(prev);
@@ -246,6 +338,30 @@ export const GeneradorPedidoSection = ({
         });
     };
 
+    // ── Actualizar split de empaque alternativo ──────────────────────────────
+    const updateEmpaquesSplit = (grupoKey: string, insumoId: string, pct: number) => {
+        setEmpaquesSplit(prev => ({
+            ...prev,
+            [grupoKey]: { ...(prev[grupoKey] ?? {}), [insumoId]: pct },
+        }));
+    };
+
+    // Detectar grupos con empaques alternativos (para mostrar widget)
+    const gruposConAlternativas = useMemo(() => {
+        const map = new Map<string, InsumoRequerido[]>();
+        for (const prov of requisicion) {
+            for (const ins of prov.insumos) {
+                if (ins.grupoEmpaque && ins.esEmpaqueInsumo) {
+                    const arr = map.get(ins.grupoEmpaque) ?? [];
+                    arr.push(ins);
+                    map.set(ins.grupoEmpaque, arr);
+                }
+            }
+        }
+        return map;
+    }, [requisicion]);
+
+
     // ── Guardar borrador ─────────────────────────────────────────────────────
     const handleGuardarBorrador = async () => {
         const data: Partial<BorradorMRP> = {
@@ -253,7 +369,7 @@ export const GeneradorPedidoSection = ({
             numeroPedido, fechaSolicitada, tiempoEntrega, notas,
             colchonSeguridad, considerarStock, considerarOCPendientes,
             lineas: lineas.filter(l => l.productoId).map(l => ({ productoId: l.productoId, cantidad: l.cantidad })),
-            cantidadesOverride, proveedoresOverride,
+            cantidadesOverride, proveedoresOverride, empaquesSplit,
         };
         if (borradorActualId) {
             await updateBorrador(borradorActualId, data);
@@ -277,11 +393,12 @@ export const GeneradorPedidoSection = ({
         setLineas((b.lineas ?? []).map(l => ({ uuid: uid(), productoId: l.productoId, cantidad: l.cantidad })));
         setCantidadesOverride(b.cantidadesOverride ?? {});
         setProveedoresOverride(b.proveedoresOverride ?? {});
+        setEmpaquesSplit(b.empaquesSplit ?? {});
         setShowBorradores(false);
         toast.success(`Borrador "${b.nombre}" cargado`);
     };
 
-    // ── Generar OC ───────────────────────────────────────────────────────────
+    // ── Generar OC ──────────────────────────────────────────────────────────────────────
     const handleGenerar = async () => {
         if (!numeroPedido.trim()) { toast.error("Ingresa el número de pedido."); return; }
         const provValidos = requisicion.filter(r =>
@@ -292,6 +409,7 @@ export const GeneradorPedidoSection = ({
         setGenerando(true);
         setShowConfirm(false);
         const generadas: string[] = [];
+        const generadasObj: OrdenCompra[] = [];
         const base = numeroPedido.trim().toUpperCase();
 
         for (const prov of provValidos) {
@@ -316,8 +434,9 @@ export const GeneradorPedidoSection = ({
             }));
             const label = items.length > 1 ? `${items[0].insumo} +${items.length - 1} más` : items[0]?.insumo ?? "";
             const totalBruto = items.reduce((s, i) => s + i.cantidad * i.precio_estimado, 0);
+            const now = new Date().toISOString();
 
-            const ok = await createOrden({
+            const ocData: Partial<OrdenCompra> = {
                 id: newId, terceroId: prov.terceroId, insumo: label,
                 cantidad: items.reduce((s, i) => s + i.cantidad, 0),
                 unidad: items[0]?.unidad ?? "Unidad",
@@ -326,21 +445,50 @@ export const GeneradorPedidoSection = ({
                 estado: "Pendiente", numeroPedido: numeroPedido.trim(),
                 fechaSolicitada, tiempoEntrega,
                 notas: notas || `Generado MRP — Pedido ${numeroPedido}. Colchón: ${colchonSeguridad}%`,
-            });
-            if (ok) generadas.push(newId);
+                created_at: now,
+            };
+            const ok = await createOrden(ocData);
+            if (ok) {
+                generadas.push(newId);
+                generadasObj.push(ocData as OrdenCompra);
+            }
         }
 
         setOrdenesGeneradas(generadas);
+        setOrdenesGeneradasObj(generadasObj);
         setGenerando(false);
         if (generadas.length) toast.success(`✅ ${generadas.length} OC generada(s) para Pedido ${numeroPedido}`);
     };
 
+
     const handleLimpiar = () => {
         setLineas([{ uuid: uid(), productoId: "", cantidad: 1 }]);
-        setNumeroPedido(""); setNotas(""); setOrdenesGeneradas([]);
+        setNumeroPedido(""); setNotas(""); setOrdenesGeneradas([]); setOrdenesGeneradasObj([]);
         setTiempoEntrega(""); setCantidadesOverride({});
-        setProveedoresOverride({}); setBorradorActualId(null); setBorradorNombre("");
+        setProveedoresOverride({}); setEmpaquesSplit({}); setBorradorActualId(null); setBorradorNombre("");
     };
+
+    // ── Descargar ZIP con todos los PDFs ────────────────────────────────────────
+    const handleDescargarZIP = async () => {
+        if (!ordenesGeneradasObj.length) return;
+        setGenerandoZIP(true);
+        setZipProgress(0);
+        try {
+            await descargarZIPPedido(
+                ordenesGeneradasObj,
+                terceros,
+                insumos,
+                numeroPedido,
+                (pct) => setZipProgress(pct)
+            );
+            toast.success(`📦 ZIP descargado con ${ordenesGeneradasObj.length} PDF(s)`);
+        } catch (e) {
+            toast.error("No se pudo generar el ZIP. ¿Instalaste jszip? (npm install jszip)");
+        } finally {
+            setGenerandoZIP(false);
+        }
+    };
+
 
     // ─── RENDER ───────────────────────────────────────────────────────────────
     return (
@@ -532,6 +680,57 @@ export const GeneradorPedidoSection = ({
                                 </div>
                             </div>
 
+                            {/* ── Widget empaques alternativos ─────────── */}
+                            {gruposConAlternativas.size > 0 && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Boxes className="w-4 h-4 text-amber-600" />
+                                        <p className="font-bold text-amber-800 text-sm">Distribución de Empaques Alternativos</p>
+                                    </div>
+                                    <p className="text-xs text-amber-600">Este producto tiene múltiples opciones de caja. Define qué % de unidades va en cada una (deben sumar 100%).</p>
+                                    {Array.from(gruposConAlternativas.entries()).map(([grupoKey, items]) => {
+                                        const splitActual = empaquesSplit[grupoKey] ?? {};
+                                        const totalPct = items.reduce((s, i) => s + (splitActual[i.insumoId] ?? Math.round(100 / items.length)), 0);
+                                        const ok = Math.abs(totalPct - 100) <= 1;
+                                        return (
+                                            <div key={grupoKey} className="bg-white rounded-xl border border-amber-100 p-3 space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                                                        {items[0]?.origenProductos?.[0]?.nombre ?? "Producto"}
+                                                    </p>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ok ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
+                                                        Total: {totalPct}% {ok ? "✓" : "⚠ suma ≠ 100"}
+                                                    </span>
+                                                </div>
+                                                {items.map(ins => {
+                                                    const defaultPct = Math.round(100 / items.length);
+                                                    const pct = splitActual[ins.insumoId] ?? defaultPct;
+                                                    const unidades = Math.round(ins.cantidadBruta * (pct / 100));
+                                                    const cajas = Math.ceil(unidades / ins.unidadesPorEmpaque);
+                                                    return (
+                                                        <div key={ins.insumoId} className="flex items-center gap-3">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-bold text-gray-800 truncate">{ins.insumoNombre}</p>
+                                                                <p className="text-[10px] text-gray-400">{ins.unidadesPorEmpaque} uds/caja · {cajas} cajas para {unidades} uds</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                                <Input
+                                                                    type="number" min={0} max={100}
+                                                                    value={pct}
+                                                                    onChange={e => updateEmpaquesSplit(grupoKey, ins.insumoId, Math.min(100, Math.max(0, Number(e.target.value))))}
+                                                                    className="w-16 h-8 text-center text-sm font-bold border-amber-200"
+                                                                />
+                                                                <span className="text-xs text-gray-400 font-bold">%</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
                             {/* Cards por proveedor */}
                             <div className="space-y-3 max-h-[52vh] overflow-y-auto pr-1">
                                 {requisicion.map((prov, idx) => {
@@ -671,19 +870,40 @@ export const GeneradorPedidoSection = ({
                                     <ChevronRight className="w-4 h-4 ml-1" />
                                 </Button>
                             ) : (
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-                                        <div>
-                                            <p className="font-bold text-emerald-800 text-sm">{ordenesGeneradas.length} OC generadas en Firestore</p>
-                                            <p className="text-xs text-emerald-600">Disponibles en pestaña Órdenes de Compra</p>
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle2 className="w-7 h-7 text-emerald-600 shrink-0" />
+                                            <div>
+                                                <p className="font-bold text-emerald-800 text-sm">{ordenesGeneradas.length} OC generadas · Pedido {numeroPedido}</p>
+                                                <p className="text-xs text-emerald-600 font-mono">{ordenesGeneradas.join(" · ")}</p>
+                                            </div>
                                         </div>
+                                        <Button variant="outline" onClick={handleLimpiar} className="border-emerald-300 text-emerald-700 text-xs shrink-0">
+                                            Nuevo Pedido
+                                        </Button>
                                     </div>
-                                    <Button variant="outline" onClick={handleLimpiar} className="border-emerald-300 text-emerald-700 text-xs">
-                                        Nuevo Pedido
+                                    {/* Botón descarga ZIP */}
+                                    <Button onClick={handleDescargarZIP} disabled={generandoZIP}
+                                        className="w-full h-11 bg-[#183C30] hover:bg-[#122e24] text-white font-bold rounded-xl">
+                                        {generandoZIP ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Generando ZIP... {zipProgress}%
+                                                <div className="ml-3 flex-1 max-w-24 h-2 bg-white/20 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${zipProgress}%` }} />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Archive className="w-4 h-4 mr-2" />
+                                                📦 Descargar ZIP con {ordenesGeneradas.length} PDF(s) — Pedido {numeroPedido}
+                                            </>
+                                        )}
                                     </Button>
                                 </div>
                             )}
+
                         </>
                     )}
                 </div>
