@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Building2, ShoppingCart, CheckCircle, FileText, UploadCloud, Trash2, Package, Download, Edit2, X } from "lucide-react";
+import { Plus, Building2, ShoppingCart, CheckCircle, FileText, UploadCloud, Trash2, Package, Download, Edit2, X, Mail, Send, Loader2, PlusCircle, AtSign } from "lucide-react";
 import { OrdenCompra, Tercero, Insumo } from "@/hooks/useCompras";
 import { format } from "date-fns";
 import { exportarOrdenPDF } from "../utils/pdfExport";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
+import { useEmail } from "@/hooks/useEmail";
 
 interface OrdenesSectionProps {
     ordenes: OrdenCompra[];
@@ -33,6 +34,36 @@ export const OrdenesSection = ({
         { insumoId: "", cantidad: 0, unidad: "Unidad", precio_estimado: 0 }
     ]);
     const [uploadingFile, setUploadingFile] = useState(false);
+    const { enviarOC, enviando } = useEmail();
+
+    // Estado del modal de email
+    const [emailModal, setEmailModal] = useState<{ open: boolean; orden: OrdenCompra | null }>({
+        open: false, orden: null,
+    });
+    const [ccInput, setCcInput] = useState("");
+    const [ccEmails, setCcEmails] = useState<string[]>([]);
+
+    const addCC = () => {
+        const trimmed = ccInput.trim();
+        if (trimmed && !ccEmails.includes(trimmed)) {
+            setCcEmails(prev => [...prev, trimmed]);
+            setCcInput("");
+        }
+    };
+
+    const openEmailModal = (orden: OrdenCompra) => {
+        setCcEmails([]);
+        setCcInput("");
+        setEmailModal({ open: true, orden });
+    };
+
+    const handleEnviarEmail = async () => {
+        if (!emailModal.orden) return;
+        const tercero = terceros.find(t => t.id === emailModal.orden!.terceroId);
+        if (!tercero) return;
+        const ok = await enviarOC({ orden: emailModal.orden, tercero, insumos, ccEmails });
+        if (ok) setEmailModal({ open: false, orden: null });
+    };
 
     // Filters
     const [searchOrdenes, setSearchOrdenes] = useState("");
@@ -473,6 +504,13 @@ export const OrdenesSection = ({
                                     <Button variant="ghost" size="icon" onClick={() => handleExportPDF(o, tercero)} className="text-amber-600 hover:bg-amber-50 h-8 w-8" title="Descargar PDF">
                                         <Download className="w-4 h-4" />
                                     </Button>
+                                    {/* Botón Enviar por Email --- aparece si hay correo en el proveedor */}
+                                    {tercero?.correo && (
+                                        <Button variant="ghost" size="icon" onClick={() => openEmailModal(o)}
+                                            className="text-blue-500 hover:bg-blue-50 h-8 w-8" title="Enviar OC por email al proveedor">
+                                            <Mail className="w-4 h-4" />
+                                        </Button>
+                                    )}
                                     <Button variant="ghost" size="icon" onClick={() => deleteOrden(o.id)} className="text-red-500 hover:bg-red-50 h-8 w-8" title="Eliminar Orden">
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
@@ -487,6 +525,137 @@ export const OrdenesSection = ({
                     )}
                 </div>
             </div>
+
+            {/* Modal email */}
+            <EmailModal
+                open={emailModal.open}
+                onClose={() => setEmailModal({ open: false, orden: null })}
+                orden={emailModal.orden}
+                terceros={terceros}
+                onEnviar={handleEnviarEmail}
+                enviando={enviando}
+                ccEmails={ccEmails}
+                setCcEmails={setCcEmails}
+                ccInput={ccInput}
+                setCcInput={setCcInput}
+                addCC={addCC}
+            />
         </div>
     );
 };
+
+/* ── Modal de envío de email ─────────────────────────────────────────────── */
+function EmailModal({
+    open, onClose, orden, terceros, onEnviar, enviando,
+    ccEmails, setCcEmails, ccInput, setCcInput, addCC,
+}: {
+    open: boolean;
+    onClose: () => void;
+    orden: OrdenCompra | null;
+    terceros: Tercero[];
+    onEnviar: () => void;
+    enviando: boolean;
+    ccEmails: string[];
+    setCcEmails: (v: string[]) => void;
+    ccInput: string;
+    setCcInput: (v: string) => void;
+    addCC: () => void;
+}) {
+    if (!orden) return null;
+    const tercero = terceros.find(t => t.id === orden.terceroId);
+    const total = orden.total_bruto ?? ((orden.cantidad ?? 0) * (orden.precio_estimado ?? 0));
+
+    return (
+        <Dialog open={open} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[540px]">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-xl font-black">
+                        <Mail className="w-5 h-5 text-blue-500" />
+                        Enviar OC por Email
+                    </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                    {/* Info OC */}
+                    <div className="bg-[#183C30]/5 border border-[#183C30]/20 rounded-xl p-3">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-xs font-black text-gray-400 uppercase tracking-wider">Orden de Compra</p>
+                                <p className="font-black text-gray-900 text-lg">{orden.id}</p>
+                                <p className="text-xs text-gray-500">Pedido: {orden.numeroPedido ?? "—"}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs font-black text-gray-400 uppercase tracking-wider">Total</p>
+                                <p className="font-black text-teal-700 text-xl">${total.toLocaleString("es-CO")}</p>
+                                <p className="text-[10px] text-gray-400">{(orden.items?.length ?? 1)} ítem(s)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Para */}
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                            <AtSign className="w-3 h-3" /> Para (Proveedor)
+                        </label>
+                        <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl p-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                <Building2 className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-800 text-sm">{tercero?.nombre ?? "Proveedor"}</p>
+                                <p className="text-xs text-blue-600 font-mono">{tercero?.correo ?? "Sin correo configurado"}</p>
+                            </div>
+                        </div>
+                        {!tercero?.correo && (
+                            <p className="text-xs text-red-500">⚠ Este proveedor no tiene correo. Agrégalo en la pestaña Terceros.</p>
+                        )}
+                    </div>
+
+                    {/* CC */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                            <Mail className="w-3 h-3" /> Copia (CC) — Otros destinatarios
+                        </label>
+                        <div className="flex gap-2">
+                            <Input placeholder="correo@empresa.com" value={ccInput}
+                                onChange={e => setCcInput(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && addCC()}
+                                className="h-9 text-sm flex-1" />
+                            <Button size="sm" variant="outline" onClick={addCC} className="shrink-0">
+                                <PlusCircle className="w-4 h-4 mr-1" /> Agregar
+                            </Button>
+                        </div>
+                        {ccEmails.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                                {ccEmails.map(email => (
+                                    <span key={email} className="flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">
+                                        {email}
+                                        <button onClick={() => setCcEmails(ccEmails.filter(e => e !== email))}>
+                                            <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Info adjunto */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
+                        <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span>Se adjuntará el PDF <strong>OC_{orden.id}.pdf</strong> generado automáticamente.</span>
+                    </div>
+
+                    {/* Botón Enviar */}
+                    <Button onClick={onEnviar} disabled={enviando || !tercero?.correo}
+                        className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-base">
+                        {enviando ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                        ) : (
+                            <><Send className="w-4 h-4 mr-2" /> Enviar OC a {1 + ccEmails.length} destinatario(s)</>
+                        )}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
