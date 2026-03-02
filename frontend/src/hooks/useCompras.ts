@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { API_URL } from "@/lib/config";
 import { toast } from "sonner";
-import { useMemo } from "react";
 
 export interface Tercero {
     id: string;
@@ -286,22 +285,46 @@ export function useCompras() {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] })
     });
 
-    // 3. Facade functions to match old API
-    const createOrden = async (d: Partial<OrdenCompra>) => { createOrdenMutation.mutate(d); return true; };
-    const updateOrden = async (id: string, u: Partial<OrdenCompra>) => { updateOrdenMutation.mutate({ id, updates: u }); return true; };
-    const deleteOrden = async (id: string) => { deleteOrdenMutation.mutate(id); return true; };
+    // 3. Facade functions usando mutateAsync para await correcto
+    const createOrden = async (d: Partial<OrdenCompra>) => {
+        try { await createOrdenMutation.mutateAsync(d); return true; } catch { return false; }
+    };
+    const updateOrden = async (id: string, u: Partial<OrdenCompra>) => {
+        try { await updateOrdenMutation.mutateAsync({ id, updates: u }); return true; } catch { return false; }
+    };
+    const deleteOrden = async (id: string) => {
+        try { await deleteOrdenMutation.mutateAsync(id); return true; } catch { return false; }
+    };
 
-    const createTercero = async (d: Partial<Tercero>) => { createTerceroMutation.mutate(d); return true; };
-    const updateTercero = async (id: string, u: Partial<Tercero>) => { updateTerceroMutation.mutate({ id, updates: u }); return true; };
-    const deleteTercero = async (id: string) => { deleteTerceroMutation.mutate(id); return true; };
+    const createTercero = async (d: Partial<Tercero>) => {
+        try { await createTerceroMutation.mutateAsync(d); return true; } catch { return false; }
+    };
+    const updateTercero = async (id: string, u: Partial<Tercero>) => {
+        try { await updateTerceroMutation.mutateAsync({ id, updates: u }); return true; } catch { return false; }
+    };
+    const deleteTercero = async (id: string) => {
+        try { await deleteTerceroMutation.mutateAsync(id); return true; } catch { return false; }
+    };
 
-    const createInsumo = async (d: Partial<Insumo>) => { createInsumoMutation.mutate(d); return true; };
-    const updateInsumo = async (id: string, u: Partial<Insumo>) => { updateInsumoMutation.mutate({ id, updates: u }); return true; };
-    const deleteInsumo = async (id: string) => { deleteInsumoMutation.mutate(id); return true; };
+    const createInsumo = async (d: Partial<Insumo>) => {
+        try { await createInsumoMutation.mutateAsync(d); return true; } catch { return false; }
+    };
+    const updateInsumo = async (id: string, u: Partial<Insumo>) => {
+        try { await updateInsumoMutation.mutateAsync({ id, updates: u }); return true; } catch { return false; }
+    };
+    const deleteInsumo = async (id: string) => {
+        try { await deleteInsumoMutation.mutateAsync(id); return true; } catch { return false; }
+    };
 
-    const createProducto = async (d: Partial<ProductoFabricado>) => { createProductoMutation.mutate(d); return true; };
-    const updateProducto = async (id: string, u: Partial<ProductoFabricado>) => { updateProductoMutation.mutate({ id, updates: u }); return true; };
-    const deleteProducto = async (id: string) => { deleteProductoMutation.mutate(id); return true; };
+    const createProducto = async (d: Partial<ProductoFabricado>) => {
+        try { await createProductoMutation.mutateAsync(d); return true; } catch { return false; }
+    };
+    const updateProducto = async (id: string, u: Partial<ProductoFabricado>) => {
+        try { await updateProductoMutation.mutateAsync({ id, updates: u }); return true; } catch { return false; }
+    };
+    const deleteProducto = async (id: string) => {
+        try { await deleteProductoMutation.mutateAsync(id); return true; } catch { return false; }
+    };
 
     return {
         terceros, insumos, ordenes, productos, isLoading, error,
