@@ -186,6 +186,46 @@ export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: 
     doc.setFont("helvetica", "normal");
     doc.text("Gerencia Administrativa / Técnica", 120, finalY + 9);
 
+    // --- Historial de Entregas (si hay parciales) ---
+    if (orden.historialEntregas && orden.historialEntregas.length > 0) {
+        finalY += 20;
+        // Check if we need a new page
+        if (finalY > 240) { doc.addPage(); finalY = 20; }
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(24, 60, 48);
+        doc.text("Historial de Entregas Parciales", 14, finalY);
+        finalY += 6;
+        doc.setDrawColor(24, 60, 48);
+        doc.setLineWidth(0.4);
+        doc.line(14, finalY, 196, finalY);
+        finalY += 4;
+
+        const historialBody = orden.historialEntregas.map((delivery, idx) => [
+            `#${idx + 1}`,
+            format(new Date(delivery.fecha), 'dd/MM/yy HH:mm'),
+            delivery.recibidoPor,
+            delivery.items.map((it: any) => `${it.insumo}: ${it.cantidad}`).join(' | '),
+            delivery.notas || '-'
+        ]);
+
+        autoTable(doc, {
+            startY: finalY,
+            head: [["No.", "Fecha", "Recibió", "Ítems Entregados", "Notas"]],
+            body: historialBody,
+            theme: 'striped',
+            headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+            styles: { fontSize: 7.5, cellPadding: 3 },
+            columnStyles: {
+                0: { cellWidth: 8, halign: 'center' },
+                1: { cellWidth: 22 },
+                2: { cellWidth: 32 },
+                4: { fontStyle: 'italic' }
+            }
+        });
+    }
+
     // --- Footer ---
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {

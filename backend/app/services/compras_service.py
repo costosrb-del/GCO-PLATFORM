@@ -26,7 +26,7 @@ COLLECTION_INSUMOS = "insumos_base"
 def get_insumos():
     if db:
         try:
-            docs = db.collection(COLLECTION_INSUMOS).stream()
+            docs = db.collection(COLLECTION_INSUMOS).order_by("created_at", direction=firestore.Query.DESCENDING).stream()
             return [doc.to_dict() for doc in docs]
         except Exception as e:
             print(f"Error fetching insumos: {e}")
@@ -38,14 +38,16 @@ def create_insumo(data: dict):
         data["id"] = str(uuid.uuid4())
     if "created_at" not in data:
         data["created_at"] = datetime.now().isoformat()
-    
+    # Limpia valores None para evitar ruido en Firestore
+    clean_data = {k: v for k, v in data.items() if v is not None}
     if db:
         try:
-            db.collection(COLLECTION_INSUMOS).document(data["id"]).set(data)
-            return data
+            db.collection(COLLECTION_INSUMOS).document(clean_data["id"]).set(clean_data)
+            return clean_data
         except Exception as e:
             print(f"Error saving insumo Firebase: {e}")
-    return data
+            raise
+    return clean_data
 
 def update_insumo(insumo_id: str, data: dict):
     if db:
@@ -67,7 +69,7 @@ def delete_insumo(insumo_id: str):
 def get_terceros():
     if db:
         try:
-            docs = db.collection(COLLECTION_TERCEROS).stream()
+            docs = db.collection(COLLECTION_TERCEROS).order_by("nombre").stream()
             return [doc.to_dict() for doc in docs]
         except Exception as e:
             print(f"Error fetching terceros: {e}")
@@ -108,7 +110,7 @@ def delete_tercero(tercero_id: str):
 def get_ordenes_compra():
     if db:
         try:
-            docs = db.collection(COLLECTION_ORDENES).stream()
+            docs = db.collection(COLLECTION_ORDENES).order_by("created_at", direction=firestore.Query.DESCENDING).stream()
             return [doc.to_dict() for doc in docs]
         except Exception as e:
             print(f"Error fetching ordenes: {e}")
@@ -122,14 +124,16 @@ def create_orden_compra(data: dict):
         data["created_at"] = datetime.now().isoformat()
     if "estado" not in data:
         data["estado"] = "Pendiente"
-        
+    # Limpia None para no guardar keys vacías en Firestore
+    clean_data = {k: v for k, v in data.items() if v is not None}
     if db:
         try:
-            db.collection(COLLECTION_ORDENES).document(data["id"]).set(data)
-            return data
+            db.collection(COLLECTION_ORDENES).document(clean_data["id"]).set(clean_data)
+            return clean_data
         except Exception as e:
             print(f"Error saving orden Firebase: {e}")
-    return data
+            raise
+    return clean_data
 
 def update_orden_compra(orden_id: str, data: dict):
     if db:

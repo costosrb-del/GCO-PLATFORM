@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { OrdenCompra, Tercero, Insumo, Delivery, DeliveryItem } from "@/hooks/useCompras";
 import { exportarOrdenPDF } from "../utils/pdfExport";
+import { toast } from "sonner";
 
 interface VisualizeOrdenDialogProps {
     open: boolean;
@@ -49,7 +50,7 @@ export const VisualizeOrdenDialog = ({
     const handleSaveReception = async () => {
         if (!viewingOrden.items) return;
         if (!receiverName.trim()) {
-            alert("Por favor ingrese quién recibe el pedido");
+            toast.error("Debe ingresar el nombre de quien recibe el pedido");
             return;
         }
         setIsSaving(true);
@@ -71,7 +72,7 @@ export const VisualizeOrdenDialog = ({
         });
 
         if (newDeliveryItems.length === 0) {
-            alert("No ha ingresado cantidades para recibir");
+            toast.error("Debe ingresar al menos una cantidad mayor a 0 para registrar la entrega");
             setIsSaving(false);
             return;
         }
@@ -101,43 +102,46 @@ export const VisualizeOrdenDialog = ({
         });
 
         if (success) {
+            toast.success(nuevoEstado === 'Recibido'
+                ? `¡Orden completada! Todo el pedido fue recibido.`
+                : `Entrega #${historialEntregas.length} registrada por ${receiverName}.`);
             setIsReceiving(false);
             setReceivedInputs({});
             setReceiverName("");
             setDeliveryNotes("");
+        } else {
+            toast.error("Error al guardar la recepción. Por favor inténtelo de nuevo.");
         }
         setIsSaving(false);
     };
 
-    const calculateOverallProgress = () => {
-        if (!viewingOrden.items || viewingOrden.items.length === 0) return 0;
+    const progress = useMemo(() => {
+        if (!viewingOrden?.items || viewingOrden.items.length === 0) return 0;
         const totalRequested = viewingOrden.items.reduce((acc, it) => acc + it.cantidad, 0);
         const totalReceived = viewingOrden.items.reduce((acc, it) => acc + (it.cantidad_recibida || 0), 0);
         return Math.round((totalReceived / totalRequested) * 100);
-    };
-
-    const progress = calculateOverallProgress();
+    }, [viewingOrden?.items]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[100vw] w-screen h-screen max-h-screen m-0 p-0 border-none shadow-none rounded-none overflow-y-auto transition-all duration-300">
+            <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] xl:max-w-[1400px] w-full max-h-[96vh] p-0 border-none shadow-2xl rounded-3xl overflow-hidden transition-all duration-300">
                 <div className="bg-white flex flex-col min-h-screen w-full">
                     {/* Header estilizado */}
                     <div className="bg-[#0f172a] p-10 text-white flex justify-between items-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/10 to-transparent pointer-events-none" />
                         <div className="flex items-center gap-8 relative z-10">
-                            <div className="flex-shrink-0 bg-white p-4 rounded-2xl shadow-2xl">
+                            <div className="flex-shrink-0 bg-white p-3 rounded-xl shadow-lg border border-slate-100">
                                 <img
                                     src="/logo.png"
                                     alt="Logo"
-                                    className="w-16 h-16 object-contain"
+                                    className="w-12 h-12 object-contain"
                                     onError={(e) => {
                                         e.currentTarget.style.display = 'none';
                                         const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                                         if (fallback) fallback.style.display = 'flex';
                                     }}
                                 />
-                                <div className="w-16 h-16 items-center justify-center font-black text-2xl text-slate-800 hidden">OB</div>
+                                <div className="w-12 h-12 items-center justify-center font-black text-xl text-slate-800 hidden">OB</div>
                             </div>
                             <div className="space-y-1">
                                 <div className="flex items-center gap-3">
@@ -175,61 +179,60 @@ export const VisualizeOrdenDialog = ({
                         </div>
                     </div>
 
-                    <div className="p-12 space-y-12 max-w-[1600px] mx-auto w-full">
-                        <div className="grid grid-cols-3 gap-16">
-                            {/* PANEL IZQUIERDO: Proveedor */}
-                            <div className="space-y-6">
-                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
-                                    <Building2 className="w-6 h-6" /> Información del Proveedor
+                    <div className="p-8 lg:p-12 space-y-12 w-full overflow-y-auto max-h-[calc(96vh-160px)]">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                            <div className="lg:col-span-4 space-y-6">
+                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-xs tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                    <Building2 className="w-5 h-5" /> Información del Proveedor
                                 </h3>
-                                <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 space-y-6 shadow-sm">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">Razón Social</span>
-                                        <span className="col-span-2 font-black text-slate-800 text-2xl leading-tight">{currentTercero?.nombre || 'Desconocido'}</span>
+                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-6 shadow-sm">
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Razón Social</span>
+                                        <span className="font-black text-slate-800 text-xl leading-snug">{currentTercero?.nombre || 'Desconocido'}</span>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">NIT / Documento</span>
-                                        <span className="col-span-2 font-mono font-bold text-slate-600 bg-white px-4 py-1.5 rounded-lg border border-slate-200 inline-block text-base shadow-sm">{currentTercero?.nit || 'N/A'}</span>
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">NIT / Documento</span>
+                                        <span className="font-mono font-bold text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 inline-block text-sm shadow-sm w-max">{currentTercero?.nit || 'N/A'}</span>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4 border-t pt-6 border-slate-200/50">
-                                        <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">Contacto Directo</span>
-                                        <div className="col-span-2 flex flex-col gap-1">
-                                            <span className="font-black text-slate-700 text-lg uppercase">{currentTercero?.personaContacto || 'N/A'}</span>
-                                            <span className="text-base font-bold text-emerald-600">{currentTercero?.numeroContacto || 'N/A'}</span>
-                                            <span className="text-sm font-medium text-slate-400 italic">{currentTercero?.correo || 'N/A'}</span>
+                                    <div className="space-y-4 border-t pt-5 border-slate-200/50">
+                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block">Contacto Directo</span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-black text-slate-700 text-base uppercase">{currentTercero?.personaContacto || 'N/A'}</span>
+                                            <span className="text-sm font-bold text-emerald-600">{currentTercero?.numeroContacto || 'N/A'}</span>
+                                            <span className="text-xs font-medium text-slate-400 italic">{currentTercero?.correo || 'N/A'}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* PANEL CENTRAL: Logística */}
-                            <div className="space-y-6">
-                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
-                                    <FileText className="w-6 h-6" /> Detalles de Operación
+                            <div className="lg:col-span-4 space-y-6">
+                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-xs tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                    <FileText className="w-5 h-5" /> Detalles de Operación
                                 </h3>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-                                        <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">Fecha Compromiso</span>
-                                        <p className="font-black text-slate-900 text-2xl">{viewingOrden.fechaSolicitada ? format(parseISO(viewingOrden.fechaSolicitada), 'dd/MM/yyyy') : 'POR DEFINIR'}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-1">
+                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Fecha Compromiso</span>
+                                        <p className="font-black text-slate-900 text-xl">{viewingOrden.fechaSolicitada ? format(parseISO(viewingOrden.fechaSolicitada), 'dd/MM/yyyy') : 'POR DEFINIR'}</p>
                                     </div>
-                                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-                                        <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">Lead Time</span>
-                                        <p className="font-black text-emerald-700 text-2xl uppercase">{viewingOrden.tiempoEntrega || 'INMEDIATO'}</p>
+                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-1">
+                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Lead Time</span>
+                                        <p className="font-black text-emerald-700 text-xl uppercase">{viewingOrden.tiempoEntrega || 'INMEDIATO'}</p>
                                     </div>
-                                    <div className="col-span-2 bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 flex items-center justify-between">
+                                    <div className="sm:col-span-2 bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 flex items-center justify-between">
                                         <div>
-                                            <span className="text-emerald-700 text-[11px] font-black uppercase tracking-widest">Plan de Entregas</span>
-                                            <p className="text-lg text-emerald-900 font-bold">{(viewingOrden as any).entregasParciales || 'Entrega Única'}</p>
+                                            <span className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Plan de Entregas</span>
+                                            <p className="text-base text-emerald-900 font-bold">{(viewingOrden as any).entregasParciales || 'Entrega Única'}</p>
                                         </div>
-                                        <Package className="w-10 h-10 text-emerald-400/50" />
+                                        <Package className="w-7 h-7 text-emerald-400/50" />
                                     </div>
                                 </div>
                             </div>
 
                             {/* PANEL DERECHO: Acciones de Recepción */}
-                            <div className="space-y-6">
-                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
-                                    <Truck className="w-6 h-6" /> Control de Entregas
+                            <div className="lg:col-span-4 space-y-6">
+                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-xs tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                    <Truck className="w-5 h-5" /> Control de Suministro
                                 </h3>
                                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4">
                                     {!isReceiving ? (
@@ -308,8 +311,8 @@ export const VisualizeOrdenDialog = ({
 
                         {/* TABLA DE PRODUCTOS - AMPLIA */}
                         <div className="space-y-6">
-                            <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
-                                <ShoppingCart className="w-6 h-6" /> Detalle de Ítems e Inventario Recibido
+                            <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-xs tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                <ShoppingCart className="w-5 h-5" /> Detalle de Ítems e Inventario Recibido
                             </h3>
                             <div className="border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 bg-white">
                                 <table className="w-full text-sm">
@@ -394,11 +397,11 @@ export const VisualizeOrdenDialog = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-12">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                             {/* HISTORIAL DE ENTREGAS */}
                             <div className="space-y-6">
-                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
-                                    <History className="w-6 h-6" /> Registro Histórico de Entregas
+                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-xs tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                    <History className="w-5 h-5" /> Registro Histórico de Entregas
                                 </h3>
 
                                 <div className="space-y-4">
