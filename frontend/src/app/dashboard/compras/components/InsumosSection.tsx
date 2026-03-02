@@ -105,9 +105,27 @@ export const InsumosSection = ({ insumos, createInsumo, updateInsumo, deleteInsu
                                     </div>
                                     <div className="space-y-2 flex-1">
                                         <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Rendimiento (Mfg)</label>
-                                        <Input className="h-11 border-slate-200" value={insumoForm.rendimiento} onChange={e => setInsumoForm({ ...insumoForm, rendimiento: e.target.value })} placeholder="Ej. Rinde 50 unds" />
+                                        <Input className="h-11 border-slate-200" value={insumoForm.rendimiento} onChange={e => setInsumoForm({ ...insumoForm, rendimiento: e.target.value })} placeholder="Ej. 80% o Rinde 50 unds" />
                                     </div>
                                 </div>
+                                <div className="flex gap-4">
+                                    <div className="space-y-2 flex-1">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Lote Mínimo de Compra</label>
+                                        <Input className="h-11 border-slate-200" type="number" min={0} step={1}
+                                            value={insumoForm.loteMinimo ?? ""}
+                                            onChange={e => setInsumoForm({ ...insumoForm, loteMinimo: Number(e.target.value) })}
+                                            placeholder="Ej. 100 (redondear a múltiplo)" />
+                                        <p className="text-[10px] text-slate-400">El MRP redondeará hacia arriba al múltiplo. 0 = sin mínimo.</p>
+                                    </div>
+                                    <div className="space-y-2 flex-1">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Precio Base (COP)</label>
+                                        <Input className="h-11 border-slate-200" type="number" min={0}
+                                            value={insumoForm.precio ?? ""}
+                                            onChange={e => setInsumoForm({ ...insumoForm, precio: Number(e.target.value) })}
+                                            placeholder="Ej. 5000" />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Clasificación</label>
                                     <Select value={insumoForm.clasificacion || "Materia Prima"} onValueChange={v => setInsumoForm({ ...insumoForm, clasificacion: v })}>

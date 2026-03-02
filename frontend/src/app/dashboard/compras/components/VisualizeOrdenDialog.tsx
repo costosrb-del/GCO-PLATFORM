@@ -374,10 +374,10 @@ export const VisualizeOrdenDialog = ({
                                         ) : (
                                             <tr className="group hover:bg-emerald-50/30 transition-all duration-300">
                                                 <td className="px-8 py-6 text-slate-300 font-mono text-center font-bold text-lg">1</td>
-                                                <td className="px-8 py-6 font-black text-slate-800 text-xl uppercase tracking-tight">{viewingOrden.insumo.replace(/ \+\d+ más$/, "")}</td>
+                                                <td className="px-8 py-6 font-black text-slate-800 text-xl uppercase tracking-tight">{(viewingOrden.insumo || '').replace(/ \+\d+ más$/, "")}</td>
                                                 <td className="px-8 py-6 text-center">
                                                     <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-black text-sm border border-slate-200">
-                                                        {viewingOrden.cantidad.toLocaleString()} {viewingOrden.unidad}
+                                                        {(viewingOrden.cantidad || 0).toLocaleString()} {viewingOrden.unidad}
                                                     </span>
                                                 </td>
                                                 <td className="px-8 py-6 text-center bg-blue-50/30">
@@ -385,10 +385,10 @@ export const VisualizeOrdenDialog = ({
                                                 </td>
                                                 {isReceiving && <td className="px-8 py-6 text-center bg-emerald-50">-</td>}
                                                 <td className="px-8 py-6 text-center">
-                                                    <span className="text-amber-600 font-black text-lg">{viewingOrden.cantidad.toLocaleString()}</span>
+                                                    <span className="text-amber-600 font-black text-lg">{(viewingOrden.cantidad || 0).toLocaleString()}</span>
                                                 </td>
                                                 <td className="px-8 py-6 text-right font-black text-emerald-700 text-2xl border-l border-slate-100 bg-emerald-50/20">
-                                                    ${(viewingOrden.cantidad * (viewingOrden.precio_estimado || 0)).toLocaleString()}
+                                                    ${((viewingOrden.cantidad || 0) * (viewingOrden.precio_estimado || 0)).toLocaleString()}
                                                 </td>
                                             </tr>
                                         )}
@@ -472,7 +472,7 @@ export const VisualizeOrdenDialog = ({
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
                                             <span className="text-slate-400 font-bold">Total Bruto</span>
-                                            <span className="text-2xl font-black">${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}</span>
+                                            <span className="text-2xl font-black">${(viewingOrden.total_bruto || ((viewingOrden.cantidad || 0) * (viewingOrden.precio_estimado || 0))).toLocaleString()}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-slate-400 font-bold">Retenciones / Impuestos</span>
@@ -482,7 +482,7 @@ export const VisualizeOrdenDialog = ({
                                             <div className="flex flex-col">
                                                 <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Valor Neto a Pagar</span>
                                                 <span className="text-4xl font-black text-white mt-1">
-                                                    ${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}
+                                                    ${(viewingOrden.total_bruto || ((viewingOrden.cantidad || 0) * (viewingOrden.precio_estimado || 0))).toLocaleString()}
                                                 </span>
                                             </div>
                                             <CheckCircle2 className="w-12 h-12 text-emerald-500/20" />

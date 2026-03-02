@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useCompras, OrdenCompra } from "@/hooks/useCompras";
-import { ShoppingCart, Building2, FileText } from "lucide-react";
+import { ShoppingCart, Building2, FileText, Wand2 } from "lucide-react";
 import { TercerosSection } from "./components/TercerosSection";
 import { InsumosSection } from "./components/InsumosSection";
 import { ProductosSection } from "./components/ProductosSection";
 import { OrdenesSection } from "./components/OrdenesSection";
 import { VisualizeOrdenDialog } from "./components/VisualizeOrdenDialog";
+import { GeneradorPedidoSection } from "./components/GeneradorPedidoSection";
 
 export default function ComprasPage() {
     const {
@@ -18,7 +19,7 @@ export default function ComprasPage() {
         createProducto, updateProducto, deleteProducto
     } = useCompras();
 
-    const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos">("ordenes");
+    const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos" | "generador">("ordenes");
 
     const [viewingOrden, setViewingOrden] = useState<OrdenCompra | null>(null);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -85,6 +86,16 @@ export default function ComprasPage() {
                         >
                             Productos Fabricados
                         </button>
+                        <button
+                            onClick={() => setActiveTab("generador")}
+                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "generador"
+                                ? "bg-violet-600 text-white shadow-sm"
+                                : "text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                                }`}
+                        >
+                            <Wand2 className="w-3.5 h-3.5" />
+                            Generar por Pedido
+                        </button>
                     </div>
                 </div>
 
@@ -127,6 +138,7 @@ export default function ComprasPage() {
                     <TercerosSection
                         terceros={terceros}
                         insumos={insumos}
+                        ordenes={ordenes}
                         createTercero={createTercero}
                         updateTercero={updateTercero}
                         deleteTercero={deleteTercero}
@@ -162,6 +174,17 @@ export default function ComprasPage() {
                         createProducto={createProducto}
                         updateProducto={updateProducto}
                         deleteProducto={deleteProducto}
+                    />
+                )}
+
+                {activeTab === "generador" && (
+                    <GeneradorPedidoSection
+                        productos={productos}
+                        insumos={insumos}
+                        terceros={terceros}
+                        ordenes={ordenes}
+                        createOrden={createOrden}
+                        updateOrden={updateOrden}
                     />
                 )}
 
