@@ -40,6 +40,7 @@ class OrdenCompraCreate(BaseModel):
     notas: Optional[str] = None
     entregasParciales: Optional[str] = None
     items: Optional[List[Dict[str, Any]]] = None
+    historialEntregas: Optional[List[Dict[str, Any]]] = None
     total_bruto: Optional[float] = None
     id: Optional[str] = None
 

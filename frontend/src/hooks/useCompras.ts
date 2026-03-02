@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { API_URL } from "@/lib/config";
+import { toast } from "sonner";
+import { useMemo } from "react";
 
 export interface Tercero {
     id: string;
@@ -30,7 +32,21 @@ export interface OrdenItem {
     cantidad: number;
     unidad: string;
     precio_estimado: number;
-    cantidad_recibida?: number; // Nueva propiedad para seguimiento parcial
+    cantidad_recibida?: number;
+}
+
+export interface DeliveryItem {
+    insumoId: string;
+    insumo: string;
+    cantidad: number;
+}
+
+export interface Delivery {
+    id: string;
+    fecha: string;
+    recibidoPor: string;
+    items: DeliveryItem[];
+    notas?: string;
 }
 
 export interface OrdenCompra {
@@ -50,6 +66,7 @@ export interface OrdenCompra {
     notas?: string;
     entregasParciales?: string;
     items?: OrdenItem[];
+    historialEntregas?: Delivery[]; // Nuevo campo para control de entregas
     total_bruto?: number;
     created_at?: string;
 }
@@ -65,231 +82,233 @@ export interface ProductoFabricado {
 }
 
 export function useCompras() {
-    const [terceros, setTerceros] = useState<Tercero[]>([]);
-    const [insumos, setInsumos] = useState<Insumo[]>([]);
-    const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
-    const [productos, setProductos] = useState<ProductoFabricado[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchData = async (background = false) => {
-        if (!background) setIsLoading(true);
-        try {
-            const [tercerosRes, insumosRes, ordenesRes, productosRes] = await Promise.all([
-                fetch(`${API_URL}/api/compras/terceros`),
-                fetch(`${API_URL}/api/compras/insumos`),
-                fetch(`${API_URL}/api/compras/ordenes`),
-                fetch(`${API_URL}/api/compras/productos_fabricados`)
-            ]);
-
-            if (!tercerosRes.ok || !ordenesRes.ok || !insumosRes.ok) throw new Error("Error fetching data");
-
-            const tercerosData = await tercerosRes.json();
-            const insumosData = await insumosRes.json();
-            const ordenesData = await ordenesRes.json();
-            const productosData = await productosRes.json();
-
-            setTerceros(tercerosData.data || []);
-            setInsumos(insumosData.data || []);
-            setOrdenes(ordenesData.data || []);
-            setProductos(productosData.data || []);
-            setError(null);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            if (!background) setIsLoading(false);
+    // 1. Queries (FETCHING)
+    const { data: terceros = [], isLoading: loadingTerceros, error: errorTerceros } = useQuery<Tercero[]>({
+        queryKey: ['terceros'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/api/compras/terceros`);
+            const json = await res.json();
+            return json.data || [];
         }
-    };
+    });
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const createTercero = async (data: Partial<Tercero>) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/terceros`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            if (!res.ok) throw new Error("Failed to create tercero");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
+    const { data: insumos = [], isLoading: loadingInsumos, error: errorInsumos } = useQuery<Insumo[]>({
+        queryKey: ['insumos'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/api/compras/insumos`);
+            const json = await res.json();
+            return json.data || [];
         }
-    };
+    });
 
-    const updateTercero = async (id: string, updates: Partial<Tercero>) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/terceros/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updates)
-            });
-            if (!res.ok) throw new Error("Failed to update tercero");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
+    const { data: ordenes = [], isLoading: loadingOrdenes, error: errorOrdenes } = useQuery<OrdenCompra[]>({
+        queryKey: ['ordenes'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/api/compras/ordenes`);
+            const json = await res.json();
+            return json.data || [];
         }
-    };
+    });
 
-    const deleteTercero = async (id: string) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/terceros/${id}`, {
-                method: "DELETE"
-            });
-            if (!res.ok) throw new Error("Failed to delete tercero");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
+    const { data: productos = [], isLoading: loadingProductos, error: errorProductos } = useQuery<ProductoFabricado[]>({
+        queryKey: ['productos'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/api/compras/productos_fabricados`);
+            const json = await res.json();
+            return json.data || [];
         }
-    };
+    });
 
-    const createOrden = async (data: Partial<OrdenCompra>) => {
-        try {
+    const isLoading = loadingTerceros || loadingInsumos || loadingOrdenes || loadingProductos;
+    const error = errorTerceros || errorInsumos || errorOrdenes || errorProductos ? "Error al cargar datos" : null;
+
+    // 2. Mutations (CRUD con Optimistic Updates)
+
+    // ORDENES
+    const createOrdenMutation = useMutation({
+        mutationFn: async (data: Partial<OrdenCompra>) => {
             const res = await fetch(`${API_URL}/api/compras/ordenes`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
             });
-            if (!res.ok) throw new Error("Failed to create orden");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
+            if (!res.ok) throw new Error("Error al crear");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['ordenes'] });
+            toast.success("Orden creada con éxito");
         }
-    };
+    });
 
-    const updateOrden = async (id: string, updates: Partial<OrdenCompra>) => {
-        setOrdenes(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-        try {
+    const updateOrdenMutation = useMutation({
+        mutationFn: async ({ id, updates }: { id: string, updates: Partial<OrdenCompra> }) => {
             const res = await fetch(`${API_URL}/api/compras/ordenes/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             });
-            if (!res.ok) throw new Error("Failed to update orden");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            await fetchData(true);
-            return false;
-        }
-    };
+            if (!res.ok) throw new Error("Error al actualizar");
+            return res.json();
+        },
+        onMutate: async ({ id, updates }) => {
+            await queryClient.cancelQueries({ queryKey: ['ordenes'] });
+            const previous = queryClient.getQueryData(['ordenes']);
+            queryClient.setQueryData(['ordenes'], (old: OrdenCompra[]) =>
+                old?.map(o => o.id === id ? { ...o, ...updates } : o)
+            );
+            return { previous };
+        },
+        onError: (_err, _new, context) => {
+            queryClient.setQueryData(['ordenes'], context?.previous);
+            toast.error("Fallo al actualizar");
+        },
+        onSettled: () => queryClient.invalidateQueries({ queryKey: ['ordenes'] })
+    });
 
-    const deleteOrden = async (id: string) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/ordenes/${id}`, {
-                method: "DELETE"
+    const deleteOrdenMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${API_URL}/api/compras/ordenes/${id}`, { method: "DELETE" });
+            if (!res.ok) throw new Error("Error al eliminar");
+            return id;
+        },
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ['ordenes'] });
+            const previous = queryClient.getQueryData(['ordenes']);
+            queryClient.setQueryData(['ordenes'], (old: OrdenCompra[]) => old?.filter(o => o.id !== id));
+            return { previous };
+        },
+        onError: (_err, _id, context) => {
+            queryClient.setQueryData(['ordenes'], context?.previous);
+            toast.error("Fallo al eliminar");
+        },
+        onSettled: () => queryClient.invalidateQueries({ queryKey: ['ordenes'] })
+    });
+
+    // TERCEROS
+    const createTerceroMutation = useMutation({
+        mutationFn: async (data: Partial<Tercero>) => {
+            const res = await fetch(`${API_URL}/api/compras/terceros`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
             });
-            if (!res.ok) throw new Error("Failed to delete orden");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
+            if (!res.ok) throw new Error("Fallo");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['terceros'] });
+            toast.success("Proveedor registrado");
         }
-    };
+    });
 
-    const createInsumo = async (data: Partial<Insumo>) => {
-        try {
+    const updateTerceroMutation = useMutation({
+        mutationFn: async ({ id, updates }: { id: string, updates: Partial<Tercero> }) => {
+            const res = await fetch(`${API_URL}/api/compras/terceros/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates)
+            });
+            return res.json();
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['terceros'] })
+    });
+
+    const deleteTerceroMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await fetch(`${API_URL}/api/compras/terceros/${id}`, { method: "DELETE" });
+            return id;
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['terceros'] })
+    });
+
+    // INSUMOS
+    const createInsumoMutation = useMutation({
+        mutationFn: async (data: Partial<Insumo>) => {
             const res = await fetch(`${API_URL}/api/compras/insumos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
             });
-            if (!res.ok) throw new Error("Failed to create insumo");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    };
+            return res.json();
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insumos'] })
+    });
 
-    const updateInsumo = async (id: string, updates: Partial<Insumo>) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/insumos/${id}`, {
+    const updateInsumoMutation = useMutation({
+        mutationFn: async ({ id, updates }: { id: string, updates: Partial<Insumo> }) => {
+            await fetch(`${API_URL}/api/compras/insumos/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             });
-            if (!res.ok) throw new Error("Failed to update insumo");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    };
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insumos'] })
+    });
 
-    const deleteInsumo = async (id: string) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/insumos/${id}`, {
-                method: "DELETE"
-            });
-            if (!res.ok) throw new Error("Failed to delete insumo");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    };
+    const deleteInsumoMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await fetch(`${API_URL}/api/compras/insumos/${id}`, { method: "DELETE" });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insumos'] })
+    });
 
-    const createProducto = async (data: Partial<ProductoFabricado>) => {
-        try {
+    // PRODUCTOS FABRICADOS
+    const createProductoMutation = useMutation({
+        mutationFn: async (data: Partial<ProductoFabricado>) => {
             const res = await fetch(`${API_URL}/api/compras/productos_fabricados`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
             });
-            if (!res.ok) throw new Error("Failed to create producto");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    };
+            return res.json();
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] })
+    });
 
-    const updateProducto = async (id: string, updates: Partial<ProductoFabricado>) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/productos_fabricados/${id}`, {
+    const updateProductoMutation = useMutation({
+        mutationFn: async ({ id, updates }: { id: string, updates: Partial<ProductoFabricado> }) => {
+            await fetch(`${API_URL}/api/compras/productos_fabricados/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             });
-            if (!res.ok) throw new Error("Failed to update producto");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    };
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] })
+    });
 
-    const deleteProducto = async (id: string) => {
-        try {
-            const res = await fetch(`${API_URL}/api/compras/productos_fabricados/${id}`, {
-                method: "DELETE"
-            });
-            if (!res.ok) throw new Error("Failed to delete producto");
-            await fetchData(true);
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    };
+    const deleteProductoMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await fetch(`${API_URL}/api/compras/productos_fabricados/${id}`, { method: "DELETE" });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] })
+    });
 
-    return { terceros, insumos, ordenes, productos, isLoading, error, createTercero, updateTercero, deleteTercero, createInsumo, updateInsumo, deleteInsumo, createOrden, updateOrden, deleteOrden, createProducto, updateProducto, deleteProducto, fetchData };
+    // 3. Facade functions to match old API
+    const createOrden = async (d: Partial<OrdenCompra>) => { createOrdenMutation.mutate(d); return true; };
+    const updateOrden = async (id: string, u: Partial<OrdenCompra>) => { updateOrdenMutation.mutate({ id, updates: u }); return true; };
+    const deleteOrden = async (id: string) => { deleteOrdenMutation.mutate(id); return true; };
+
+    const createTercero = async (d: Partial<Tercero>) => { createTerceroMutation.mutate(d); return true; };
+    const updateTercero = async (id: string, u: Partial<Tercero>) => { updateTerceroMutation.mutate({ id, updates: u }); return true; };
+    const deleteTercero = async (id: string) => { deleteTerceroMutation.mutate(id); return true; };
+
+    const createInsumo = async (d: Partial<Insumo>) => { createInsumoMutation.mutate(d); return true; };
+    const updateInsumo = async (id: string, u: Partial<Insumo>) => { updateInsumoMutation.mutate({ id, updates: u }); return true; };
+    const deleteInsumo = async (id: string) => { deleteInsumoMutation.mutate(id); return true; };
+
+    const createProducto = async (d: Partial<ProductoFabricado>) => { createProductoMutation.mutate(d); return true; };
+    const updateProducto = async (id: string, u: Partial<ProductoFabricado>) => { updateProductoMutation.mutate({ id, updates: u }); return true; };
+    const deleteProducto = async (id: string) => { deleteProductoMutation.mutate(id); return true; };
+
+    return {
+        terceros, insumos, ordenes, productos, isLoading, error,
+        createTercero, updateTercero, deleteTercero,
+        createInsumo, updateInsumo, deleteInsumo,
+        createOrden, updateOrden, deleteOrden,
+        createProducto, updateProducto, deleteProducto,
+        fetchData: () => queryClient.invalidateQueries({ queryKey: ['terceros', 'insumos', 'ordenes', 'productos'] })
+    };
 }

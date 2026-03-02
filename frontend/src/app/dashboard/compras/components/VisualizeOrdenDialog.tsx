@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2, FileText, Package, Download, ShoppingCart, CheckCircle2, History, AlertCircle, X } from "lucide-react";
+import { Building2, FileText, Package, Download, ShoppingCart, CheckCircle2, History, AlertCircle, X, Truck, UserCheck, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { OrdenCompra, Tercero, Insumo } from "@/hooks/useCompras";
+import { es } from "date-fns/locale";
+import { OrdenCompra, Tercero, Insumo, Delivery, DeliveryItem } from "@/hooks/useCompras";
 import { exportarOrdenPDF } from "../utils/pdfExport";
 
 interface VisualizeOrdenDialogProps {
@@ -26,6 +27,8 @@ export const VisualizeOrdenDialog = ({
 }: VisualizeOrdenDialogProps) => {
     const [isReceiving, setIsReceiving] = useState(false);
     const [receivedInputs, setReceivedInputs] = useState<Record<number, number>>({});
+    const [receiverName, setReceiverName] = useState("");
+    const [deliveryNotes, setDeliveryNotes] = useState("");
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -45,12 +48,43 @@ export const VisualizeOrdenDialog = ({
 
     const handleSaveReception = async () => {
         if (!viewingOrden.items) return;
+        if (!receiverName.trim()) {
+            alert("Por favor ingrese quién recibe el pedido");
+            return;
+        }
         setIsSaving(true);
 
-        const updatedItems = viewingOrden.items.map((it, idx) => ({
-            ...it,
-            cantidad_recibida: (it.cantidad_recibida || 0) + (receivedInputs[idx] || 0)
-        }));
+        const newDeliveryItems: DeliveryItem[] = [];
+        const updatedItems = viewingOrden.items.map((it, idx) => {
+            const entHoy = receivedInputs[idx] || 0;
+            if (entHoy > 0) {
+                newDeliveryItems.push({
+                    insumoId: it.insumoId,
+                    insumo: it.insumo,
+                    cantidad: entHoy
+                });
+            }
+            return {
+                ...it,
+                cantidad_recibida: (it.cantidad_recibida || 0) + entHoy
+            };
+        });
+
+        if (newDeliveryItems.length === 0) {
+            alert("No ha ingresado cantidades para recibir");
+            setIsSaving(false);
+            return;
+        }
+
+        const newDelivery: Delivery = {
+            id: crypto.randomUUID(),
+            fecha: new Date().toISOString(),
+            recibidoPor: receiverName,
+            items: newDeliveryItems,
+            notas: deliveryNotes
+        };
+
+        const historialEntregas = [...(viewingOrden.historialEntregas || []), newDelivery];
 
         // Clasificar nuevo estado
         const allDone = updatedItems.every(it => (it.cantidad_recibida || 0) >= it.cantidad);
@@ -62,55 +96,82 @@ export const VisualizeOrdenDialog = ({
 
         const success = await updateOrden(viewingOrden.id, {
             items: updatedItems,
+            historialEntregas,
             estado: nuevoEstado
         });
 
         if (success) {
             setIsReceiving(false);
+            setReceivedInputs({});
+            setReceiverName("");
+            setDeliveryNotes("");
         }
         setIsSaving(false);
     };
 
+    const calculateOverallProgress = () => {
+        if (!viewingOrden.items || viewingOrden.items.length === 0) return 0;
+        const totalRequested = viewingOrden.items.reduce((acc, it) => acc + it.cantidad, 0);
+        const totalReceived = viewingOrden.items.reduce((acc, it) => acc + (it.cantidad_recibida || 0), 0);
+        return Math.round((totalReceived / totalRequested) * 100);
+    };
+
+    const progress = calculateOverallProgress();
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] m-0 p-0 border-none shadow-none rounded-none overflow-hidden transition-all duration-300">
-                <div className="bg-white overflow-y-auto flex flex-col h-full w-full">
+            <DialogContent className="max-w-[100vw] w-screen h-screen max-h-screen m-0 p-0 border-none shadow-none rounded-none overflow-y-auto transition-all duration-300">
+                <div className="bg-white flex flex-col min-h-screen w-full">
                     {/* Header estilizado */}
-                    <div className="bg-[#183C30] p-10 text-white flex justify-between items-center relative border-b-8 border-emerald-900">
-                        <div className="flex items-center gap-8">
-                            <div className="bg-white p-4 rounded-3xl shadow-2xl flex-shrink-0 border-4 border-emerald-800/30">
+                    <div className="bg-[#0f172a] p-10 text-white flex justify-between items-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/10 to-transparent pointer-events-none" />
+                        <div className="flex items-center gap-8 relative z-10">
+                            <div className="flex-shrink-0 bg-white p-4 rounded-2xl shadow-2xl">
                                 <img
                                     src="/logo.png"
-                                    alt="Logo Origen Botánico"
-                                    className="w-24 h-24 object-contain"
+                                    alt="Logo"
+                                    className="w-16 h-16 object-contain"
                                     onError={(e) => {
                                         e.currentTarget.style.display = 'none';
                                         const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                                         if (fallback) fallback.style.display = 'flex';
                                     }}
                                 />
-                                <div className="w-24 h-24 items-center justify-center bg-[#183C30] rounded-xl font-black text-4xl text-white hidden">G</div>
+                                <div className="w-16 h-16 items-center justify-center font-black text-2xl text-slate-800 hidden">OB</div>
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-4xl font-black tracking-tight uppercase leading-none">Autorización de Compra</h2>
-                                <p className="text-emerald-400 font-bold tracking-[0.2em] text-sm uppercase">Origen Botánico S.A.S. - NIT: 901.401.558-1</p>
-                                <div className="flex items-center gap-4 mt-4 text-emerald-100/80 text-xs font-black uppercase">
-                                    <span className="bg-white/10 px-4 py-1.5 rounded-full border border-white/10 tracking-[0.2em]">ID: {viewingOrden.id}</span>
-                                    <span className="bg-white/10 px-4 py-1.5 rounded-full border border-white/10 tracking-[0.2em]">Pedido: {viewingOrden.numeroPedido || 'N/A'}</span>
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-4xl font-black tracking-tight uppercase leading-none">Orden de Compra</h2>
+                                    <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded text-[10px] font-black tracking-[0.2em] border border-emerald-500/30">OFICIAL</span>
+                                </div>
+                                <p className="text-slate-400 font-bold tracking-[0.2em] text-sm uppercase">Origen Botánico S.A.S</p>
+                                <div className="flex items-center gap-4 mt-4 text-slate-400 text-xs font-black uppercase">
+                                    <span className="bg-white/5 px-4 py-1.5 rounded-full border border-white/5 tracking-[0.2em]">ID: {viewingOrden.id.slice(0, 8)}...</span>
+                                    <span className="bg-emerald-500/10 text-emerald-100 px-4 py-1.5 rounded-full border border-emerald-500/20 tracking-[0.2em]">Pedido: {viewingOrden.numeroPedido || 'N/A'}</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right flex flex-col items-end gap-4 bg-white/5 p-6 rounded-3xl border border-white/10">
-                            <div>
-                                <div className="text-[10px] font-black underline decoration-emerald-500 underline-offset-4 uppercase tracking-[0.3em] mb-2 opacity-60">Estado Actual</div>
-                                <span className={`px-6 py-2 rounded-xl text-sm font-black shadow-2xl uppercase tracking-[0.2em] ${viewingOrden.estado === 'Recibido' ? 'bg-emerald-500 text-white' :
-                                    viewingOrden.estado === 'Parcial' ? 'bg-blue-500 text-white' :
-                                        'bg-amber-400 text-[#183C30]'
-                                    }`}>
-                                    {viewingOrden.estado}
-                                </span>
+                        <div className="text-right flex flex-col items-end gap-4 relative z-10">
+                            <div className="flex flex-col items-end gap-2">
+                                <div className="text-[10px] font-black uppercase tracking-[0.3em] mb-1 opacity-40">Estado de Suministro</div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-6 py-2 rounded-xl text-sm font-black shadow-2xl uppercase tracking-[0.2em] ${viewingOrden.estado === 'Recibido' ? 'bg-emerald-500 text-white' :
+                                        viewingOrden.estado === 'Parcial' ? 'bg-blue-500 text-white' :
+                                            'bg-amber-400 text-slate-900'
+                                        }`}>
+                                        {viewingOrden.estado}
+                                    </span>
+                                    {progress > 0 && (
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-2xl font-black text-white">{progress}%</span>
+                                            <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <p className="text-[10px] font-bold text-emerald-100/40 uppercase tracking-widest">Generada: {viewingOrden.created_at ? format(new Date(viewingOrden.created_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Generada el {viewingOrden.created_at ? format(new Date(viewingOrden.created_at), "d 'de' MMMM, yyyy", { locale: es }) : 'N/A'}</p>
                         </div>
                     </div>
 
@@ -168,45 +229,77 @@ export const VisualizeOrdenDialog = ({
                             {/* PANEL DERECHO: Acciones de Recepción */}
                             <div className="space-y-6">
                                 <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
-                                    <CheckCircle2 className="w-6 h-6" /> Registro de Inventario
+                                    <Truck className="w-6 h-6" /> Control de Entregas
                                 </h3>
-                                <div className="bg-white p-8 rounded-3xl border border-dotted border-slate-300 shadow-xl space-y-4">
+                                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4">
                                     {!isReceiving ? (
                                         <>
                                             <Button
                                                 onClick={() => setIsReceiving(true)}
-                                                className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-blue-200"
+                                                className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-blue-200 transition-all active:scale-95"
                                             >
-                                                <History className="w-6 h-6" /> Recibir Pedido
+                                                <Package className="w-6 h-6" /> Registrar Entrega
                                             </Button>
                                             <Button
                                                 onClick={() => currentTercero && exportarOrdenPDF(viewingOrden, currentTercero, insumos)}
                                                 variant="outline"
                                                 className="w-full h-16 border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3"
                                             >
-                                                <Download className="w-6 h-6" /> Descargar PDF
+                                                <Download className="w-6 h-6" /> Exportar PDF
                                             </Button>
                                         </>
                                     ) : (
-                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                                        <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                                            <div className="space-y-4">
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Quién Recibe</label>
+                                                    <div className="relative">
+                                                        <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Input
+                                                            placeholder="Nombre completo"
+                                                            value={receiverName}
+                                                            onChange={(e) => setReceiverName(e.target.value)}
+                                                            className="pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl font-bold focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Notas de Entrega</label>
+                                                    <Input
+                                                        placeholder="Ej: Llegó con avería ligera..."
+                                                        value={deliveryNotes}
+                                                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                                                        className="h-12 bg-slate-50 border-slate-200 rounded-xl font-bold focus:ring-blue-500"
+                                                    />
+                                                </div>
+                                            </div>
+
                                             <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-start gap-3">
                                                 <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                                                <p className="text-[10px] font-black text-amber-800 uppercase leading-snug">Modo Recepción: Ingrese las cantidades que están entrando a la bodega hoy.</p>
+                                                <p className="text-[10px] font-black text-amber-800 uppercase leading-snug">Modo Recepción: Ajuste las cantidades en la tabla inferior y confirme.</p>
                                             </div>
-                                            <Button
-                                                onClick={handleSaveReception}
-                                                disabled={isSaving}
-                                                className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest"
-                                            >
-                                                {isSaving ? "Guardando..." : "Confirmar Entrada"}
-                                            </Button>
-                                            <Button
-                                                onClick={() => setIsReceiving(false)}
-                                                variant="ghost"
-                                                className="w-full font-black text-slate-400 hover:text-red-500 uppercase text-[10px]"
-                                            >
-                                                Cancelar
-                                            </Button>
+
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    onClick={handleSaveReception}
+                                                    disabled={isSaving}
+                                                    className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest shadow-lg shadow-emerald-100 disabled:opacity-50"
+                                                >
+                                                    {isSaving ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                            Guardando...
+                                                        </div>
+                                                    ) : "Confirmar Recepción"}
+                                                </Button>
+                                                <Button
+                                                    onClick={() => setIsReceiving(false)}
+                                                    variant="ghost"
+                                                    className="w-full font-black text-slate-400 hover:text-red-500 uppercase text-[10px]"
+                                                >
+                                                    Descartar Cambios
+                                                </Button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -221,14 +314,14 @@ export const VisualizeOrdenDialog = ({
                             <div className="border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 bg-white">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="bg-[#183C30] border-b-2 border-emerald-900">
-                                            <th className="px-8 py-6 text-center w-20 text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Item</th>
-                                            <th className="px-8 py-6 text-left text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Descripción del Insumo</th>
-                                            <th className="px-8 py-6 text-center text-emerald-100/60 font-black uppercase text-[10px] tracking-widest">Solicitado</th>
-                                            <th className="px-8 py-6 text-center text-blue-300 font-black uppercase text-[10px] tracking-widest bg-white/5">Ya Recibido</th>
-                                            {isReceiving && <th className="px-8 py-6 text-center text-emerald-400 font-black uppercase text-[10px] tracking-widest animate-pulse">Entra Hoy</th>}
-                                            <th className="px-8 py-6 text-center text-amber-300 font-black uppercase text-[10px] tracking-widest">Pendiente</th>
-                                            <th className="px-8 py-6 text-right text-emerald-100/60 font-black uppercase text-[10px] tracking-widest border-l border-emerald-900/50">Vr. Total</th>
+                                        <tr className="bg-slate-900 border-b-2 border-slate-950">
+                                            <th className="px-8 py-6 text-center w-20 text-slate-400 font-black uppercase text-[10px] tracking-widest">Ref</th>
+                                            <th className="px-8 py-6 text-left text-slate-400 font-black uppercase text-[10px] tracking-widest">Insumo / Descripción</th>
+                                            <th className="px-8 py-6 text-center text-slate-400 font-black uppercase text-[10px] tracking-widest">Cantidad Pedida</th>
+                                            <th className="px-8 py-6 text-center text-blue-400 font-black uppercase text-[10px] tracking-widest bg-blue-500/5">Acumulado Recibido</th>
+                                            {isReceiving && <th className="px-8 py-6 text-center text-emerald-400 font-black uppercase text-[10px] tracking-widest animate-pulse bg-emerald-500/5">Novedad Hoy</th>}
+                                            <th className="px-8 py-6 text-center text-amber-400 font-black uppercase text-[10px] tracking-widest">Saldo Pendiente</th>
+                                            <th className="px-8 py-6 text-right text-slate-400 font-black uppercase text-[10px] tracking-widest">Costo Proyectado</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -297,30 +390,104 @@ export const VisualizeOrdenDialog = ({
                                             </tr>
                                         )}
                                     </tbody>
-                                    <tfoot className="bg-[#183C30] border-t-4 border-emerald-900">
-                                        <tr>
-                                            <td colSpan={isReceiving ? 6 : 5} className="px-10 py-10 text-right font-black uppercase tracking-[0.4em] text-xs text-emerald-100/60">Total Bruto a Pagar COP</td>
-                                            <td className="px-10 py-10 text-right font-black text-5xl text-white border-l border-emerald-900/50 tabular-nums">
-                                                ${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    </tfoot>
                                 </table>
                             </div>
                         </div>
 
-                        {/* OBSERVACIONES */}
-                        {viewingOrden.notas && (
-                            <div className="bg-amber-50/80 rounded-3xl p-8 border border-amber-100 flex gap-6 items-start shadow-sm">
-                                <div className="bg-white p-3 rounded-2xl shadow-sm border border-amber-200">
-                                    <FileText className="w-6 h-6 text-amber-600" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="font-black text-amber-800 uppercase text-[10px] tracking-[0.2em]">Notas del Comprador</h4>
-                                    <p className="text-amber-900 leading-relaxed font-bold italic text-lg opacity-80">"{viewingOrden.notas}"</p>
+                        <div className="grid grid-cols-2 gap-12">
+                            {/* HISTORIAL DE ENTREGAS */}
+                            <div className="space-y-6">
+                                <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                    <History className="w-6 h-6" /> Registro Histórico de Entregas
+                                </h3>
+
+                                <div className="space-y-4">
+                                    {viewingOrden.historialEntregas && viewingOrden.historialEntregas.length > 0 ? (
+                                        viewingOrden.historialEntregas.slice().reverse().map((delivery, dIdx) => (
+                                            <div key={delivery.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="bg-emerald-100 p-2 rounded-lg">
+                                                            <Calendar className="w-4 h-4 text-emerald-700" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-black text-slate-900 leading-none">{format(new Date(delivery.fecha), "d 'de' MMMM, HH:mm", { locale: es })}</p>
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">N° {viewingOrden.historialEntregas!.length - dIdx}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Recibido por</span>
+                                                        <span className="font-black text-emerald-700">{delivery.recibidoPor}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-slate-50 rounded-xl p-4 mb-3">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {delivery.items.map((item, iIdx) => (
+                                                            <span key={iIdx} className="bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold">
+                                                                {item.insumo}: <span className="text-emerald-600 font-black">{item.cantidad}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {delivery.notas && (
+                                                    <p className="text-sm text-slate-500 italic font-medium px-2 border-l-2 border-slate-200">
+                                                        "{delivery.notas}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center">
+                                            <Package className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">No hay registros de entrega parcial</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
+
+                            {/* OBSERVACIONES Y TOTALES */}
+                            <div className="space-y-8">
+                                {viewingOrden.notas && (
+                                    <div className="space-y-6">
+                                        <h3 className="flex items-center gap-3 font-black text-[#183C30] uppercase text-sm tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                                            <FileText className="w-6 h-6" /> Notas de la Orden
+                                        </h3>
+                                        <div className="bg-amber-50/80 rounded-3xl p-8 border border-amber-100 flex gap-6 items-start shadow-sm">
+                                            <p className="text-amber-900 leading-relaxed font-bold italic text-lg opacity-80">"{viewingOrden.notas}"</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-[#0f172a] rounded-[2rem] p-10 text-white space-y-6 shadow-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-3xl" />
+                                    <div className="flex justify-between items-center border-b border-white/10 pb-6 uppercase tracking-[0.2em] text-[10px] font-black opacity-60">
+                                        <span>Resumen Económico</span>
+                                        <span>Valores en COP</span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-400 font-bold">Total Bruto</span>
+                                            <span className="text-2xl font-black">${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-400 font-bold">Retenciones / Impuestos</span>
+                                            <span className="text-slate-400 font-black">$0</span>
+                                        </div>
+                                        <div className="pt-6 border-t border-white/10 flex justify-between items-end">
+                                            <div className="flex flex-col">
+                                                <span className="text-emerald-400 font-black text-xs uppercase tracking-widest">Valor Neto a Pagar</span>
+                                                <span className="text-4xl font-black text-white mt-1">
+                                                    ${(viewingOrden.total_bruto || (viewingOrden.cantidad * (viewingOrden.precio_estimado || 0))).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <CheckCircle2 className="w-12 h-12 text-emerald-500/20" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Botón de cierre discreto */}
                         <div className="flex justify-center pb-12">

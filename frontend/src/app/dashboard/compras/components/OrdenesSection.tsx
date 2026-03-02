@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -150,22 +150,24 @@ export const OrdenesSection = ({
         exportarOrdenPDF(o, tercero, insumos);
     };
 
-    const filteredOrdenes = ordenes.filter(o => {
-        const t = terceros.find(terc => terc.id === o.terceroId);
-        const matchesSearch = o.insumo.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
-            o.estado.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
-            (t?.nombre || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
-            (o.id || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
-            (o.numeroPedido || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
-            (o.notas || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
-            (o.fechaSolicitada || "").toLowerCase().includes(searchOrdenes.toLowerCase());
+    const filteredOrdenes = useMemo(() => {
+        return ordenes.filter(o => {
+            const t = terceros.find(terc => terc.id === o.terceroId);
+            const matchesSearch = o.insumo.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+                o.estado.toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+                (t?.nombre || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+                (o.id || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+                (o.numeroPedido || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+                (o.notas || "").toLowerCase().includes(searchOrdenes.toLowerCase()) ||
+                (o.fechaSolicitada || "").toLowerCase().includes(searchOrdenes.toLowerCase());
 
-        const matchesProvider = filterProviderId && filterProviderId !== "none" ? (t?.id === filterProviderId) : true;
-        const matchesInsumo = filterInsumoId && filterInsumoId !== "none" ? (o.items?.some(it => it.insumoId === filterInsumoId) || o.insumoId === filterInsumoId) : true;
-        const matchesPedidoNum = filterPedidoNum ? (o.numeroPedido === filterPedidoNum || o.id.includes(filterPedidoNum)) : true;
+            const matchesProvider = filterProviderId && filterProviderId !== "none" ? (t?.id === filterProviderId) : true;
+            const matchesInsumo = filterInsumoId && filterInsumoId !== "none" ? (o.items?.some(it => it.insumoId === filterInsumoId) || o.insumoId === filterInsumoId) : true;
+            const matchesPedidoNum = filterPedidoNum ? (o.numeroPedido === filterPedidoNum || o.id.includes(filterPedidoNum)) : true;
 
-        return matchesSearch && matchesProvider && matchesInsumo && matchesPedidoNum;
-    });
+            return matchesSearch && matchesProvider && matchesInsumo && matchesPedidoNum;
+        });
+    }, [ordenes, searchOrdenes, terceros, filterProviderId, filterInsumoId, filterPedidoNum]);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
@@ -431,8 +433,13 @@ export const OrdenesSection = ({
                                     ${(o.total_bruto || ((o.precio_estimado || 0) * o.cantidad)).toLocaleString()}
                                 </div>
                                 <div className="flex justify-center">
-                                    <span className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1 w-max ${isRecibido ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                        {isRecibido ? <CheckCircle className="w-3 h-3" /> : <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+                                    <span className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1 w-max ${o.estado === "Recibido" ? 'bg-green-100 text-green-700' :
+                                        o.estado === "Parcial" ? 'bg-blue-100 text-blue-700' :
+                                            'bg-amber-100 text-amber-700'
+                                        }`}>
+                                        {o.estado === "Recibido" ? <CheckCircle className="w-3 h-3" /> :
+                                            o.estado === "Parcial" ? <Package className="w-3 h-3" /> :
+                                                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
                                         {o.estado}
                                     </span>
                                 </div>

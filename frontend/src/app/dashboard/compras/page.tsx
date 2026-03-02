@@ -23,10 +23,17 @@ export default function ComprasPage() {
     const [viewingOrden, setViewingOrden] = useState<OrdenCompra | null>(null);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
-    if (isLoading) {
+    // Skeleton Loading Placeholder
+    if (isLoading && !ordenes.length) {
         return (
-            <div className="flex justify-center items-center h-screen bg-slate-50/50">
-                <div className="w-8 h-8 border-4 border-[#183C30]/20 border-t-[#183C30] rounded-full animate-spin"></div>
+            <div className="min-h-screen bg-slate-50/50 p-6 space-y-6 animate-pulse">
+                <div className="max-w-7xl mx-auto space-y-6">
+                    <div className="h-24 bg-white rounded-2xl border border-gray-100" />
+                    <div className="grid grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-white rounded-2xl border border-gray-100" />)}
+                    </div>
+                    <div className="h-[500px] bg-white rounded-2xl border border-gray-100" />
+                </div>
             </div>
         );
     }
@@ -42,8 +49,14 @@ export default function ComprasPage() {
                             <ShoppingCart className="w-7 h-7 text-[#183C30]" />
                             Gestión de Compras
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1 font-medium">
+                        <p className="text-sm text-gray-500 mt-1 font-medium flex items-center gap-2">
                             Control de terceros, proveedores y órdenes de compra de insumos.
+                            {isLoading && (
+                                <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full animate-pulse">
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                                    ACTUALIZANDO
+                                </span>
+                            )}
                         </p>
                     </div>
 

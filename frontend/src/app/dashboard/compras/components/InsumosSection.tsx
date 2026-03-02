@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -42,17 +42,19 @@ export const InsumosSection = ({ insumos, createInsumo, updateInsumo, deleteInsu
 
     const clasificacionesUnicas = Array.from(new Set(insumos.map(i => i.clasificacion).filter(Boolean)));
 
-    const filteredInsumos = insumos.filter(i => {
-        const matchesSearch = i.nombre.toLowerCase().includes(searchInsumos.toLowerCase()) ||
-            i.sku.toLowerCase().includes(searchInsumos.toLowerCase()) ||
-            (i.rendimiento || "").toLowerCase().includes(searchInsumos.toLowerCase()) ||
-            (i.clasificacion || "").toLowerCase().includes(searchInsumos.toLowerCase()) ||
-            (i.unidad || "").toLowerCase().includes(searchInsumos.toLowerCase());
+    const filteredInsumos = useMemo(() => {
+        return insumos.filter(i => {
+            const matchesSearch = i.nombre.toLowerCase().includes(searchInsumos.toLowerCase()) ||
+                i.sku.toLowerCase().includes(searchInsumos.toLowerCase()) ||
+                (i.rendimiento || "").toLowerCase().includes(searchInsumos.toLowerCase()) ||
+                (i.clasificacion || "").toLowerCase().includes(searchInsumos.toLowerCase()) ||
+                (i.unidad || "").toLowerCase().includes(searchInsumos.toLowerCase());
 
-        const matchesClasificacion = filterClasificacion !== "none" ? i.clasificacion === filterClasificacion : true;
+            const matchesClasificacion = filterClasificacion !== "none" ? i.clasificacion === filterClasificacion : true;
 
-        return matchesSearch && matchesClasificacion;
-    });
+            return matchesSearch && matchesClasificacion;
+        });
+    }, [insumos, searchInsumos, filterClasificacion]);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">

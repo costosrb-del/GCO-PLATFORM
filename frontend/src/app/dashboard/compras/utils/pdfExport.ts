@@ -11,33 +11,27 @@ export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: 
     doc.setFillColor(24, 60, 48);
     doc.rect(0, 0, 210, 48, "F");
 
-    // ── ZONA IZQUIERDA: Logo + empresa (x: 12 → 120) ─────────────────────
-    // Caja blanca para el logo
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(12, 7, 32, 34, 5, 5, 'F');
-
-    // Logo
+    // ── ZONA IZQUIERDA: Logo + empresa (x: 12 → 140) ─────────────────────
+    // Logo directo sobre fondo verde (sin caja blanca)
     try {
         const logoPath = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : "/logo.png";
-        doc.addImage(logoPath, "PNG", 13, 8, 30, 32);
+        doc.addImage(logoPath, "PNG", 12, 6, 36, 36);
     } catch (e) {
-        doc.setTextColor(24, 60, 48);
+        doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
-        doc.text("G", 25, 28);
+        doc.text("OB", 18, 28);
     }
 
-    // Título de empresa y documento — limitado a x < 118
+    // Título del documento y empresa
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
-    doc.text("AUTORIZACIÓN DE COMPRA", 50, 20);
+    doc.text("AUTORIZACIÓN DE COMPRA", 52, 20);
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("ORIGEN BOTÁNICO S.A.S.", 50, 28);
-    doc.setFontSize(7.5);
-    doc.text("NIT: 901.401.558-1  |  Rionegro, Antioquia", 50, 33);
+    doc.text("ORIGEN BOTÁNICO", 52, 30);
 
     // ── SEPARADOR VERTICAL ───────────────────────────────────────────────
     doc.setDrawColor(200, 220, 210);
