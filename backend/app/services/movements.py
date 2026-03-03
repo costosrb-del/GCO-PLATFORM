@@ -158,6 +158,7 @@ def extract_movements_from_doc(doc, doc_type):
     
     # For Purchases (FC), we want to show the external supplier invoice
     provider_doc = "N/A"
+    affected_invoice = "N/A"
     if doc_type == "purchases":
         prov_inv = doc.get("provider_invoice")
         if isinstance(prov_inv, dict):
@@ -166,6 +167,10 @@ def extract_movements_from_doc(doc, doc_type):
             external_doc = f"{prefix}{num_val}".strip()
             if external_doc:
                 provider_doc = external_doc
+    elif doc_type == "credit-notes":
+        inv_data = doc.get("invoice")
+        if isinstance(inv_data, dict):
+            affected_invoice = inv_data.get("name") or ""
     
     # Determine movement type based on document (using original endpoint name)
     mov_type = "SALIDA" # Default for invoices
@@ -369,6 +374,7 @@ def extract_movements_from_doc(doc, doc_type):
             "total": round(line_total, 2),
             "type": mov_type,
             "observations": observation,
+            "affected_invoice": affected_invoice,
             # Audit Fields
             "cost_center": cc_name,
             "seller": seller_name,

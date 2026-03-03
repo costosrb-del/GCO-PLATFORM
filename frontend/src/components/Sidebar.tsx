@@ -14,7 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const [isInventoryOpen, setIsInventoryOpen] = useState(true);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [role, setRole] = useState("");
   const [userEmail, setUserEmail] = useState("Usuario");
@@ -217,6 +217,19 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                         title={isCollapsed ? "Auditoria Movimientos" : ""}
                       >
                         {isCollapsed ? "Audit." : "Auditoria Movimientos"}
+                      </Link>
+                    )}
+
+                    {(role === "admin" || role === "viewer") && (
+                      <Link
+                        href="/dashboard/conciliacion"
+                        className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/conciliacion"
+                          ? "bg-white text-[#183C30] font-medium shadow-md"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                          } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                        title={isCollapsed ? "Conciliación FVs" : ""}
+                      >
+                        {isCollapsed ? "Concil." : "Conciliación FVs"}
                       </Link>
                     )}
 

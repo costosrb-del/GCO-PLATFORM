@@ -58,18 +58,22 @@ def _build_base_html(title: str, body_content: str) -> str:
 
 def _send(subject: str, html: str, recipients: list[str]) -> tuple[bool, str]:
     """Envía un email HTML por SMTP."""
-    sender_email = os.getenv("MAIL_USERNAME")
-    sender_password = os.getenv("MAIL_PASSWORD")
+    # Support both MAIL_USERNAME (conciliacion) and EMAIL_USER (compras)
+    sender_email = os.getenv("MAIL_USERNAME") or os.getenv("EMAIL_USER")
+    sender_password = os.getenv("MAIL_PASSWORD") or os.getenv("EMAIL_PASSWORD")
+    
+    smtp_host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+    smtp_port = int(os.getenv("EMAIL_PORT", "587"))
 
     if not sender_email or not sender_password:
-        logger.warning("Email no configurado (MAIL_USERNAME / MAIL_PASSWORD).")
+        logger.warning(f"Email no configurado. MAIL_USERNAME={bool(os.getenv('MAIL_USERNAME'))}, EMAIL_USER={bool(os.getenv('EMAIL_USER'))}")
         return False, "Credenciales de correo no configuradas."
 
     if not recipients:
         return False, "Sin destinatarios."
 
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server = smtplib.SMTP(smtp_host, smtp_port)
         server.starttls()
         server.login(sender_email, sender_password)
 
@@ -213,3 +217,39 @@ def send_daily_report_email(inventory_data) -> tuple[bool, str]:
     """
     html = _build_base_html("📊 Reporte Diario de Inventario", body)
     return _send(f"📊 Estado Inventario GCO — {datetime.now().strftime('%Y-%m-%d')}", html, recipient_emails)
+
+
+def send_conciliacion_email(start_date: str, end_date: str, stats: dict, discrepancies: list, recipients: list[str]) -> tuple[bool, str]:
+    """Envía un resumen de la conciliación por correo."""
+    
+    diff_html = ""
+    if discrepancies:
+        diff_html = "<h3>Detalle de Diferencias (Muestra)</h3><table><tr><th>Empresa</th><th>Factura</th><th>Cliente</th><th>Novedad</th></tr>"
+        for d in discrepancies[:10]: # Solo mostramos las primeras 10 para no saturar
+            novedades = "<br>".join(d.get("diffs", []))
+            diff_html += f"<tr><td>{d.get('empresa','')}</td><td>{d.get('invoice','')}</td><td>{d.get('client','')}</td><td style='color: #991b1b; font-size: 11px;'>{novedades}</td></tr>"
+        diff_html += "</table>"
+        if len(discrepancies) > 10:
+             diff_html += f"<p><em>...y {len(discrepancies) - 10} diferencias más (ver plataforma).</em></p>"
+
+    body = f"""
+        <p>Se ha completado un cruce automático de conciliación de facturación.</p>
+        
+        <div class="stat-box">
+            <h3 style="margin-top:0">Resumen del Periodo: {start_date} al {end_date}</h3>
+            <p><strong>Hora de Conciliación:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
+            <p><strong>Facturas que Coinciden Perfectamente:</strong> <span style="color: #065f46; font-weight: bold;">{stats.get('matched', 0)}</span></p>
+            <p><strong>Facturas con Diferencias de Cantidad/SKU:</strong> <span style="color: #92400e; font-weight: bold;">{stats.get('diferencias', 0)}</span></p>
+            <p><strong>Facturas solo en Siigo (Faltan en Excel):</strong> <span style="color: #991b1b; font-weight: bold;">{stats.get('solo_siigo', 0)}</span></p>
+            <p><strong>Facturas solo en Excel (Pendientes en Siigo):</strong> <span style="color: #ea580c; font-weight: bold;">{stats.get('solo_sheets', 0)}</span></p>
+            <p><strong>Total de Documentos Analizados:</strong> {stats.get('total', 0)}</p>
+        </div>
+        
+        {diff_html}
+        
+        <div class="cta">
+            <a href="{PLATFORM_URL}dashboard/conciliacion">Ver Reporte Completo en GCO →</a>
+        </div>
+    """
+    html = _build_base_html(f"🔄 Resultado Conciliación {start_date} / {end_date}", body)
+    return _send(f"[GCO] Conciliación FVs: {stats.get('diferencias', 0)} Diferencias ({start_date} al {end_date})", html, recipients)
