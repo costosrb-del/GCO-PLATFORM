@@ -176,9 +176,9 @@ export const OrdenesSection = ({
         }
     };
 
-    const handleExportPDF = (o: OrdenCompra, tercero?: Tercero) => {
+    const handleExportPDF = async (o: OrdenCompra, tercero?: Tercero) => {
         if (!tercero) return;
-        exportarOrdenPDF(o, tercero, insumos);
+        await exportarOrdenPDF(o, tercero, insumos);
     };
 
     const filteredOrdenes = useMemo(() => {

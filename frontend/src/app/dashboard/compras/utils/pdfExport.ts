@@ -462,7 +462,7 @@ export const descargarZIPPedido = async (
         const tercero = terceros.find(t => t.id === orden.terceroId);
         if (!tercero) { done++; continue; }
 
-        const blob = generarPDFOrdenBlob(orden, tercero, insumos);
+        const blob = await generarPDFOrdenBlob(orden, tercero, insumos);
         const safeName = tercero.nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g, "_");
         folder.file(`OC_${orden.id}_${safeName}.pdf`, blob);
 
