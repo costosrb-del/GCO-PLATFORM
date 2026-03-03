@@ -45,6 +45,13 @@ export const VisualizeOrdenDialog = ({
         }
     }, [viewingOrden]);
 
+    const progress = useMemo(() => {
+        if (!viewingOrden?.items || viewingOrden.items.length === 0) return 0;
+        const totalRequested = viewingOrden.items.reduce((acc, it) => acc + it.cantidad, 0);
+        const totalReceived = viewingOrden.items.reduce((acc, it) => acc + (it.cantidad_recibida || 0), 0);
+        return Math.round((totalReceived / totalRequested) * 100);
+    }, [viewingOrden?.items]);
+
     if (!viewingOrden) return null;
 
     const currentTercero = terceros.find(t => t.id === viewingOrden.terceroId);
@@ -120,12 +127,6 @@ export const VisualizeOrdenDialog = ({
         setIsSaving(false);
     };
 
-    const progress = useMemo(() => {
-        if (!viewingOrden?.items || viewingOrden.items.length === 0) return 0;
-        const totalRequested = viewingOrden.items.reduce((acc, it) => acc + it.cantidad, 0);
-        const totalReceived = viewingOrden.items.reduce((acc, it) => acc + (it.cantidad_recibida || 0), 0);
-        return Math.round((totalReceived / totalRequested) * 100);
-    }, [viewingOrden?.items]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
