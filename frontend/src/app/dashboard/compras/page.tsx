@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useCompras, OrdenCompra } from "@/hooks/useCompras";
-import { ShoppingCart, Building2, FileText, Wand2 } from "lucide-react";
+import { ShoppingCart, Building2, FileText, Wand2, Truck } from "lucide-react";
 import { TercerosSection } from "./components/TercerosSection";
 import { InsumosSection } from "./components/InsumosSection";
 import { ProductosSection } from "./components/ProductosSection";
 import { OrdenesSection } from "./components/OrdenesSection";
 import { VisualizeOrdenDialog } from "./components/VisualizeOrdenDialog";
 import { GeneradorPedidoSection } from "./components/GeneradorPedidoSection";
+import { EntregasSection } from "./components/EntregasSection";
 
 export default function ComprasPage() {
     const {
@@ -19,7 +20,7 @@ export default function ComprasPage() {
         createProducto, updateProducto, deleteProducto
     } = useCompras();
 
-    const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos" | "generador">("ordenes");
+    const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos" | "generador" | "entregas">("ordenes");
 
     const [viewingOrden, setViewingOrden] = useState<OrdenCompra | null>(null);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -95,6 +96,16 @@ export default function ComprasPage() {
                         >
                             <Wand2 className="w-3.5 h-3.5" />
                             Generar por Pedido
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("entregas")}
+                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "entregas"
+                                ? "bg-[#183C30] text-white shadow-sm"
+                                : "text-gray-500 hover:text-[#183C30] hover:bg-emerald-50"
+                                }`}
+                        >
+                            <Truck className="w-3.5 h-3.5" />
+                            Recepción de Entregas
                         </button>
                     </div>
                 </div>
@@ -185,6 +196,14 @@ export default function ComprasPage() {
                         ordenes={ordenes}
                         createOrden={createOrden}
                         updateOrden={updateOrden}
+                    />
+                )}
+
+                {activeTab === "entregas" && (
+                    <EntregasSection
+                        terceros={terceros}
+                        insumos={insumos}
+                        ordenes={ordenes}
                     />
                 )}
 

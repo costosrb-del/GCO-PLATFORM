@@ -478,3 +478,124 @@ def delete_borrador(borrador_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── ENTREGA GLOBAL (una factura/RM → múltiples OCs) ──────────────────────────
+
+class EntregaGlobalItem(BaseModel):
+    insumoId: str
+    insumo: str
+    cantidadRecibida: float
+
+class EntregaGlobalRequest(BaseModel):
+    terceroId: str
+    documentoRef: str
+    fecha: str
+    recibidoPor: str
+    notas: Optional[str] = ""
+    items: List[EntregaGlobalItem]
+
+
+@router.post("/ordenes/registrar-entrega-global")
+def registrar_entrega_global(req: EntregaGlobalRequest, background_tasks: BackgroundTasks):
+    """
+    Distribuye una entrega de proveedor (una factura/RM) entre todas sus OCs abiertas.
+    Lógica FIFO: aplica primero a la OC más antigua.
+    """
+    import uuid
+
+    try:
+        all_ordenes = compras_service.get_ordenes_compra()
+
+        ocs_abiertas = [
+            o for o in all_ordenes
+            if o.get("terceroId") == req.terceroId
+            and o.get("estado") in ("Aprobada", "Parcial", "Pendiente")
+        ]
+        ocs_abiertas.sort(key=lambda o: o.get("created_at", ""), reverse=False)
+
+        oc_pendientes = {}
+        for oc in ocs_abiertas:
+            pendientes = {}
+            for it in (oc.get("items") or []):
+                iid = it.get("insumoId", "")
+                pend = max(0.0, float(it.get("cantidad", 0)) - float(it.get("cantidad_recibida", 0)))
+                if pend > 0:
+                    pendientes[iid] = pend
+            if pendientes:
+                oc_pendientes[oc["id"]] = pendientes
+
+        distribucion = {}
+        for item_req in req.items:
+            restante = float(item_req.cantidadRecibida)
+            iid = item_req.insumoId
+            for oc in ocs_abiertas:
+                if restante <= 0:
+                    break
+                oc_id = oc["id"]
+                pend = oc_pendientes.get(oc_id, {}).get(iid, 0)
+                if pend <= 0:
+                    continue
+                asignar = min(pend, restante)
+                if oc_id not in distribucion:
+                    distribucion[oc_id] = {}
+                distribucion[oc_id][iid] = distribucion[oc_id].get(iid, 0) + asignar
+                oc_pendientes[oc_id][iid] = pend - asignar
+                restante -= asignar
+
+        delivery_id = str(uuid.uuid4())
+        ocs_afectadas = []
+
+        for oc in ocs_abiertas:
+            oc_id = oc["id"]
+            if oc_id not in distribucion:
+                continue
+            asignados = distribucion[oc_id]
+            items = list(oc.get("items") or [])
+
+            for it in items:
+                iid = it.get("insumoId", "")
+                if iid in asignados:
+                    it["cantidad_recibida"] = float(it.get("cantidad_recibida", 0)) + asignados[iid]
+
+            delivery_items = [
+                {"insumoId": iid,
+                 "insumo": next((i.get("insumo", "") for i in items if i.get("insumoId") == iid), iid),
+                 "cantidad": cant}
+                for iid, cant in asignados.items()
+            ]
+            nueva_entrega = {
+                "id": delivery_id,
+                "fecha": req.fecha,
+                "recibidoPor": req.recibidoPor,
+                "documentoRef": req.documentoRef,
+                "notas": req.notas or "",
+                "items": delivery_items,
+                "esEntregaGlobal": True
+            }
+            historial = list(oc.get("historialEntregas") or [])
+            historial.append(nueva_entrega)
+
+            all_done = all(float(it.get("cantidad_recibida", 0)) >= float(it.get("cantidad", 0)) for it in items)
+            some_done = any(float(it.get("cantidad_recibida", 0)) > 0 for it in items)
+            nuevo_estado = "Recibido" if all_done else ("Parcial" if some_done else oc.get("estado"))
+
+            compras_service.update_orden_compra(oc_id, {
+                "items": items,
+                "historialEntregas": historial,
+                "estado": nuevo_estado
+            })
+            ocs_afectadas.append({
+                "oc_id": oc_id,
+                "numeroPedido": oc.get("numeroPedido", oc_id[:8]),
+                "nuevo_estado": nuevo_estado,
+                "asignado": asignados
+            })
+
+        return {
+            "message": f"Entrega registrada en {len(ocs_afectadas)} OC(s)",
+            "delivery_id": delivery_id,
+            "distribucion": ocs_afectadas
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
