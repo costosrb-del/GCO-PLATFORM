@@ -22,8 +22,11 @@ export default function ComprasPage() {
 
     const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos" | "generador" | "entregas">("ordenes");
 
-    const [viewingOrden, setViewingOrden] = useState<OrdenCompra | null>(null);
+    const [viewingOrdenId, setViewingOrdenId] = useState<string | null>(null);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+    // Derivar viewingOrden en vivo desde el caché de React Query para que las entregas parciales
+    // acumulen correctamente sin cerrar/reabrir el diálogo
+    const viewingOrden = viewingOrdenId ? (ordenes.find(o => o.id === viewingOrdenId) ?? null) : null;
 
     // Skeleton Loading Placeholder
     if (isLoading && !ordenes.length) {
@@ -164,7 +167,7 @@ export default function ComprasPage() {
                         createOrden={createOrden}
                         updateOrden={updateOrden}
                         deleteOrden={deleteOrden}
-                        setViewingOrden={setViewingOrden}
+                        setViewingOrden={(orden) => setViewingOrdenId(orden?.id ?? null)}
                         setIsViewDialogOpen={setIsViewDialogOpen}
                     />
                 )}
