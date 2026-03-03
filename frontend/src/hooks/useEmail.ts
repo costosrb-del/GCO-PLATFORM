@@ -47,7 +47,7 @@ export function useEmail() {
         setEnviando(true);
         try {
             // 1. Generar PDF blob en el frontend
-            const pdfBlob = generarPDFOrdenBlob(orden, tercero, insumos);
+            const pdfBlob = await generarPDFOrdenBlob(orden, tercero, insumos);
             const pdfBase64 = await blobToBase64(pdfBlob);
 
             // 2. Llamar al backend
