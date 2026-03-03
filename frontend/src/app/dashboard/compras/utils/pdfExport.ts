@@ -7,22 +7,51 @@ import { parseISO } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const exportarOrdenPDF = (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]) => {
-    const doc = new jsPDF();
+// ── Helper: carga una imagen como base64 (async, con fallback) ───────────────
+async function loadLogoBase64(): Promise<string | null> {
+    try {
+        const logoPath = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : null;
+        if (!logoPath) return null;
+        const res = await fetch(logoPath);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        return null;
+    }
+}
 
-    // ── HEADER ────────────────────────────────────────────────────────────
+function addLogoToDoc(doc: jsPDF, logoBase64: string | null) {
     doc.setFillColor(24, 60, 48);
     doc.rect(0, 0, 210, 48, "F");
-
-    try {
-        const logoPath = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png";
-        doc.addImage(logoPath, "PNG", 12, 6, 36, 36);
-    } catch {
+    if (logoBase64) {
+        try {
+            doc.addImage(logoBase64, "PNG", 12, 6, 36, 36);
+        } catch {
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont("helvetica", "bold");
+            doc.text("OB", 18, 28);
+        }
+    } else {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
         doc.text("OB", 18, 28);
     }
+}
+
+export const exportarOrdenPDF = async (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]) => {
+    const doc = new jsPDF();
+    const logoBase64 = await loadLogoBase64();
+
+    // ── HEADER ────────────────────────────────────────────────────────────
+    addLogoToDoc(doc, logoBase64);
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
@@ -285,20 +314,10 @@ export const exportarOrdenesExcel = (ordenes: OrdenCompra[], terceros: Tercero[]
  * Igual que exportarOrdenPDF pero devuelve un Blob en lugar de descargar.
  * Lo usa descargarZIPPedido para empaquetar todos los PDFs en un ZIP.
  */
-export const generarPDFOrdenBlob = (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]): Blob => {
+export const generarPDFOrdenBlob = async (orden: OrdenCompra, tercero: Tercero, insumos: Insumo[]): Promise<Blob> => {
     const doc = new jsPDF();
-
-    doc.setFillColor(24, 60, 48);
-    doc.rect(0, 0, 210, 48, "F");
-    try {
-        const logoPath = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png";
-        doc.addImage(logoPath, "PNG", 12, 6, 36, 36);
-    } catch {
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(18);
-        doc.setFont("helvetica", "bold");
-        doc.text("OB", 18, 28);
-    }
+    const logoBase64 = await loadLogoBase64();
+    addLogoToDoc(doc, logoBase64);
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
     doc.setFont("helvetica", "bold");

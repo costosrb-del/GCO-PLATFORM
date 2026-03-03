@@ -262,7 +262,7 @@ export const VisualizeOrdenDialog = ({
                                                 <Package className="w-6 h-6" /> Registrar Entrega
                                             </Button>
                                             <Button
-                                                onClick={() => currentTercero && exportarOrdenPDF(viewingOrden, currentTercero, insumos)}
+                                                onClick={async () => currentTercero && await exportarOrdenPDF(viewingOrden, currentTercero, insumos)}
                                                 variant="outline"
                                                 className="w-full h-16 border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3"
                                             >
