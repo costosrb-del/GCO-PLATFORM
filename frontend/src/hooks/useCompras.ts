@@ -64,6 +64,7 @@ export interface Delivery {
     id: string;
     fecha: string;
     recibidoPor: string;
+    documentoRef?: string;
     items: DeliveryItem[];
     notas?: string;
 }

@@ -75,64 +75,108 @@ export function ConciliacionSection() {
         if (!data) return;
         const doc = new jsPDF();
 
-        // Header
+        // Helper to calculate totals
+        const calculateTotals = () => {
+            const bySku: Record<string, number> = {};
+            const byCompany: Record<string, number> = {};
+            let totalUnits = 0;
+
+            const processList = (list: any[]) => {
+                list.forEach(item => {
+                    const siigoItems = item.siigo_items || item.items || {};
+                    const sheetItems = item.sheet_items || {};
+                    const allSkus = new Set([...Object.keys(siigoItems), ...Object.keys(sheetItems)]);
+
+                    allSkus.forEach(sku => {
+                        const qty = (siigoItems[sku] || 0) > 0 ? siigoItems[sku] : (sheetItems[sku] || 0);
+                        bySku[sku] = (bySku[sku] || 0) + qty;
+                        byCompany[item.empresa] = (byCompany[item.empresa] || 0) + qty;
+                        totalUnits += qty;
+                    });
+                });
+            };
+
+            processList(data.matched);
+            processList(data.diferencias);
+            processList(data.solo_siigo);
+            processList(data.solo_sheets);
+
+            return { bySku, byCompany, totalUnits };
+        };
+
+        const totals = calculateTotals();
+
+        // Header Compacto
         doc.setFillColor(24, 60, 48);
-        doc.rect(0, 0, 210, 30, "F");
+        doc.rect(0, 0, 210, 20, "F");
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(18);
+        doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
-        doc.text("REPORTE DE CONCILIACIÓN GCO", 14, 18);
-        doc.setFontSize(9);
+        doc.text("INFORME GCO: CONCILIACIÓN Y VENTAS", 14, 12);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        doc.text(`Periodo: ${startDate} al ${endDate}`, 14, 25);
-        doc.text(`Generado: ${new Date().toLocaleString()}`, 196, 25, { align: "right" });
+        doc.text(`Periodo: ${startDate} al ${endDate} | Generado: ${new Date().toLocaleString()}`, 14, 17);
 
-        let finalY = 40;
+        let finalY = 25;
 
-        // Summary Table
+        // Resumen y SKU lado a lado
         autoTable(doc, {
             startY: finalY,
-            head: [["Estado", "Cantidad de Documentos"]],
+            head: [["RESUMEN EJECUTIVO", "VALOR"]],
             body: [
-                ["Coinciden Perfectamente", data.matched.length],
-                ["Diferencias de Cantidad/SKU", data.diferencias.length],
-                ["Solo en Siigo (Pend. en Sheet)", data.solo_siigo.length],
-                ["Solo en Sheet (Pend. en Siigo)", data.solo_sheets.length],
-                ["Total Documentos Analizados", data.matched.length + data.diferencias.length + data.solo_siigo.length + data.solo_sheets.length]
+                ["Facturas Conciliadas OK", data.matched.length],
+                ["Facturas con Diferencias", data.diferencias.length],
+                ["Solo en Siigo", data.solo_siigo.length],
+                ["Solo en Sheets", data.solo_sheets.length],
+                ["TOTAL UNIDADES", totals.totalUnits.toLocaleString()]
             ],
-            theme: "striped",
+            theme: "grid",
             headStyles: { fillColor: [24, 60, 48] },
-            styles: { fontSize: 10 }
+            styles: { fontSize: 7, cellPadding: 1 },
+            margin: { right: 110 }
         });
 
-        finalY = (doc as any).lastAutoTable.finalY + 15;
+        autoTable(doc, {
+            startY: finalY,
+            head: [["SKU", "UNID"]],
+            body: Object.entries(totals.bySku).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([sku, qty]) => [sku, qty.toLocaleString()]),
+            theme: "striped",
+            headStyles: { fillColor: [20, 83, 45] },
+            styles: { fontSize: 7, cellPadding: 1 },
+            margin: { left: 110 }
+        });
 
-        // Content - Diferencias
-        if (data.diferencias.length > 0) {
-            doc.setFontSize(14);
-            doc.setTextColor(153, 27, 27); // Red-800
-            doc.text("DETALLE DE DIFERENCIAS DETECTADAS", 14, finalY);
+        finalY = (doc as any).lastAutoTable.finalY + 8;
 
-            autoTable(doc, {
-                startY: finalY + 5,
-                head: [["Empresa", "Factura", "Cliente", "Novedades"]],
-                body: data.diferencias.map(d => [
-                    d.empresa,
-                    d.invoice,
-                    d.client,
-                    d.diffs.join("\n")
-                ]),
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [180, 83, 9] }, // Amber-700
-                columnStyles: {
-                    3: { cellWidth: 80 }
-                }
-            });
-            finalY = (doc as any).lastAutoTable.finalY + 15;
-        }
+        // Listado Detallado Muy Compacto
+        doc.setFontSize(9);
+        doc.setTextColor(24, 60, 48);
+        doc.text("LISTADO DETALLADO DE FACTURAS", 14, finalY);
 
-        doc.save(`Conciliacion_GCO_${startDate}_a_${endDate}.pdf`);
-        toast.success("PDF generado exitosamente");
+        const allDocs = [
+            ...data.matched.map((i: any) => ({ ...i, estado: "OK" })),
+            ...data.diferencias.map((i: any) => ({ ...i, estado: "DIF" })),
+            ...data.solo_siigo.map((i: any) => ({ ...i, estado: "S. SIIGO" })),
+            ...data.solo_sheets.map((i: any) => ({ ...i, estado: "S. SHEETS" }))
+        ];
+
+        autoTable(doc, {
+            startY: finalY + 4,
+            head: [["Empresa", "Factura", "Fecha", "Cliente", "Est."]],
+            body: allDocs.map(d => [
+                d.empresa.substring(0, 15),
+                d.invoice,
+                d.date,
+                d.client.substring(0, 25),
+                d.estado
+            ]),
+            styles: { fontSize: 5.5, cellPadding: 0.5 },
+            headStyles: { fillColor: [24, 60, 48] },
+            margin: { bottom: 10 }
+        });
+
+        doc.save(`Conciliacion_Compacta_GCO_${startDate}_a_${endDate}.pdf`);
+        toast.success("PDF Compacto generado exitosamente");
     };
 
     const handleExport = () => {

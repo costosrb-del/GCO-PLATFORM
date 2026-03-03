@@ -29,6 +29,8 @@ export const VisualizeOrdenDialog = ({
     const [isReceiving, setIsReceiving] = useState(false);
     const [receivedInputs, setReceivedInputs] = useState<Record<number, number>>({});
     const [receiverName, setReceiverName] = useState("");
+    const [deliveryDate, setDeliveryDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const [documentoRef, setDocumentoRef] = useState("");
     const [deliveryNotes, setDeliveryNotes] = useState("");
     const [isSaving, setIsSaving] = useState(false);
 
@@ -78,9 +80,10 @@ export const VisualizeOrdenDialog = ({
         }
 
         const newDelivery: Delivery = {
-            id: crypto.randomUUID(),
-            fecha: new Date().toISOString(),
+            id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
+            fecha: new Date(deliveryDate + 'T12:00:00').toISOString(),
             recibidoPor: receiverName,
+            documentoRef: documentoRef,
             items: newDeliveryItems,
             notas: deliveryNotes
         };
@@ -108,6 +111,8 @@ export const VisualizeOrdenDialog = ({
             setIsReceiving(false);
             setReceivedInputs({});
             setReceiverName("");
+            setDeliveryDate(format(new Date(), "yyyy-MM-dd"));
+            setDocumentoRef("");
             setDeliveryNotes("");
         } else {
             toast.error("Error al guardar la recepción. Por favor inténtelo de nuevo.");
@@ -150,7 +155,7 @@ export const VisualizeOrdenDialog = ({
                                 </div>
                                 <p className="text-slate-400 font-bold tracking-[0.2em] text-sm uppercase">Origen Botánico S.A.S</p>
                                 <div className="flex items-center gap-4 mt-4 text-slate-400 text-xs font-black uppercase">
-                                    <span className="bg-white/5 px-4 py-1.5 rounded-full border border-white/5 tracking-[0.2em]">ID: {viewingOrden.id.slice(0, 8)}...</span>
+                                    <span className="bg-white/5 px-4 py-1.5 rounded-full border border-white/5 tracking-[0.2em]">ID: {viewingOrden.id?.slice(0, 8) || 'N/A'}...</span>
                                     <span className="bg-emerald-500/10 text-emerald-100 px-4 py-1.5 rounded-full border border-emerald-500/20 tracking-[0.2em]">Pedido: {viewingOrden.numeroPedido || 'N/A'}</span>
                                 </div>
                             </div>
@@ -175,7 +180,13 @@ export const VisualizeOrdenDialog = ({
                                     )}
                                 </div>
                             </div>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Generada el {viewingOrden.created_at ? format(new Date(viewingOrden.created_at), "d 'de' MMMM, yyyy", { locale: es }) : 'N/A'}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Generada el {(() => {
+                                try {
+                                    return viewingOrden.created_at ? format(new Date(viewingOrden.created_at), "d 'de' MMMM, yyyy", { locale: es }) : 'N/A';
+                                } catch (e) {
+                                    return 'N/A';
+                                }
+                            })()}</p>
                         </div>
                     </div>
 
@@ -213,7 +224,13 @@ export const VisualizeOrdenDialog = ({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-1">
                                         <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Fecha Compromiso</span>
-                                        <p className="font-black text-slate-900 text-xl">{viewingOrden.fechaSolicitada ? format(parseISO(viewingOrden.fechaSolicitada), 'dd/MM/yyyy') : 'POR DEFINIR'}</p>
+                                        <p className="font-black text-slate-900 text-xl">{(() => {
+                                            try {
+                                                return viewingOrden.fechaSolicitada ? format(parseISO(viewingOrden.fechaSolicitada), 'dd/MM/yyyy') : 'POR DEFINIR';
+                                            } catch (e) {
+                                                return 'POR DEFINIR';
+                                            }
+                                        })()}</p>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-1">
                                         <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Lead Time</span>
@@ -262,6 +279,30 @@ export const VisualizeOrdenDialog = ({
                                                             placeholder="Nombre completo"
                                                             value={receiverName}
                                                             onChange={(e) => setReceiverName(e.target.value)}
+                                                            className="pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl font-bold focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Fecha de Entrega</label>
+                                                    <div className="relative">
+                                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Input
+                                                            type="date"
+                                                            value={deliveryDate}
+                                                            onChange={(e) => setDeliveryDate(e.target.value)}
+                                                            className="pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl font-bold focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Factura / Remisión</label>
+                                                    <div className="relative">
+                                                        <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Input
+                                                            placeholder="Ej: FAC-123 o RM-456"
+                                                            value={documentoRef}
+                                                            onChange={(e) => setDocumentoRef(e.target.value)}
                                                             className="pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl font-bold focus:ring-blue-500"
                                                         />
                                                     </div>
@@ -421,6 +462,9 @@ export const VisualizeOrdenDialog = ({
                                                     <div className="text-right">
                                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Recibido por</span>
                                                         <span className="font-black text-emerald-700">{delivery.recibidoPor}</span>
+                                                        {delivery.documentoRef && (
+                                                            <span className="block text-[10px] font-black text-blue-600 uppercase mt-1">Doc: {delivery.documentoRef}</span>
+                                                        )}
                                                     </div>
                                                 </div>
 
