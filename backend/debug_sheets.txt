@@ -1,0 +1,28 @@
+Cargando configuración de empresas...
+Total empresas encontradas: 6
+Integrity Check Passed: 1/1 documents verified.
+DEBUG: Total movements extracted: 1
+Integrity Check Passed: 8/8 documents verified.
+DEBUG: Total movements extracted: 44
+Integrity Check Passed: 86/86 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 150/150 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 11/11 documents verified.
+DEBUG: Total movements extracted: 26
+Integrity Check Passed: 71/71 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 22/22 documents verified.
+DEBUG: Total movements extracted: 65
+Integrity Check Passed: 40/40 documents verified.
+DEBUG: Total movements extracted: 153
+Integrity Check Passed: 194/194 documents verified.
+DEBUG: Total movements extracted: 530
+Integrity Check Passed: 42/42 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 19/19 documents verified.
+DEBUG: Total movements extracted: 0
+Error fetching credit-notes page 1: RetryError[<Future at 0x1d4224b8850 state=finished raised ConnectionError>]
+DEBUG: Total movements extracted: 0
+
+--- OK ---

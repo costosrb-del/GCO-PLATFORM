@@ -26,14 +26,21 @@ def normalize_invoice(inv: str) -> str:
     s = s.replace(" ", "-")
     return s
 
-def normalize_sku(sku: str) -> str:
-    s = str(sku).upper().strip()
+def normalize_sku(sku) -> str:
+    # Pandas often reads integer codes from Excel/Sheets as floats (e.g. 7210 → 7210.0).
+    # Convert to int first to avoid "7210.0" → "72100" when stripping non-digits.
+    try:
+        f = float(str(sku))
+        s = str(int(f)).upper().strip()
+    except (ValueError, TypeError):
+        s = str(sku).upper().strip()
+
     if "SD15" in s:
         return "SD15"
     digits = re.sub(r'\D', '', s)
     if digits:
-         return digits
-    return s 
+        return digits
+    return s
 
 def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_almaverde: bool = False) -> Dict[str, Any]:
     # 1. Fetch Siigo FVs
@@ -110,6 +117,13 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
     if "output=csv" in url:
         url = url.replace("output=csv", "output=xlsx")
         
+    # Strip single=true and gid so Google always returns the ENTIRE workbook, not just one tab
+    import re
+    url = re.sub(r'&?single=true', '', url)
+    url = re.sub(r'&?gid=\d+', '', url)
+    # If the URL ends with ? (because we removed the only params), that is fine, or we can clean it
+    url = url.replace("?&", "?").rstrip("?")
+    
     try:
         xl = pd.ExcelFile(url)
     except Exception as e:
@@ -117,9 +131,13 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
         
     sheet_invoices = {}
     
+    print(f"[DEBUG SHEETS] Hojas encontradas: {xl.sheet_names}")
+    
     for sheet_name in xl.sheet_names:
         df = xl.parse(sheet_name)
         df.columns = df.columns.astype(str).str.strip()
+        
+        print(f"[DEBUG SHEETS] Hoja '{sheet_name}' columnas: {list(df.columns)}")
         
         col_inv = next((c for c in df.columns if 'FACTURA' in c.upper() and 'D.' in c.upper()), None)
         if not col_inv: col_inv = next((c for c in df.columns if 'FACTURA' in c.upper()), None)
@@ -128,6 +146,12 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
         col_emp = next((c for c in df.columns if 'EMPRESA' in c.upper()), None)
         col_date = next((c for c in df.columns if 'FECHA' in c.upper() and 'WAP' not in c.upper()), None)
         col_client = next((c for c in df.columns if 'TERCERO EXTERNO' in c.upper() or 'CLIENTE' in c.upper()), None)
+        
+        print(f"[DEBUG SHEETS] Hoja '{sheet_name}' cols detectadas: inv={col_inv}, qty={col_qty}, code={col_code}, emp={col_emp}, date={col_date}")
+        
+        if not col_inv or not col_qty:
+            print(f"[DEBUG SHEETS] IGNORADA Hoja '{sheet_name}' (falta col_inv o col_qty)")
+            continue
         
         if col_inv and col_qty: 
              for _, row_s in df.iterrows():
@@ -167,6 +191,7 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
                   client_val = str(row_s.get(col_client, "")) if col_client else ""
                   
                   key = f"{curr_emp}_{inv}"
+                  print(f"[DEBUG SHEETS]   Key generado: '{key}' (empresa_raw='{v_empresa}', inv_raw='{v_inv}')")
                   
                   if key not in sheet_invoices:
                       sheet_invoices[key] = {
@@ -182,6 +207,9 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
                   if code_str:
                        sheet_invoices[key]["items"][code_str] = sheet_invoices[key]["items"].get(code_str, 0) + v_qty
              
+    print(f"[DEBUG MATCH] Keys de SIIGO ({len(siigo_invoices)}): {sorted(siigo_invoices.keys())}")
+    print(f"[DEBUG MATCH] Keys de SHEETS ({len(sheet_invoices)}): {sorted(sheet_invoices.keys())}")
+
     matched = []
     diferencias = []
     solo_siigo = []
@@ -210,6 +238,7 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
                     "client": s_inv["client"], "siigo_items": s_items, "sheet_items": g_items
                 })
         else:
+            print(f"[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='{k}'")
             solo_siigo.append({
                 "empresa": s_inv["empresa"], "invoice": s_inv["invoice"], "date": s_inv["date"],
                 "client": s_inv["client"], "siigo_items": s_inv["items"]

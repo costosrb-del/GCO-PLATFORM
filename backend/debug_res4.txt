@@ -1,0 +1,492 @@
+C:\Users\costo\Downloads\GCO_PLATFORM_V2\backend\app\services\conciliacion.py:174: UserWarning: Parsing dates in %Y-%m-%d format when dayfirst=True was specified. Pass `dayfirst=False` or specify a format to silence this warning.
+  p_dt = pd.to_datetime(date_val, errors='coerce', dayfirst=True)
+Cargando configuración de empresas...
+Total empresas encontradas: 6
+Integrity Check Passed: 1/1 documents verified.
+DEBUG: Total movements extracted: 1
+Integrity Check Passed: 40/40 documents verified.
+DEBUG: Total movements extracted: 153
+Integrity Check Passed: 11/11 documents verified.
+DEBUG: Total movements extracted: 26
+Integrity Check Passed: 8/8 documents verified.
+DEBUG: Total movements extracted: 44
+Integrity Check Passed: 71/71 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 197/197 documents verified.
+DEBUG: Total movements extracted: 541
+Integrity Check Passed: 86/86 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 150/150 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 22/22 documents verified.
+DEBUG: Total movements extracted: 65
+Integrity Check Passed: 19/19 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 42/42 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 1164/1164 documents verified.
+DEBUG: Total movements extracted: 0
+[DEBUG SHEETS] Hojas encontradas: ['RAICES ORGANICAS', 'HECHIZO DE BELLEZA', 'ARMONIA COSMETICA', 'GRUPO HUIMAN PROJECT SAS', 'RITUAL BOTÁNICO ', 'ALAMVERDE WHATSAAP', '2802']
+[DEBUG SHEETS] Hoja 'RAICES ORGANICAS' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja 'RAICES ORGANICAS' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG SHEETS] Hoja 'HECHIZO DE BELLEZA' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja 'HECHIZO DE BELLEZA' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG SHEETS] Hoja 'ARMONIA COSMETICA' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja 'ARMONIA COSMETICA' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG SHEETS]   Key generado: 'ARMONIA C._2-1404' (empresa_raw='ARMONIA COSMETICA', inv_raw='FV-2-1404')
+[DEBUG SHEETS]   Key generado: 'ARMONIA C._2-1404' (empresa_raw='ARMONIA COSMETICA', inv_raw='FV-2-1404')
+[DEBUG SHEETS]   Key generado: 'ARMONIA C._2-1404' (empresa_raw='ARMONIA COSMETICA', inv_raw='FV-2-1404')
+[DEBUG SHEETS]   Key generado: 'ARMONIA C._2-1404' (empresa_raw='ARMONIA COSMETICA', inv_raw='FV-2-1404')
+[DEBUG SHEETS]   Key generado: 'ARMONIA C._2-1405' (empresa_raw='ARMONIA COSMETICA', inv_raw='FV-2-1405')
+[DEBUG SHEETS]   Key generado: 'ARMONIA C._2-1405' (empresa_raw='ARMONIA COSMETICA', inv_raw='FV-2-1405')
+[DEBUG SHEETS] Hoja 'GRUPO HUIMAN PROJECT SAS' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja 'GRUPO HUIMAN PROJECT SAS' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1413' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1413')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1414' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1414')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1414' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1414')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1414' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1414')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1414' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1414')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1414' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1414')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1414' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1414')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1415' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1415')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1416' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1416')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1416' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1416')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1416' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1416')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1416' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1416')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1416' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1416')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1416' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1416')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1417' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1417')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1418' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1418')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1418' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1418')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1419' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1419')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1419' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1419')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1419' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1419')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1419' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1419')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1419' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1419')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1420' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1420')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1420' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1420')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1420' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1420')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1421' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1421')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1421' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1421')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1421' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1421')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1421' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1421')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1421' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1421')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1422' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1422')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1423' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1423')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1423' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1423')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1423' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1423')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1423' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1423')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1423' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1423')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1424' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1424')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1424' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1424')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1425' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1425')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1426' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1426')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1427' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1427')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1427' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1427')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1427' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1427')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1427' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1427')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1428' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1428')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1428' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1428')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1428' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1428')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1428' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1428')
+[DEBUG SHEETS]   Key generado: 'GRUPO HUMAN_4-1428' (empresa_raw='GRUPO HUMAN PROJECT SAS', inv_raw='FV-4-1428')
+[DEBUG SHEETS] Hoja 'RITUAL BOTÁNICO ' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja 'RITUAL BOTÁNICO ' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73245' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73245')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73245' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73245')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73245' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73245')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73246' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73246')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73247' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73247')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73247' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73247')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73247' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73247')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73247' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73247')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73247' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73247')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73248' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73248')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73248' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73248')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73249' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73249')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73249' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73249')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73250' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73250')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73250' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73250')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73250' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73250')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73250' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73250')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73251' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73251')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73251' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73251')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73251' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73251')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73251' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73251')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73252' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73252')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73252' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73252')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73252' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73252')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73252' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73252')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73252' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73252')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73252' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73252')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73253' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73253')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73253' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73253')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73253' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73253')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73254' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73254')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73254' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73254')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73254' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73254')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73255' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73255')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73255' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73255')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73255' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73255')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73255' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73255')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73256' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73256')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73256' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73256')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73256' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73256')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73256' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73256')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73257' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73257')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73257' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73257')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73257' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73257')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73257' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73257')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73258' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73258')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73258' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73258')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73258' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73258')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73258' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73258')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73259' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73259')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73259' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73259')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73259' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73259')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73259' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73259')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73260' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73260')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73260' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73260')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73260' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73260')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73260' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73260')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73261' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73261')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73261' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73261')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73261' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73261')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73261' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73261')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73262' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73262')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73262' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73262')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73262' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73262')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73262' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73262')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73263' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73263')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73263' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73263')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73263' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73263')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73263' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73263')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73264' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73264')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73264' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73264')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73264' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73264')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73264' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73264')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73265' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73265')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73265' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73265')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73265' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73265')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73265' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73265')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73265' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73265')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73266' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73266')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73267' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73267')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73267' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73267')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73267' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73267')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73268' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73268')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73268' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73268')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73268' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73268')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73268' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73268')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73269' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73269')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73269' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73269')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73269' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73269')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73269' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73269')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73270' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73270')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73270' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73270')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73271' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73271')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73272' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73272')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73272' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73272')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73273' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73273')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73273' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73273')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73273' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73273')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73273' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73273')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73274' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73274')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73274' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73274')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73274' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73274')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73274' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73274')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73275' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73275')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73275' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73275')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73275' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73275')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73275' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73275')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73276' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73276')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73276' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73276')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73276' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73276')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73276' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73276')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73277' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73277')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73277' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73277')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73277' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73277')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73277' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73277')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73277' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73277')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73278' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73278')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73278' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73278')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73279' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73279')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73279' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73279')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73279' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73279')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73280' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73280')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73280' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73280')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73280' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73280')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73280' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73280')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73281' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73281')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73281' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73281')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73282' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73282')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73282' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73282')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73282' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73282')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73282' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73282')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73282' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73282')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73283' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73283')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS]   Key generado: 'RITUAL BOTANICO_2-73284' (empresa_raw='RITUAL BOTANICO SAS', inv_raw='FV-2-73284')
+[DEBUG SHEETS] Hoja 'ALAMVERDE WHATSAAP' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja 'ALAMVERDE WHATSAAP' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2923' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2923')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2923' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2923')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2929' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2929')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2929' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2929')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2929' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2929')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2929' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2929')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2930' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2930')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2930' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2930')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2930' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2930')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2930' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2930')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2930' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2930')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2930' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2930')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2931' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2931')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2931' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2931')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2931' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2931')
+[DEBUG SHEETS]   Key generado: 'ALMAVERDE_2-2931' (empresa_raw='ALMAVERDE', inv_raw='FV-2-2931')
+[DEBUG SHEETS] Hoja '2802' columnas: ['EMPRESA', 'DOC', 'PREFIJO', 'No. Doc.', 'FECHA', 'Tercero Externo', '# D. FACTURA', 'Nota Encab.', 'Tercero Interno', 'Cod. Producto', 'Bodega', 'U.Medida', 'Cantidad', 'Transportadora (P2)', 'Flete (P3)', 'Ciudad (P4)', 'Tipo Envio', 'Documento (P5)', 'Pedido (P6)', 'Direccion (P8)', 'Guia (P9)', 'Telefono (P10)', 'Pto Referencia', 'Nota Cliente', 'Fecha Wap', 'Email']
+[DEBUG SHEETS] Hoja '2802' cols detectadas: inv=# D. FACTURA, qty=Cantidad, code=Cod. Producto, emp=EMPRESA, date=FECHA
+[DEBUG MATCH] Keys de SIIGO (273): ['ALMAVERDE_2-2770', 'ALMAVERDE_2-2771', 'ALMAVERDE_2-2772', 'ALMAVERDE_2-2773', 'ALMAVERDE_2-2774', 'ALMAVERDE_2-2775', 'ALMAVERDE_2-2776', 'ALMAVERDE_2-2777', 'ALMAVERDE_2-2778', 'ALMAVERDE_2-2779', 'ALMAVERDE_2-2780', 'ALMAVERDE_2-2781', 'ALMAVERDE_2-2782', 'ALMAVERDE_2-2783', 'ALMAVERDE_2-2784', 'ALMAVERDE_2-2785', 'ALMAVERDE_2-2786', 'ALMAVERDE_2-2787', 'ALMAVERDE_2-2788', 'ALMAVERDE_2-2789', 'ALMAVERDE_2-2790', 'ALMAVERDE_2-2791', 'ALMAVERDE_2-2792', 'ALMAVERDE_2-2793', 'ALMAVERDE_2-2794', 'ALMAVERDE_2-2795', 'ALMAVERDE_2-2796', 'ALMAVERDE_2-2797', 'ALMAVERDE_2-2798', 'ALMAVERDE_2-2799', 'ALMAVERDE_2-2800', 'ALMAVERDE_2-2801', 'ALMAVERDE_2-2802', 'ALMAVERDE_2-2803', 'ALMAVERDE_2-2804', 'ALMAVERDE_2-2805', 'ALMAVERDE_2-2806', 'ALMAVERDE_2-2807', 'ALMAVERDE_2-2808', 'ALMAVERDE_2-2809', 'ALMAVERDE_2-2810', 'ALMAVERDE_2-2811', 'ALMAVERDE_2-2812', 'ALMAVERDE_2-2813', 'ALMAVERDE_2-2814', 'ALMAVERDE_2-2815', 'ALMAVERDE_2-2816', 'ALMAVERDE_2-2817', 'ALMAVERDE_2-2818', 'ALMAVERDE_2-2819', 'ALMAVERDE_2-2820', 'ALMAVERDE_2-2821', 'ALMAVERDE_2-2822', 'ALMAVERDE_2-2823', 'ALMAVERDE_2-2824', 'ALMAVERDE_2-2825', 'ALMAVERDE_2-2826', 'ALMAVERDE_2-2827', 'ALMAVERDE_2-2828', 'ALMAVERDE_2-2829', 'ALMAVERDE_2-2830', 'ALMAVERDE_2-2831', 'ALMAVERDE_2-2832', 'ALMAVERDE_2-2833', 'ALMAVERDE_2-2834', 'ALMAVERDE_2-2835', 'ALMAVERDE_2-2836', 'ALMAVERDE_2-2837', 'ALMAVERDE_2-2838', 'ALMAVERDE_2-2839', 'ALMAVERDE_2-2840', 'ALMAVERDE_2-2841', 'ALMAVERDE_2-2842', 'ALMAVERDE_2-2843', 'ALMAVERDE_2-2844', 'ALMAVERDE_2-2845', 'ALMAVERDE_2-2846', 'ALMAVERDE_2-2847', 'ALMAVERDE_2-2848', 'ALMAVERDE_2-2849', 'ALMAVERDE_2-2850', 'ALMAVERDE_2-2851', 'ALMAVERDE_2-2852', 'ALMAVERDE_2-2853', 'ALMAVERDE_2-2854', 'ALMAVERDE_2-2855', 'ALMAVERDE_2-2856', 'ALMAVERDE_2-2857', 'ALMAVERDE_2-2858', 'ALMAVERDE_2-2859', 'ALMAVERDE_2-2860', 'ALMAVERDE_2-2861', 'ALMAVERDE_2-2862', 'ALMAVERDE_2-2863', 'ALMAVERDE_2-2864', 'ALMAVERDE_2-2865', 'ALMAVERDE_2-2866', 'ALMAVERDE_2-2867', 'ALMAVERDE_2-2868', 'ALMAVERDE_2-2869', 'ALMAVERDE_2-2870', 'ALMAVERDE_2-2871', 'ALMAVERDE_2-2872', 'ALMAVERDE_2-2873', 'ALMAVERDE_2-2874', 'ALMAVERDE_2-2875', 'ALMAVERDE_2-2876', 'ALMAVERDE_2-2877', 'ALMAVERDE_2-2878', 'ALMAVERDE_2-2879', 'ALMAVERDE_2-2880', 'ALMAVERDE_2-2881', 'ALMAVERDE_2-2882', 'ALMAVERDE_2-2883', 'ALMAVERDE_2-2884', 'ALMAVERDE_2-2885', 'ALMAVERDE_2-2886', 'ALMAVERDE_2-2887', 'ALMAVERDE_2-2888', 'ALMAVERDE_2-2889', 'ALMAVERDE_2-2890', 'ALMAVERDE_2-2891', 'ALMAVERDE_2-2892', 'ALMAVERDE_2-2893', 'ALMAVERDE_2-2894', 'ALMAVERDE_2-2895', 'ALMAVERDE_2-2896', 'ALMAVERDE_2-2897', 'ALMAVERDE_2-2898', 'ALMAVERDE_2-2899', 'ALMAVERDE_2-2900', 'ALMAVERDE_2-2901', 'ALMAVERDE_2-2902', 'ALMAVERDE_2-2903', 'ALMAVERDE_2-2904', 'ALMAVERDE_2-2905', 'ALMAVERDE_2-2906', 'ALMAVERDE_2-2907', 'ALMAVERDE_2-2908', 'ALMAVERDE_2-2909', 'ALMAVERDE_2-2910', 'ALMAVERDE_2-2911', 'ALMAVERDE_2-2912', 'ALMAVERDE_2-2913', 'ALMAVERDE_2-2914', 'ALMAVERDE_2-2915', 'ALMAVERDE_2-2916', 'ALMAVERDE_2-2917', 'ALMAVERDE_2-2918', 'ALMAVERDE_2-2919', 'ALMAVERDE_2-2920', 'ALMAVERDE_2-2921', 'ALMAVERDE_2-2922', 'ALMAVERDE_2-2923', 'ALMAVERDE_2-2924', 'ALMAVERDE_2-2925', 'ALMAVERDE_2-2926', 'ALMAVERDE_2-2927', 'ALMAVERDE_2-2928', 'ALMAVERDE_2-2929', 'ALMAVERDE_2-2930', 'ALMAVERDE_2-2931', 'ALMAVERDE_2-2932', 'ALMAVERDE_2-2933', 'ALMAVERDE_2-2934', 'ALMAVERDE_2-2935', 'ALMAVERDE_2-2936', 'ALMAVERDE_2-2937', 'ALMAVERDE_2-2938', 'ALMAVERDE_2-2939', 'ALMAVERDE_2-2940', 'ALMAVERDE_2-2941', 'ALMAVERDE_2-2942', 'ALMAVERDE_2-2943', 'ALMAVERDE_2-2944', 'ALMAVERDE_2-2945', 'ALMAVERDE_2-2946', 'ALMAVERDE_2-2947', 'ALMAVERDE_2-2948', 'ALMAVERDE_2-2949', 'ALMAVERDE_2-2950', 'ALMAVERDE_2-2951', 'ALMAVERDE_2-2952', 'ALMAVERDE_2-2953', 'ALMAVERDE_2-2954', 'ALMAVERDE_2-2955', 'ALMAVERDE_2-2956', 'ALMAVERDE_2-2957', 'ALMAVERDE_2-2958', 'ALMAVERDE_2-2959', 'ALMAVERDE_2-2960', 'ALMAVERDE_2-2961', 'ALMAVERDE_2-2962', 'ALMAVERDE_2-2963', 'ALMAVERDE_2-2964', 'ALMAVERDE_2-2965', 'ALMAVERDE_2-2966', 'ARMONIA C._2-1401', 'ARMONIA C._2-1402', 'ARMONIA C._2-1403', 'ARMONIA C._2-1404', 'ARMONIA C._2-1405', 'ARMONIA C._6-435', 'ARMONIA C._6-436', 'ARMONIA C._6-437', 'ARMONIA C._6-438', 'ARMONIA C._6-439', 'ARMONIA C._6-440', 'GRUPO HUMAN_4-1413', 'GRUPO HUMAN_4-1414', 'GRUPO HUMAN_4-1415', 'GRUPO HUMAN_4-1416', 'GRUPO HUMAN_4-1417', 'GRUPO HUMAN_4-1418', 'GRUPO HUMAN_4-1419', 'GRUPO HUMAN_4-1420', 'GRUPO HUMAN_4-1421', 'GRUPO HUMAN_4-1422', 'GRUPO HUMAN_4-1423', 'GRUPO HUMAN_4-1424', 'GRUPO HUMAN_4-1425', 'GRUPO HUMAN_4-1426', 'GRUPO HUMAN_4-1427', 'GRUPO HUMAN_4-1428', 'HECHIZO DE BELLEZA_2-3012', 'HECHIZO DE BELLEZA_2-3013', 'HECHIZO DE BELLEZA_2-3014', 'HECHIZO DE BELLEZA_2-3015', 'HECHIZO DE BELLEZA_2-3016', 'HECHIZO DE BELLEZA_2-3017', 'HECHIZO DE BELLEZA_2-3018', 'HECHIZO DE BELLEZA_2-3019', 'RAICES ORGANICAS_2-6152', 'RITUAL BOTANICO_2-73245', 'RITUAL BOTANICO_2-73246', 'RITUAL BOTANICO_2-73247', 'RITUAL BOTANICO_2-73248', 'RITUAL BOTANICO_2-73249', 'RITUAL BOTANICO_2-73250', 'RITUAL BOTANICO_2-73251', 'RITUAL BOTANICO_2-73252', 'RITUAL BOTANICO_2-73253', 'RITUAL BOTANICO_2-73254', 'RITUAL BOTANICO_2-73255', 'RITUAL BOTANICO_2-73256', 'RITUAL BOTANICO_2-73257', 'RITUAL BOTANICO_2-73258', 'RITUAL BOTANICO_2-73259', 'RITUAL BOTANICO_2-73260', 'RITUAL BOTANICO_2-73261', 'RITUAL BOTANICO_2-73262', 'RITUAL BOTANICO_2-73263', 'RITUAL BOTANICO_2-73264', 'RITUAL BOTANICO_2-73265', 'RITUAL BOTANICO_2-73266', 'RITUAL BOTANICO_2-73267', 'RITUAL BOTANICO_2-73268', 'RITUAL BOTANICO_2-73269', 'RITUAL BOTANICO_2-73270', 'RITUAL BOTANICO_2-73271', 'RITUAL BOTANICO_2-73272', 'RITUAL BOTANICO_2-73273', 'RITUAL BOTANICO_2-73274', 'RITUAL BOTANICO_2-73275', 'RITUAL BOTANICO_2-73276', 'RITUAL BOTANICO_2-73277', 'RITUAL BOTANICO_2-73278', 'RITUAL BOTANICO_2-73279', 'RITUAL BOTANICO_2-73280', 'RITUAL BOTANICO_2-73281', 'RITUAL BOTANICO_2-73282', 'RITUAL BOTANICO_2-73283', 'RITUAL BOTANICO_2-73284']
+[DEBUG MATCH] Keys de SHEETS (62): ['ALMAVERDE_2-2923', 'ALMAVERDE_2-2929', 'ALMAVERDE_2-2930', 'ALMAVERDE_2-2931', 'ARMONIA C._2-1404', 'ARMONIA C._2-1405', 'GRUPO HUMAN_4-1413', 'GRUPO HUMAN_4-1414', 'GRUPO HUMAN_4-1415', 'GRUPO HUMAN_4-1416', 'GRUPO HUMAN_4-1417', 'GRUPO HUMAN_4-1418', 'GRUPO HUMAN_4-1419', 'GRUPO HUMAN_4-1420', 'GRUPO HUMAN_4-1421', 'GRUPO HUMAN_4-1422', 'GRUPO HUMAN_4-1423', 'GRUPO HUMAN_4-1424', 'GRUPO HUMAN_4-1425', 'GRUPO HUMAN_4-1426', 'GRUPO HUMAN_4-1427', 'GRUPO HUMAN_4-1428', 'RITUAL BOTANICO_2-73245', 'RITUAL BOTANICO_2-73246', 'RITUAL BOTANICO_2-73247', 'RITUAL BOTANICO_2-73248', 'RITUAL BOTANICO_2-73249', 'RITUAL BOTANICO_2-73250', 'RITUAL BOTANICO_2-73251', 'RITUAL BOTANICO_2-73252', 'RITUAL BOTANICO_2-73253', 'RITUAL BOTANICO_2-73254', 'RITUAL BOTANICO_2-73255', 'RITUAL BOTANICO_2-73256', 'RITUAL BOTANICO_2-73257', 'RITUAL BOTANICO_2-73258', 'RITUAL BOTANICO_2-73259', 'RITUAL BOTANICO_2-73260', 'RITUAL BOTANICO_2-73261', 'RITUAL BOTANICO_2-73262', 'RITUAL BOTANICO_2-73263', 'RITUAL BOTANICO_2-73264', 'RITUAL BOTANICO_2-73265', 'RITUAL BOTANICO_2-73266', 'RITUAL BOTANICO_2-73267', 'RITUAL BOTANICO_2-73268', 'RITUAL BOTANICO_2-73269', 'RITUAL BOTANICO_2-73270', 'RITUAL BOTANICO_2-73271', 'RITUAL BOTANICO_2-73272', 'RITUAL BOTANICO_2-73273', 'RITUAL BOTANICO_2-73274', 'RITUAL BOTANICO_2-73275', 'RITUAL BOTANICO_2-73276', 'RITUAL BOTANICO_2-73277', 'RITUAL BOTANICO_2-73278', 'RITUAL BOTANICO_2-73279', 'RITUAL BOTANICO_2-73280', 'RITUAL BOTANICO_2-73281', 'RITUAL BOTANICO_2-73282', 'RITUAL BOTANICO_2-73283', 'RITUAL BOTANICO_2-73284']
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._2-1403'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._2-1402'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._2-1401'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._6-440'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._6-439'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._6-438'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._6-437'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._6-436'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ARMONIA C._6-435'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3019'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3018'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3017'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3016'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3015'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3014'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3013'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='HECHIZO DE BELLEZA_2-3012'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='RAICES ORGANICAS_2-6152'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2966'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2965'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2964'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2963'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2962'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2961'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2960'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2959'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2958'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2957'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2956'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2955'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2954'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2953'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2952'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2951'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2950'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2949'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2948'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2947'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2946'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2945'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2944'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2943'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2942'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2941'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2940'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2939'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2938'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2937'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2936'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2935'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2934'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2933'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2932'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2928'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2927'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2926'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2925'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2924'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2922'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2921'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2920'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2919'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2918'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2917'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2916'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2915'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2914'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2913'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2912'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2911'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2910'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2909'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2908'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2907'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2906'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2905'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2904'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2903'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2902'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2901'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2900'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2899'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2898'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2897'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2896'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2895'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2894'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2893'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2892'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2891'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2890'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2889'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2888'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2887'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2886'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2885'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2884'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2883'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2882'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2881'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2880'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2879'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2878'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2877'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2876'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2875'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2874'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2873'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2872'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2871'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2870'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2869'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2868'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2867'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2866'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2865'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2864'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2863'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2862'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2861'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2860'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2859'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2858'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2857'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2856'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2855'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2854'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2853'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2852'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2851'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2850'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2849'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2848'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2847'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2846'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2845'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2844'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2843'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2842'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2841'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2840'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2839'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2838'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2837'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2836'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2835'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2834'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2833'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2832'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2831'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2830'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2829'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2828'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2827'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2826'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2825'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2824'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2823'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2822'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2821'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2820'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2819'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2818'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2817'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2816'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2815'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2814'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2813'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2812'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2811'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2810'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2809'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2808'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2807'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2806'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2805'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2804'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2803'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2802'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2801'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2800'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2799'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2798'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2797'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2796'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2795'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2794'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2793'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2792'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2791'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2790'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2789'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2788'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2787'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2786'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2785'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2784'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2783'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2782'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2781'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2780'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2779'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2778'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2777'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2776'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2775'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2774'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2773'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2772'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2771'
+[DEBUG MATCH] SIN MATCH en Sheets para Siigo key='ALMAVERDE_2-2770'
+
+--- OK ---

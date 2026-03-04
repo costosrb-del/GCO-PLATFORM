@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import sys; from app.services.conciliacion import get_conciliacion_data; from app.services.config import get_google_sheet_url; url = get_google_sheet_url(); res = get_conciliacion_data(url, '2026-03-01', '2026-03-05', False); print('\n--- OK ---')
+                                                                                                                                                                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\costo\Downloads\GCO_PLATFORM_V2\backend\app\services\conciliacion.py", line 143, in get_conciliacion_data
+    print(f"[DEBUG SHEETS] Hoja '{sheet_name}' cols detectadas \u2192 inv={col_inv}, qty={col_qty}, code={col_code}, emp={col_emp}, date={col_date}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\costo\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Cargando configuración de empresas...
+Total empresas encontradas: 6
+Integrity Check Passed: 1/1 documents verified.
+DEBUG: Total movements extracted: 1
+Integrity Check Passed: 11/11 documents verified.
+DEBUG: Total movements extracted: 26
+Integrity Check Passed: 40/40 documents verified.
+DEBUG: Total movements extracted: 153
+Integrity Check Passed: 71/71 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 8/8 documents verified.
+DEBUG: Total movements extracted: 44
+Integrity Check Passed: 150/150 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 86/86 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 195/195 documents verified.
+DEBUG: Total movements extracted: 532
+Integrity Check Passed: 22/22 documents verified.
+DEBUG: Total movements extracted: 65
+Integrity Check Passed: 19/19 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 42/42 documents verified.
+DEBUG: Total movements extracted: 0
+Integrity Check Passed: 1164/1164 documents verified.
+DEBUG: Total movements extracted: 0
+[DEBUG SHEETS] Hojas encontradas: ['DISPONIBLE', 'ASIGNACION', 'INGRESO', 'FACTURACION', 'ENTREGADO VS SOLICITADO']
+[DEBUG SHEETS] Hoja 'DISPONIBLE' columnas: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8']
