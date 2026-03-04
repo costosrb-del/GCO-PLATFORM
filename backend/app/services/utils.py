@@ -112,18 +112,25 @@ def fetch_google_sheet_inventory(sheet_url):
                     continue
                     
                 # Clean quantity logic
-                qty_str = str(row["quantity"]).strip()
-                if qty_str and qty_str.lower() not in ("nan", "none", ""):
-                    qty_str = qty_str.replace(".", "")
-                    qty_str = qty_str.replace(",", ".")
-                    # remove non numeric except dot and minus
-                    qty_str = re.sub(r'[^\d.-]', '', qty_str)
-                    if qty_str == "" or qty_str == "-" or qty_str == ".":
-                         qty = 0.0
-                    else:
-                         qty = float(qty_str)
-                else:
+                qty_raw = row["quantity"]
+                if pd.isna(qty_raw):
                     qty = 0.0
+                elif isinstance(qty_raw, (int, float)):
+                    qty = float(qty_raw)
+                else:
+                    qty_str = str(qty_raw).strip()
+                    if qty_str and qty_str.lower() not in ("nan", "none", ""):
+                        # Asume formato latino: punto para miles, coma para decimales
+                        qty_str = qty_str.replace(".", "")
+                        qty_str = qty_str.replace(",", ".")
+                        # remove non numeric except dot and minus
+                        qty_str = re.sub(r'[^\d.-]', '', qty_str)
+                        if qty_str in ("", "-", "."):
+                             qty = 0.0
+                        else:
+                             qty = float(qty_str)
+                    else:
+                        qty = 0.0
 
                 if not name or name.lower() in ("nan", "none", ""):
                     name = "Sin Nombre Externo"
