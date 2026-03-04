@@ -173,18 +173,41 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
 
                   # --- FILTRADO ESTRICTO POR FECHA (SHEETS) ---
                   date_val = str(row_s.get(col_date, "")) if col_date else ""
-                  if pd.notna(row_s.get(col_date)) and hasattr(row_s.get(col_date), 'strftime'):
-                      date_val = row_s.get(col_date).strftime('%Y-%m-%d')
+                  p_dt_str = ""
                   
-                  if date_val and date_val not in ["NaT", "nan", ""]:
-                      try:
-                          p_dt = pd.to_datetime(date_val, errors='coerce', dayfirst=True)
-                          if pd.notna(p_dt):
-                              p_dt_str = p_dt.strftime("%Y-%m-%d")
-                              if not (start_date <= p_dt_str <= end_date):
-                                  continue 
-                      except:
-                          pass
+                  if pd.notna(row_s.get(col_date)):
+                      val = row_s.get(col_date)
+                      
+                      # Si ya es un objeto datetime/date
+                      if hasattr(val, 'strftime'):
+                          p_dt_str = val.strftime('%Y-%m-%d')
+                          date_val = p_dt_str
+                      else:
+                          # Si es un string que debemos parsear
+                          val_str = str(val).strip()
+                          if val_str and val_str not in ["NaT", "nan", ""]:
+                              try:
+                                  # Primero intentamos parsear asumiendo mes/dia formato US
+                                  # o si ya viene YYYY-MM-DD
+                                  p_dt = pd.to_datetime(val_str, errors='coerce')
+                                  if pd.isna(p_dt) or "NaT" in str(p_dt):
+                                      # Fallback con dayfirst=True si no pudo (e.g. DD/MM/YYYY)
+                                      p_dt = pd.to_datetime(val_str, errors='coerce', dayfirst=True)
+                                      
+                                  if pd.notna(p_dt):
+                                      p_dt_str = p_dt.strftime("%Y-%m-%d")
+                                      date_val = val_str # guardamos el original o podemos usar p_dt_str
+                              except:
+                                  pass
+                                  
+                  # Check against start and end date
+                  if p_dt_str:
+                      if not (start_date <= p_dt_str <= end_date):
+                          continue
+                  elif date_val and date_val not in ["NaT", "nan", ""]:
+                      # Fallback manual text fallback parsing if dt fails but format exists
+                      # Just in case we could not parse it but it looks like a valid text date
+                      pass
                   # --------------------------------------------
 
                   inv = normalize_invoice(v_inv)
