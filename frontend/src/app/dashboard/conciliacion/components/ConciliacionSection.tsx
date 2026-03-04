@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Loader2, CheckCircle2, AlertTriangle, XCircle, FileSpreadsheet, Download, Filter, RefreshCcw, TrendingUp, ChevronUp, ChevronDown, Mail, Settings, FileText, ChevronRight, Share2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -31,7 +31,7 @@ const SummaryCard = ({ title, value, color, icon: Icon }: any) => (
 );
 
 export function ConciliacionSection() {
-    const [url, setUrl] = useState("https://docs.google.com/spreadsheets/d/e/2PACX-1vQX-cGiE9Da8QvYsYBpCAiPwvm4QL2frVBckyh7O0wusUkKPJLoSGH9ygsnv_-3e92ZjV_noh-a8a97/pub?output=csv");
+    const [url, setUrl] = useState("");
     const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
@@ -51,6 +51,27 @@ export function ConciliacionSection() {
 
     // Settings state
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+    // Fetch config on mount
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const token = localStorage.getItem("gco_token");
+                const res = await fetch(`${API_URL}/config/settings`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.conciliacion_sheet_url) {
+                        setUrl(data.conciliacion_sheet_url);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load global url", error);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     const getFilteredList = (tabData: any[]) => {
         if (!tabData) return [];

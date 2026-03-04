@@ -335,16 +335,29 @@ export default function DashboardHome() {
 
           {/* Admin: Panel de usuarios */}
           {role === "admin" && (
-            <Link href="/dashboard/ajustes/usuarios"
-              className="group p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all flex flex-col items-start gap-4 hover:border-[#183C30]/40">
-              <div className="h-12 w-12 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-[15px]">Panel de Usuarios</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">Administración de credenciales y roles de acceso.</p>
-              </div>
-            </Link>
+            <>
+              <Link href="/dashboard/ajustes/usuarios"
+                className="group p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all flex flex-col items-start gap-4 hover:border-[#183C30]/40">
+                <div className="h-12 w-12 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-[15px]">Panel de Usuarios</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">Administración de credenciales y roles de acceso.</p>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/ajustes/rutas"
+                className="group p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all flex flex-col items-start gap-4 hover:border-[#183C30]/40">
+                <div className="h-12 w-12 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileSpreadsheet className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-[15px]">Rutas y Enlaces</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">Configuración global de endpoints y Google Sheets.</p>
+                </div>
+              </Link>
+            </>
           )}
         </div>
       </div>

@@ -1,8 +1,25 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.services.config import get_config
 from app.routers.auth_router import verify_token
 
 router = APIRouter(prefix="/config", tags=["config"])
+
+from app.services.settings import get_all_settings, set_all_settings
+
+@router.get("/settings")
+def get_settings(user: dict = Depends(verify_token)):
+    '''Get global app configs'''
+    if user.get("role") not in ["admin", "viewer", "asesora"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return get_all_settings()
+
+@router.post("/settings")
+def save_settings(new_settings: dict, user: dict = Depends(verify_token)):
+    '''Save global app configs'''
+    if user.get("role") != "admin": # Only admins can change urls
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Solo los administradores pueden guardar ajustes")
+    return {"status": "success", "data": set_all_settings(new_settings)}
 
 @router.get("/companies")
 def get_available_companies(user: dict = Depends(verify_token)):

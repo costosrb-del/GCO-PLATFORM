@@ -46,10 +46,24 @@ def get_config():
 def get_google_sheet_url():
     """
     Returns the Google Sheet URL for external inventory.
-    Hardcoded update: 2025-01-08
+    Now uses dynamic settings from the DB.
     """
-    # New URL provided by user (Specific Sheet GID)
-    # The user provided a User-Facing URL (.../pubhtml...), we need to convert it to CSV export format
-    # Base: https://docs.google.com/spreadsheets/d/e/2PACX-1vRDYM7-zJ4c5B1VftH2EGmL5buLTWt24mHN0oHOgYNK2zi37QNIEavPwnwpV06IKJMoPUJqea_tzOir/pub
-    # Params: output=xlsx (single=true prevent fetching all sheets)
+    try:
+        from app.services.settings import get_all_settings
+        settings = get_all_settings()
+        url = settings.get("inventory_sheet_url", "")
+        if url:
+            # Ensure it outputs xlsx
+            if "output=csv" in url:
+                url = url.replace("output=csv", "output=xlsx")
+            elif "output=xlsx" not in url:
+                if "?" in url:
+                    url = url.split("?")[0] + "?output=xlsx"
+                else:
+                    url += "?output=xlsx"
+            return url
+    except Exception as e:
+        print(f"Error loading settings for sheet url, using fallback: {e}")
+
+    # Fallback to default
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vRDYM7-zJ4c5B1VftH2EGmL5buLTWt24mHN0oHOgYNK2zi37QNIEavPwnwpV06IKJMoPUJqea_tzOir/pub?output=xlsx"
