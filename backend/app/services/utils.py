@@ -60,7 +60,8 @@ def fetch_google_sheet_inventory(sheet_url):
                 # Scan sheets for the best match
                 valid_df = None
                 for sheet_name in xl.sheet_names:
-                    temp_df = xl.parse(sheet_name)
+                    # dtype=str prevents pandas from converting '4.300' to 4.3
+                    temp_df = xl.parse(sheet_name, dtype=str)
                     temp_df.columns = [str(c).strip().upper() for c in temp_df.columns]
                     
                     has_sku = any("SKU" in c or "CÓDIGO" in c or "CODIGO" in c for c in temp_df.columns)
@@ -80,10 +81,10 @@ def fetch_google_sheet_inventory(sheet_url):
             except Exception as e:
                 raise ValueError(f"El link configurado no es un archivo válido de Google Sheets publicado o no tiene permisos de lectura: {str(e)}")
         else:
-            # Fallback for CSV
+            # Fallback for CSV - dtype=str preserves '4.300' as text
             response = requests.get(sheet_url)
             response.raise_for_status()
-            df = pd.read_csv(io.StringIO(response.content.decode("utf-8")))
+            df = pd.read_csv(io.StringIO(response.content.decode("utf-8")), dtype=str)
             df.columns = [str(c).strip().upper() for c in df.columns]
         
         # Mapping variations
@@ -111,26 +112,29 @@ def fetch_google_sheet_inventory(sheet_url):
                 if not code or code.lower() in ("nan", "none", ""):
                     continue
                     
-                # Clean quantity logic
-                qty_raw = row["quantity"]
-                if pd.isna(qty_raw):
+                # Clean quantity logic — all values arrive as str because we set dtype=str
+                # Latin format: '4.300' = 4300, '4.300,50' = 4300.50
+                qty_raw = str(row["quantity"]).strip() if pd.notna(row["quantity"]) else ""
+                if qty_raw in ("", "nan", "none", "None", "NaN"):
                     qty = 0.0
-                elif isinstance(qty_raw, (int, float)):
-                    qty = float(qty_raw)
                 else:
-                    qty_str = str(qty_raw).strip()
-                    if qty_str and qty_str.lower() not in ("nan", "none", ""):
-                        # Asume formato latino: punto para miles, coma para decimales
-                        qty_str = qty_str.replace(".", "")
-                        qty_str = qty_str.replace(",", ".")
-                        # remove non numeric except dot and minus
-                        qty_str = re.sub(r'[^\d.-]', '', qty_str)
-                        if qty_str in ("", "-", "."):
-                             qty = 0.0
-                        else:
-                             qty = float(qty_str)
-                    else:
+                    q = qty_raw
+                    # Detect if using Latin thousands format (dot for thousands, optional comma for decimals)
+                    # e.g. '4.300' → 4300,  '4.300,50' → 4300.5,  '4300' → 4300,  '-500' → -500
+                    if "," in q:
+                        # Has comma → comma is the decimal separator
+                        # Remove dots (thousand separators), replace comma with dot
+                        q = q.replace(".", "").replace(",", ".")
+                    elif re.search(r'\.\d{3}$', q):
+                        # Ends with exactly 3 digits after dot → dots are thousand separators
+                        # e.g. '4.300', '22.990', '7.700'
+                        q = q.replace(".", "")
+                    # else: normal float string like '320' or '4.5' → leave as is
+                    q = re.sub(r'[^\d.-]', '', q)
+                    if q in ("", "-", "."):
                         qty = 0.0
+                    else:
+                        qty = float(q)
 
                 if not name or name.lower() in ("nan", "none", ""):
                     name = "Sin Nombre Externo"
