@@ -126,12 +126,17 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
     
     try:
         xl = pd.ExcelFile(url)
+    except ValueError as e:
+        return {"error": "Error de validación del libro: Asegúrate de que configuraste correctamente el link o que el archivo está Publicado en la Web como XLSX."}
     except Exception as e:
-        return {"error": f"Error abriendo documento Google Sheets: {str(e)}"}
+        return {"error": f"Error descargando documento Google Sheets: Verifica que el link exporta a Excel y es accesible. ({str(e)})"}
         
     sheet_invoices = {}
     
     print(f"[DEBUG SHEETS] Hojas encontradas: {xl.sheet_names}")
+    
+    hojas_procesadas = 0
+    hojas_ignoradas = []
     
     for sheet_name in xl.sheet_names:
         df = xl.parse(sheet_name)
@@ -151,7 +156,10 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
         
         if not col_inv or not col_qty:
             print(f"[DEBUG SHEETS] IGNORADA Hoja '{sheet_name}' (falta col_inv o col_qty)")
+            hojas_ignoradas.append(sheet_name)
             continue
+            
+        hojas_procesadas += 1
         
         if col_inv and col_qty: 
              for _, row_s in df.iterrows():
@@ -232,6 +240,12 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
              
     print(f"[DEBUG MATCH] Keys de SIIGO ({len(siigo_invoices)}): {sorted(siigo_invoices.keys())}")
     print(f"[DEBUG MATCH] Keys de SHEETS ({len(sheet_invoices)}): {sorted(sheet_invoices.keys())}")
+
+    if hojas_procesadas == 0:
+        msg = "No se detectaron las columnas requeridas (FACTURA, CANTIDAD) en el archivo de Google Sheets proporcionado."
+        if hojas_ignoradas:
+            msg += f" Pestañas analizadas e ignoradas: {', '.join(hojas_ignoradas)}"
+        return {"error": msg}
 
     matched = []
     diferencias = []
