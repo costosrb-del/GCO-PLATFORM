@@ -44,32 +44,62 @@ def fetch_google_sheet_inventory(sheet_url):
     try:
         if "/edit" in sheet_url:
             sheet_url = sheet_url.replace("/edit", "/export?format=csv")
-        
-        response = requests.get(sheet_url)
-        response.raise_for_status()
-        
-        df = pd.read_csv(io.StringIO(response.content.decode("utf-8")))
-        
-        # Try to find columns by name first (Case Insensitive)
-        df.columns = [c.strip().upper() for c in df.columns]
+            
+        # Support extracting all sheets if it's an xlsx export
+        import re
+        if "output=xlsx" in sheet_url:
+            # For xlsx, use pd.ExcelFile directly on the URL
+            # Ensure it grabs the whole workbook by stripping single/gid
+            clean_url = re.sub(r'&?single=true', '', sheet_url)
+            clean_url = re.sub(r'&?gid=\d+', '', clean_url)
+            clean_url = clean_url.replace("?&", "?").rstrip("?")
+            
+            try:
+                xl = pd.ExcelFile(clean_url)
+                
+                # Scan sheets for the best match
+                valid_df = None
+                for sheet_name in xl.sheet_names:
+                    temp_df = xl.parse(sheet_name)
+                    temp_df.columns = [str(c).strip().upper() for c in temp_df.columns]
+                    
+                    has_sku = any("SKU" in c or "CÓDIGO" in c or "CODIGO" in c for c in temp_df.columns)
+                    has_qty = any("CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c for c in temp_df.columns)
+                    
+                    if has_sku and has_qty:
+                        valid_df = temp_df
+                        break
+                        
+                if valid_df is not None:
+                    df = valid_df
+                else:
+                    raise ValueError(f"No se detectaron las columnas requeridas (SKU o CODIGO, y CANTIDAD o LIBRE) en ninguna de las pestañas del archivo. Pestañas analizadas: {xl.sheet_names}")
+                    
+            except ValueError as e:
+                raise e
+            except Exception as e:
+                raise ValueError(f"El link configurado no es un archivo válido de Google Sheets publicado o no tiene permisos de lectura: {str(e)}")
+        else:
+            # Fallback for CSV
+            response = requests.get(sheet_url)
+            response.raise_for_status()
+            df = pd.read_csv(io.StringIO(response.content.decode("utf-8")))
+            df.columns = [str(c).strip().upper() for c in df.columns]
         
         # Mapping variations
-        sku_col = next((c for c in df.columns if "SKU" in c), None)
-        qty_col = next((c for c in df.columns if "CANTIDAD" in c or "LIBRE" in c), None)
-        name_col = next((c for c in df.columns if "NOMBRE" in c or "PRODUCTO" in c), None)
+        sku_col = next((c for c in df.columns if "SKU" in c or "CÓDIGO" in c or "CODIGO" in c), None)
+        qty_col = next((c for c in df.columns if "CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c), None)
+        name_col = next((c for c in df.columns if "NOMBRE" in c or "PRODUCTO" in c or "ARTICULO" in c), None)
 
-        if sku_col and qty_col:
-            # Reconstruct DF with found columns
-            df_final = pd.DataFrame()
-            df_final["code"] = df[sku_col]
-            df_final["name"] = df[name_col] if name_col else "Sin Nombre"
-            df_final["quantity"] = df[qty_col]
-            df = df_final
-        else:
-            # Fallback to index if column names don't match expected pattern
-            # Expected columns: A=Code, B=Name, C=Quantity
-            df = df.iloc[:, :3] 
-            df.columns = ["code", "name", "quantity"] 
+        if not sku_col or not qty_col:
+            raise ValueError(f"No se detectaron las columnas requeridas (SKU o CODIGO, y CANTIDAD o LIBRE). Columnas detectadas: {list(df.columns)}")
+
+        # Reconstruct DF with found columns
+        df_final = pd.DataFrame()
+        df_final["code"] = df[sku_col]
+        df_final["name"] = df[name_col] if name_col else "Sin Nombre"
+        df_final["quantity"] = df[qty_col]
+        df = df_final
         
         external_data = []
         for index, row in df.iterrows():
@@ -78,19 +108,24 @@ def fetch_google_sheet_inventory(sheet_url):
                 name = str(row["name"]).strip()
                 
                 # Check for "nan" 
-                if not code or code.lower() == "nan":
+                if not code or code.lower() in ("nan", "none", ""):
                     continue
                     
                 # Clean quantity logic
                 qty_str = str(row["quantity"]).strip()
-                if qty_str and qty_str.lower() != "nan":
+                if qty_str and qty_str.lower() not in ("nan", "none", ""):
                     qty_str = qty_str.replace(".", "")
                     qty_str = qty_str.replace(",", ".")
-                    qty = float(qty_str)
+                    # remove non numeric except dot and minus
+                    qty_str = re.sub(r'[^\d.-]', '', qty_str)
+                    if qty_str == "" or qty_str == "-" or qty_str == ".":
+                         qty = 0.0
+                    else:
+                         qty = float(qty_str)
                 else:
                     qty = 0.0
 
-                if not name or name.lower() == "nan":
+                if not name or name.lower() in ("nan", "none", ""):
                     name = "Sin Nombre Externo"
 
                 external_data.append({
@@ -100,12 +135,16 @@ def fetch_google_sheet_inventory(sheet_url):
                     "warehouse_name": "Sin Ingresar", # Google Sheets = Bodega Libre -> Renamed to Sin Ingresar
                     "quantity": qty
                 })
-            except ValueError:
+            except Exception as e:
+                print(f"Skipping row {index} due to error: {e}")
                 continue 
                 
         return external_data
         
+    except ValueError as e:
+        # Re-raise user friendly errors
+        raise e
     except Exception as e:
         print(f"Error fetching Google Sheet: {e}")
-        return []
+        raise ValueError(f"Ocurrió un error leyendo el documento: {str(e)}")
 
