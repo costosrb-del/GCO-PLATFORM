@@ -123,60 +123,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           </Link>
         )}
 
-        {/* Settings Group */}
-        {role === "admin" && (
-          <div className="space-y-1">
-            <button
-              onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
-              className={`flex items-center justify-between w-full px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition-all ${isCollapsed ? "justify-center cursor-default" : ""}`}
-              title={isCollapsed ? "Ajustes" : ""}
-            >
-              <div className="flex items-center space-x-3">
-                <Settings className="h-5 w-5 shrink-0" />
-                {!isCollapsed && <span>Ajustes</span>}
-              </div>
-              {!isCollapsed && (
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-200 ${isSettingsOpen ? "rotate-180" : ""}`}
-                />
-              )}
-            </button>
-
-            <AnimatePresence>
-              {(isSettingsOpen || isCollapsed) && (
-                <motion.div
-                  initial={!isCollapsed ? { height: 0, opacity: 0 } : {}}
-                  animate={!isCollapsed ? { height: "auto", opacity: 1 } : {}}
-                  exit={!isCollapsed ? { height: 0, opacity: 0 } : {}}
-                  className="overflow-hidden"
-                >
-                  <div className={`${!isCollapsed ? "ml-4 pl-4 border-l border-[#2A5E4D]" : "flex flex-col items-center"} space-y-1 pt-1`}>
-                    <Link
-                      href="/dashboard/ajustes/usuarios"
-                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/ajustes/usuarios"
-                        ? "bg-white text-[#183C30] font-medium shadow-md"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
-                      title={isCollapsed ? "Administrar Usuarios" : ""}
-                    >
-                      {isCollapsed ? "Usuar." : "Administrar Usuarios"}
-                    </Link>
-                    <Link
-                      href="/dashboard/ajustes/rutas"
-                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/ajustes/rutas"
-                        ? "bg-white text-[#183C30] font-medium shadow-md"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
-                      title={isCollapsed ? "Rutas y Enlaces" : ""}
-                    >
-                      {isCollapsed ? "Rutas" : "Rutas y Enlaces"}
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
 
         {/* Inventory Group */}
         {(role === "admin" || role === "viewer") && (
@@ -327,6 +273,63 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           </Link>
         )}
       </nav>
+
+      {/* Settings Group (Fixed at Bottom) */}
+      <div className="p-2 border-t border-[#2A5E4D]">
+        {role === "admin" && (
+          <div className="space-y-1">
+            <button
+              onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
+              className={`flex items-center justify-between w-full px-3 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition-all ${isCollapsed ? "justify-center cursor-default" : ""}`}
+              title={isCollapsed ? "Ajustes" : ""}
+            >
+              <div className="flex items-center space-x-3">
+                <Settings className="h-5 w-5 shrink-0" />
+                {!isCollapsed && <span>Ajustes</span>}
+              </div>
+              {!isCollapsed && (
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${isSettingsOpen ? "rotate-180" : ""}`}
+                />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {(isSettingsOpen || isCollapsed) && (
+                <motion.div
+                  initial={!isCollapsed ? { height: 0, opacity: 0 } : {}}
+                  animate={!isCollapsed ? { height: "auto", opacity: 1 } : {}}
+                  exit={!isCollapsed ? { height: 0, opacity: 0 } : {}}
+                  className="overflow-hidden"
+                >
+                  <div className={`${!isCollapsed ? "ml-4 pl-4 border-l border-[#2A5E4D]" : "flex flex-col items-center"} space-y-1 pt-1 pb-1`}>
+                    <Link
+                      href="/dashboard/ajustes/usuarios"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/ajustes/usuarios"
+                        ? "bg-white text-[#183C30] font-medium shadow-md"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                      title={isCollapsed ? "Administrar Usuarios" : ""}
+                    >
+                      {isCollapsed ? "Usuar." : "Administrar Usuarios"}
+                    </Link>
+                    <Link
+                      href="/dashboard/ajustes/rutas"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all ${pathname === "/dashboard/ajustes/rutas"
+                        ? "bg-white text-[#183C30] font-medium shadow-md"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        } ${isCollapsed ? "text-center text-[10px]" : ""}`}
+                      title={isCollapsed ? "Rutas y Enlaces" : ""}
+                    >
+                      {isCollapsed ? "Rutas" : "Rutas y Enlaces"}
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
 
       {/* Footer / User */}
       <div className="p-4 border-t border-[#2A5E4D] bg-[#122e24]">

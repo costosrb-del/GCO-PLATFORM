@@ -265,3 +265,91 @@ def delete_borrador(borrador_id: str):
         except Exception as e:
             print(f"Error deleting borrador MRP: {e}")
     return True
+
+# ── CONTROL LABORATORIO / MAQUILA ─────────────────────────────────────────────
+COLLECTION_MAQUILA_PROYECCIONES = "maquila_proyecciones"
+COLLECTION_MAQUILA_ENTREGAS = "maquila_entregas"
+
+def get_maquila_proyecciones(year: int):
+    """Retorna las proyecciones (solicitado) de maquila para un año."""
+    def _load():
+        if db:
+            try:
+                docs = db.collection(COLLECTION_MAQUILA_PROYECCIONES).where("year", "==", year).stream()
+                return [doc.to_dict() for doc in docs]
+            except Exception as e:
+                print(f"Error fetching maquila_proyecciones: {e}")
+                return []
+        return []
+    return mem_cache.get_or_set(f"maquila_proyecciones:{year}", _load, TTL_STATIC)
+
+def save_maquila_proyeccion(data: dict):
+    if "id" not in data or not data["id"]:
+        data["id"] = f"{data.get('year')}_{data.get('sku')}_{data.get('month')}"
+    data["updated_at"] = datetime.now().isoformat()
+    clean = {k: v for k, v in data.items() if v is not None}
+    if db:
+        try:
+            db.collection(COLLECTION_MAQUILA_PROYECCIONES).document(clean["id"]).set(clean)
+            mem_cache.delete(f"maquila_proyecciones:{clean.get('year')}")
+            return clean
+        except Exception as e:
+            print(f"Error saving maquila_proyecciones: {e}")
+            raise
+    return clean
+
+def get_maquila_entregas(year: int):
+    """Retorna las entregas (recibido) del laboratorio maestro en un año dado."""
+    def _load():
+        if db:
+            try:
+                # Filtrar by startDate / endDate del año para optimizar.
+                # Como guardamos `fechaRecepcion` en ISO, un startswith o filtro:
+                start_date = f"{year}-01-01"
+                end_date = f"{year}-12-31T23:59:59"
+                docs = db.collection(COLLECTION_MAQUILA_ENTREGAS)\
+                         .where("fechaRecepcion", ">=", start_date)\
+                         .where("fechaRecepcion", "<=", end_date)\
+                         .stream()
+                return [doc.to_dict() for doc in docs]
+            except Exception as e:
+                print(f"Error fetching maquila_entregas: {e}")
+                return []
+        return []
+    return mem_cache.get_or_set(f"maquila_entregas:{year}", _load, TTL_STATIC)
+
+def create_maquila_entrega(data: dict):
+    if "id" not in data or not data["id"]:
+        data["id"] = str(uuid.uuid4())
+    data["created_at"] = datetime.now().isoformat()
+    clean = {k: v for k, v in data.items() if v is not None}
+    
+    # Extraer el año para invalidar la cache de ese año
+    year = None
+    if clean.get("fechaRecepcion"):
+        try:
+            year = int(clean["fechaRecepcion"][:4])
+        except:
+            pass
+
+    if db:
+        try:
+            db.collection(COLLECTION_MAQUILA_ENTREGAS).document(clean["id"]).set(clean)
+            if year:
+                mem_cache.delete(f"maquila_entregas:{year}")
+            else:
+                mem_cache.delete_all() # Fallback si falla
+            return clean
+        except Exception as e:
+            print(f"Error saving maquila_entregas: {e}")
+            raise
+    return clean
+
+def delete_maquila_entrega(entrega_id: str, year: int):
+    if db:
+        try:
+            db.collection(COLLECTION_MAQUILA_ENTREGAS).document(entrega_id).delete()
+            mem_cache.delete(f"maquila_entregas:{year}")
+        except Exception as e:
+            print(f"Error deleting maquila_entrega: {e}")
+    return True

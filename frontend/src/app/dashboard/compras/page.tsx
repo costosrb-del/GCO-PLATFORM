@@ -10,6 +10,8 @@ import { OrdenesSection } from "./components/OrdenesSection";
 import { VisualizeOrdenDialog } from "./components/VisualizeOrdenDialog";
 import { GeneradorPedidoSection } from "./components/GeneradorPedidoSection";
 import { EntregasSection } from "./components/EntregasSection";
+import { ControlMaquilaSection } from "./components/ControlMaquilaSection";
+import { Beaker } from "lucide-react";
 
 export default function ComprasPage() {
     const {
@@ -20,7 +22,7 @@ export default function ComprasPage() {
         createProducto, updateProducto, deleteProducto
     } = useCompras();
 
-    const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos" | "generador" | "entregas">("ordenes");
+    const [activeTab, setActiveTab] = useState<"terceros" | "ordenes" | "insumos" | "productos" | "generador" | "entregas" | "maquila">("ordenes");
 
     const [viewingOrdenId, setViewingOrdenId] = useState<string | null>(null);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -109,6 +111,16 @@ export default function ComprasPage() {
                         >
                             <Truck className="w-3.5 h-3.5" />
                             Recepción de Entregas
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("maquila")}
+                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "maquila"
+                                ? "bg-amber-500 text-white shadow-sm transform scale-100"
+                                : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                                }`}
+                        >
+                            <Beaker className="w-3.5 h-3.5" />
+                            Control Laboratorio
                         </button>
                     </div>
                 </div>
@@ -207,6 +219,12 @@ export default function ComprasPage() {
                         terceros={terceros}
                         insumos={insumos}
                         ordenes={ordenes}
+                    />
+                )}
+
+                {activeTab === "maquila" && (
+                    <ControlMaquilaSection
+                        productos={productos}
                     />
                 )}
 

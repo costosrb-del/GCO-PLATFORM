@@ -599,3 +599,59 @@ def registrar_entrega_global(req: EntregaGlobalRequest, background_tasks: Backgr
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ── CONTROL LABORATORIO / MAQUILA ─────────────────────────────────────────────
+
+class MaquilaProyeccion(BaseModel):
+    year: int
+    month: int
+    sku: str
+    nombre: Optional[str] = None
+    cantidad_solicitada: int
+
+class MaquilaEntrega(BaseModel):
+    fechaRecepcion: str
+    sku: str
+    nombre: Optional[str] = None
+    cantidad: int
+    remision: Optional[str] = None
+
+@router.get("/maquila/proyecciones/{year}")
+def get_maquila_proyecciones(year: int):
+    try:
+        data = compras_service.get_maquila_proyecciones(year)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/maquila/proyecciones")
+def save_maquila_proyeccion(req: MaquilaProyeccion):
+    try:
+        created = compras_service.save_maquila_proyeccion(req.model_dump())
+        return {"message": "Proyección guardada", "data": created}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/maquila/entregas/{year}")
+def get_maquila_entregas(year: int):
+    try:
+        data = compras_service.get_maquila_entregas(year)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/maquila/entregas")
+def create_maquila_entrega(req: MaquilaEntrega):
+    try:
+        created = compras_service.create_maquila_entrega(req.model_dump())
+        return {"message": "Entrega registrada", "data": created}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/maquila/entregas/{year}/{entrega_id}")
+def delete_maquila_entrega(year: int, entrega_id: str):
+    try:
+        compras_service.delete_maquila_entrega(entrega_id, year)
+        return {"message": "Entrega eliminada"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
