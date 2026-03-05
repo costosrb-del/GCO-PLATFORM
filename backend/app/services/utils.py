@@ -62,13 +62,31 @@ def fetch_google_sheet_inventory(sheet_url):
                 for sheet_name in xl.sheet_names:
                     # dtype=str prevents pandas from converting '4.300' to 4.3
                     temp_df = xl.parse(sheet_name, dtype=str)
-                    temp_df.columns = [str(c).strip().upper() for c in temp_df.columns]
                     
-                    has_sku = any("SKU" in c or "CÓDIGO" in c or "CODIGO" in c for c in temp_df.columns)
-                    has_qty = any("CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c for c in temp_df.columns)
+                    headers_found = False
+                    cols_upper = [str(c).strip().upper() for c in temp_df.columns]
+                    has_sku = any("SKU" in c or "CÓDIGO" in c or "CODIGO" in c for c in cols_upper)
+                    has_qty = any("CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c for c in cols_upper)
                     
                     if has_sku and has_qty:
+                        temp_df.columns = cols_upper
                         valid_df = temp_df
+                        headers_found = True
+                    else:
+                        # Check first 5 rows
+                        for i in range(min(5, len(temp_df))):
+                            row_vals = [str(v).strip().upper() for v in temp_df.iloc[i].values]
+                            has_sku_row = any("SKU" in v or "CÓDIGO" in v or "CODIGO" in v for v in row_vals)
+                            has_qty_row = any("CANTIDAD" in v or "LIBRE" in v or "DISPONIBLE" in v for v in row_vals)
+                            
+                            if has_sku_row and has_qty_row:
+                                temp_df.columns = row_vals
+                                temp_df = temp_df.iloc[i+1:].reset_index(drop=True)
+                                valid_df = temp_df
+                                headers_found = True
+                                break
+                                
+                    if headers_found:
                         break
                         
                 if valid_df is not None:
@@ -85,15 +103,38 @@ def fetch_google_sheet_inventory(sheet_url):
             response = requests.get(sheet_url)
             response.raise_for_status()
             df = pd.read_csv(io.StringIO(response.content.decode("utf-8")), dtype=str)
-            df.columns = [str(c).strip().upper() for c in df.columns]
+            
+            headers_found = False
+            cols_upper = [str(c).strip().upper() for c in df.columns]
+            has_sku = any("SKU" in c or "CÓDIGO" in c or "CODIGO" in c for c in cols_upper)
+            has_qty = any("CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c for c in cols_upper)
+            
+            if has_sku and has_qty:
+                df.columns = cols_upper
+            else:
+                for i in range(min(5, len(df))):
+                    row_vals = [str(v).strip().upper() for v in df.iloc[i].values]
+                    has_sku_row = any("SKU" in v or "CÓDIGO" in v or "CODIGO" in v for v in row_vals)
+                    has_qty_row = any("CANTIDAD" in v or "LIBRE" in v or "DISPONIBLE" in v for v in row_vals)
+                    
+                    if has_sku_row and has_qty_row:
+                        df.columns = row_vals
+                        df = df.iloc[i+1:].reset_index(drop=True)
+                        break
         
         # Mapping variations
         sku_col = next((c for c in df.columns if "SKU" in c or "CÓDIGO" in c or "CODIGO" in c), None)
-        qty_col = next((c for c in df.columns if "CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c), None)
         name_col = next((c for c in df.columns if "NOMBRE" in c or "PRODUCTO" in c or "ARTICULO" in c), None)
 
+        # Prioritize "CANTIDAD LIBRE" specifically — this is the free/unassigned stock total.
+        # Other columns like "RAICES O.", "HECHIZO B.", etc. are per-distributor and must be ignored.
+        qty_col = next((c for c in df.columns if c == "CANTIDAD LIBRE"), None)
+        if not qty_col:
+            # Fallback: match any column containing CANTIDAD, LIBRE or DISPONIBLE
+            qty_col = next((c for c in df.columns if "CANTIDAD" in c or "LIBRE" in c or "DISPONIBLE" in c), None)
+
         if not sku_col or not qty_col:
-            raise ValueError(f"No se detectaron las columnas requeridas (SKU o CODIGO, y CANTIDAD o LIBRE). Columnas detectadas: {list(df.columns)}")
+            raise ValueError(f"No se detectaron las columnas requeridas (SKU o CODIGO, y CANTIDAD LIBRE). Columnas detectadas: {list(df.columns)}")
 
         # Reconstruct DF with found columns
         df_final = pd.DataFrame()
