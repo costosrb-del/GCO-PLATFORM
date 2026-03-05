@@ -19,11 +19,24 @@ def normalize_company_name(raw_name: str) -> str:
 
 def normalize_invoice(inv: str) -> str:
     if not inv: return ""
+    import re
     s = str(inv).upper().strip()
-    for prefix in ["FV-", "FV ", "FACTURA-", "FACTURA ", "FV", "F.V.", "HU-"]:
+    
+    # Fix pandas parsing integer keys as floats (e.g. 1234.0)
+    if s.endswith(".0"):
+        s = s[:-2].strip()
+        
+    for prefix in ["FV-", "FV ", "FACTURA-", "FACTURA ", "FV", "F.V.", "HU-", "RM-", "RM ", "R.M."]:
         if s.startswith(prefix):
-            s = s[len(prefix):]
-    s = s.replace(" ", "-")
+            s = s[len(prefix):].strip()
+            
+    # Remove leading zeros from any numeric parts (e.g., "0045" -> "45", "1-089" -> "1-89")
+    parts = re.split(r'(\D+)', s)
+    for i in range(len(parts)):
+        if parts[i].isdigit():
+            parts[i] = str(int(parts[i]))
+            
+    s = "".join(parts).replace(" ", "").replace("-", "-").strip("-")
     return s
 
 def normalize_sku(sku) -> str:
