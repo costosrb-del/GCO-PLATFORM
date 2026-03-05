@@ -50,9 +50,10 @@ def normalize_sku(sku) -> str:
 
     if "SD15" in s:
         return "SD15"
+    import re
     digits = re.sub(r'\D', '', s)
     if digits:
-        return digits
+        return str(int(digits))
     return s
 
 def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_almaverde: bool = False) -> Dict[str, Any]:
