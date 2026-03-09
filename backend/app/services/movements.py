@@ -329,7 +329,8 @@ def extract_movements_from_doc(doc, doc_type):
         price = item.get("price", 0)
         description = item.get("description", "")
         
-        discount = item.get("discount", 0)
+        discount_raw = item.get("discount", 0)
+        discount = float(discount_raw.get("value", 0)) if isinstance(discount_raw, dict) else float(discount_raw)
         
         # FIX: The user noted that FV unit/total values were wrong, but FC were correct.
         # For FC (Purchases), the base cost (qty * price) is correct because taxes are handled separately.

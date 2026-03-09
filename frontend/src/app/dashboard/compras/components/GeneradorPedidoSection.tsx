@@ -130,7 +130,9 @@ export const GeneradorPedidoSection = ({
     const [showBorradores, setShowBorradores] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
     const [borradorNombre, setBorradorNombre] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
     const [borradorActualId, setBorradorActualId] = useState<string | null>(null);
+    const [searchResult, setSearchResult] = useState("");
     // Split % para empaques alternativos: key = grupoeId, value = Record<insumoId, pct>
     const [empaquesSplit, setEmpaquesSplit] = useState<Record<string, Record<string, number>>>({});
 
@@ -603,14 +605,25 @@ export const GeneradorPedidoSection = ({
                                         <SelectTrigger className="h-9 bg-white text-xs">
                                             <SelectValue placeholder="Seleccionar producto..." />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            {productos.map(p => (
-                                                <SelectItem key={p.id} value={p.id}>
-                                                    <span className="font-mono text-[10px] text-gray-400 mr-1">{p.sku}</span>
-                                                    {p.nombre}
-                                                    {!p.insumosAsociados?.length && <span className="ml-1 text-[10px] text-red-400">⚠️ sin ficha</span>}
-                                                </SelectItem>
-                                            ))}
+                                        <SelectContent className="max-h-[300px]">
+                                            <div className="p-2 border-b">
+                                                <Input 
+                                                    placeholder="🔍 Buscar producto..." 
+                                                    className="h-8 text-xs" 
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                    onKeyDown={(e) => e.stopPropagation()} // Prevent select from closing
+                                                />
+                                            </div>
+                                            {productos
+                                                .filter(p => !searchTerm || p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())))
+                                                .map(p => (
+                                                    <SelectItem key={p.id} value={p.id}>
+                                                        <span className="font-mono text-[10px] text-gray-400 mr-1">{p.sku}</span>
+                                                        {p.nombre}
+                                                        {!p.insumosAsociados?.length && <span className="ml-1 text-[10px] text-red-400">⚠️ sin ficha</span>}
+                                                    </SelectItem>
+                                                ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -679,6 +692,16 @@ export const GeneradorPedidoSection = ({
                                     </div>
                                 </div>
                             </div>
+                            
+                            {/* Buscador de resultados */}
+                            <div className="space-y-2">
+                                <Input 
+                                    placeholder="🔍 Buscar en resultados (proveedor, insumo, SKU...)" 
+                                    className="h-10 text-xs bg-white border-violet-200"
+                                    value={searchResult}
+                                    onChange={(e) => setSearchResult(e.target.value)}
+                                />
+                            </div>
 
                             {/* ── Widget empaques alternativos ─────────── */}
                             {gruposConAlternativas.size > 0 && (
@@ -733,7 +756,19 @@ export const GeneradorPedidoSection = ({
 
                             {/* Cards por proveedor */}
                             <div className="space-y-3 max-h-[52vh] overflow-y-auto pr-1">
-                                {requisicion.map((prov, idx) => {
+                                {requisicion
+                                    .filter(prov => {
+                                        if (!searchResult) return true;
+                                        const query = searchResult.toLowerCase();
+                                        return (
+                                            prov.terceroNombre.toLowerCase().includes(query) ||
+                                            prov.insumos.some(i => 
+                                                i.insumoNombre.toLowerCase().includes(query) || 
+                                                i.insumoSku.toLowerCase().includes(query)
+                                            )
+                                        );
+                                    })
+                                    .map((prov, idx) => {
                                     const sinProv = prov.terceroId === "__SIN_PROVEEDOR__";
                                     const isSelected = seleccionados.has("__ALL__") || seleccionados.has(prov.terceroId);
                                     return (

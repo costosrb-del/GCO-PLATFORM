@@ -26,6 +26,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
     const [productoForm, setProductoForm] = useState<Partial<ProductoFabricado>>({
         nombre: "", sku: "", descripcion: "", categoria: "", insumosAsociados: []
     });
+    const [searchInsumoText, setSearchInsumoText] = useState("");
 
     // ── Calcular costo y completitud ─────────────────────────────────────────
     const getProductStats = (p: ProductoFabricado) => {
@@ -159,6 +160,14 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                             {/* Agregar insumos al BOM */}
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Insumos del BOM</label>
+                                <div className="space-y-2 mb-2">
+                                    <Input
+                                        placeholder="🔍 Buscar insumo para agregar..."
+                                        value={searchInsumoText}
+                                        onChange={(e) => setSearchInsumoText(e.target.value)}
+                                        className="h-9 text-xs border-fuchsia-100 placeholder:text-gray-400"
+                                    />
+                                </div>
                                 <Select value="" onValueChange={v => {
                                     const existe = productoForm.insumosAsociados?.find(ia => ia.insumoId === v);
                                     if (!existe) {
@@ -167,17 +176,29 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                             ...productoForm,
                                             insumosAsociados: [...(productoForm.insumosAsociados ?? []), { insumoId: v, cantidadRequerida: 1 }]
                                         });
+                                        setSearchInsumoText(""); // Clear search after selection
                                     }
                                 }}>
-                                    <SelectTrigger className="h-10"><SelectValue placeholder="Agregar insumo..." /></SelectTrigger>
-                                    <SelectContent>
-                                        {insumos.map(i => (
-                                            <SelectItem key={i.id} value={i.id}>
-                                                <span className="font-mono text-[10px] text-gray-400 mr-1">{i.sku}</span>
-                                                {i.nombre}
-                                                {i.precio ? <span className="ml-1 text-emerald-600 text-[10px]">${i.precio.toLocaleString()}</span> : null}
-                                            </SelectItem>
-                                        ))}
+                                    <SelectTrigger className="h-10"><SelectValue placeholder="Seleccionar insumo filtrado..." /></SelectTrigger>
+                                    <SelectContent className="max-h-[300px]">
+                                        {insumos
+                                            .filter(i => 
+                                                i.nombre.toLowerCase().includes(searchInsumoText.toLowerCase()) || 
+                                                i.sku.toLowerCase().includes(searchInsumoText.toLowerCase())
+                                            )
+                                            .map(i => (
+                                                <SelectItem key={i.id} value={i.id}>
+                                                    <span className="font-mono text-[10px] text-gray-400 mr-1">{i.sku}</span>
+                                                    {i.nombre}
+                                                    {i.precio ? <span className="ml-1 text-emerald-600 text-[10px]">${i.precio.toLocaleString()}</span> : null}
+                                                </SelectItem>
+                                            ))}
+                                        {insumos.filter(i => 
+                                                i.nombre.toLowerCase().includes(searchInsumoText.toLowerCase()) || 
+                                                i.sku.toLowerCase().includes(searchInsumoText.toLowerCase())
+                                            ).length === 0 && (
+                                            <div className="p-2 text-xs text-center text-gray-400">No se encontraron resultados</div>
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -320,19 +341,29 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                     <div className="flex justify-between items-center">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{count} insumos en BOM</p>
                                         {costo > 0 && (
-                                            <p className="text-xs font-black text-teal-700">${costo.toLocaleString("es-CO")}</p>
+                                            <p className="text-[13px] font-black text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100">
+                                                Costo Total: ${costo.toLocaleString("es-CO")}
+                                            </p>
                                         )}
                                     </div>
                                     {p.insumosAsociados && p.insumosAsociados.length > 0 ? (
                                         <div className="space-y-0.5">
                                             {p.insumosAsociados.map((ia, idx) => {
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
+                                                const insSubtotal = (ins?.precio ?? 0) * ia.cantidadRequerida;
                                                 return (
-                                                    <div key={idx} className="flex justify-between items-center text-[11px]">
-                                                        <span className={`truncate max-w-[60%] ${!ins ? "text-red-400 line-through" : "text-gray-600"}`}>
+                                                    <div key={idx} className="flex justify-between items-center text-[10px] py-0.5 border-b border-gray-100/50 last:border-0">
+                                                        <span className={`truncate max-w-[50%] ${!ins ? "text-red-400 line-through" : "text-gray-600"}`}>
                                                             {ins?.nombre ?? "Insumo eliminado"}
                                                         </span>
-                                                        <span className="font-bold text-gray-500 shrink-0">× {ia.cantidadRequerida} {ins?.unidad ?? ""}</span>
+                                                        <div className="flex gap-2 items-center shrink-0">
+                                                            <span className="font-bold text-gray-400">× {ia.cantidadRequerida} {ins?.unidad ?? ""}</span>
+                                                            {insSubtotal > 0 && (
+                                                                <span className="text-teal-600 font-bold bg-white px-1 rounded shadow-sm border border-teal-50">
+                                                                    ${insSubtotal.toLocaleString("es-CO")}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}

@@ -125,33 +125,54 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
              else:
                   siigo_invoices[key]["items"][code] = siigo_invoices[key]["items"].get(code, 0) + qty
 
-    # 2. Fetch Google Sheet Xlsx
-    if "output=csv" in url:
-        url = url.replace("output=csv", "output=xlsx")
-        
-    # Strip single=true and gid so Google always returns the ENTIRE workbook, not just one tab
-    import re
-    url = re.sub(r'&?single=true', '', url)
-    url = re.sub(r'&?gid=\d+', '', url)
-    # If the URL ends with ? (because we removed the only params), that is fine, or we can clean it
-    url = url.replace("?&", "?").rstrip("?")
+    # 2. Fetch Google Sheet
+    import requests
+    import io
     
+    # Handle Published to Web links specifically
+    if "/pub?" in url:
+        if "output=csv" in url:
+            url = url.replace("output=csv", "output=xlsx")
+        # Do NOT strip gid/single=true for pub links as it often causes 404
+    else:
+        # For standard edit links, we want the whole workbook
+        if "output=csv" in url:
+            url = url.replace("output=csv", "output=xlsx")
+        import re
+        url = re.sub(r'&?single=true', '', url)
+        url = re.sub(r'&?gid=\d+', '', url)
+        url = url.replace("?&", "?").rstrip("?")
+
     try:
-        xl = pd.ExcelFile(url)
-    except ValueError as e:
-        return {"error": "Error de validación del libro: Asegúrate de que configuraste correctamente el link o que el archivo está Publicado en la Web como XLSX."}
+        print(f"[DEBUG CONCILIACION] Descargando desde: {url}")
+        resp = requests.get(url, timeout=45, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        
+        # Check if it's actually CSV content despite the URL extension
+        content_type = resp.headers.get('Content-Type', '')
+        if 'csv' in content_type or resp.content.startswith(b'"Fecha') or resp.content.startswith(b'Fecha'):
+             print("[DEBUG CONCILIACION] Detectado formato CSV")
+             df_csv = pd.read_csv(io.BytesIO(resp.content))
+             xl_data = {"Sheet1": df_csv}
+             sheet_names = ["Sheet1"]
+        else:
+             print("[DEBUG CONCILIACION] Detectado formato Excel")
+             xl = pd.ExcelFile(io.BytesIO(resp.content))
+             xl_data = {sn: xl.parse(sn) for sn in xl.sheet_names}
+             sheet_names = xl.sheet_names
+             
     except Exception as e:
-        return {"error": f"Error descargando documento Google Sheets: Verifica que el link exporta a Excel y es accesible. ({str(e)})"}
+        print(f"[ERROR CONCILIACION] Error descargando: {str(e)}")
+        return {"error": f"Error descargando documento Google Sheets: {str(e)}"}
         
     sheet_invoices = {}
-    
-    print(f"[DEBUG SHEETS] Hojas encontradas: {xl.sheet_names}")
+    print(f"[DEBUG SHEETS] Hojas encontradas: {sheet_names}")
     
     hojas_procesadas = 0
     hojas_ignoradas = []
     
-    for sheet_name in xl.sheet_names:
-        df = xl.parse(sheet_name)
+    for sheet_name in sheet_names:
+        df = xl_data[sheet_name]
         df.columns = df.columns.astype(str).str.strip()
         
         print(f"[DEBUG SHEETS] Hoja '{sheet_name}' columnas: {list(df.columns)}")
