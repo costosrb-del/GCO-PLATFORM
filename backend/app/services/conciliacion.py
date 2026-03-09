@@ -107,12 +107,6 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
             if m:
                 affected_inv_clean = normalize_invoice(m.group(1))
 
-        if "HUMAN" in comp_norm.upper():
-            warehouse = str(row.get("warehouse", "")).upper()
-            if "PRINCIPAL" not in warehouse and "RIONEGRO" not in warehouse:
-                 continue
-
-                 
         key = f"{comp_norm}_{affected_inv_clean}"
         
         if key not in siigo_invoices:
