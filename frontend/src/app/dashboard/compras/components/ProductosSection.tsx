@@ -11,6 +11,23 @@ import {
 import { ProductoFabricado, Insumo } from "@/hooks/useCompras";
 import { toast } from "sonner";
 
+/**
+ * Parsea el campo rendimiento:
+ * - "80%"  → 0.8  (eficiencia)
+ * - "50"   → 50   (unidades por empaque)
+ */
+function parseRendimientoFactor(raw: string | undefined): number {
+    if (!raw || raw.trim() === "" || raw === "N/A") return 1;
+    const s = raw.trim();
+    if (s.includes("%")) {
+        const n = parseFloat(s.replace("%", ""));
+        if (!isNaN(n) && n > 0) return n / 100;
+    }
+    const n = parseFloat(s);
+    if (!isNaN(n) && n > 0) return n;
+    return 1;
+}
+
 interface ProductosSectionProps {
     productos: ProductoFabricado[];
     insumos: Insumo[];
@@ -34,7 +51,9 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
         const completo = count > 0;
         const costo = p.insumosAsociados?.reduce((acc, ia) => {
             const ins = insumos.find(i => i.id === ia.insumoId);
-            return acc + ((ins?.precio ?? 0) * ia.cantidadRequerida);
+            const factor = parseRendimientoFactor(ins?.rendimiento);
+            const unitPrice = (ins?.precio ?? 0) / factor;
+            return acc + (unitPrice * ia.cantidadRequerida);
         }, 0) ?? 0;
         // Insumos con SKU huérfano (insumo eliminado)
         const rotos = p.insumosAsociados?.filter(ia => !insumos.find(i => i.id === ia.insumoId)).length ?? 0;
@@ -62,7 +81,9 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
         const costoTotal = productos.reduce((acc, p) =>
             acc + (p.insumosAsociados?.reduce((s, ia) => {
                 const ins = insumos.find(i => i.id === ia.insumoId);
-                return s + ((ins?.precio ?? 0) * ia.cantidadRequerida);
+                const factor = parseRendimientoFactor(ins?.rendimiento);
+                const unitPrice = (ins?.precio ?? 0) / factor;
+                return s + (unitPrice * ia.cantidadRequerida);
             }, 0) ?? 0), 0);
         return { completos, sinFicha, costoTotal };
     }, [productos, insumos]);
@@ -211,7 +232,9 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                         <p className="text-xs font-bold text-teal-700">
                                             Costo base: ${productoForm.insumosAsociados?.reduce((acc, ia) => {
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
-                                                return acc + ((ins?.precio ?? 0) * ia.cantidadRequerida);
+                                                const factor = parseRendimientoFactor(ins?.rendimiento);
+                                                const unitPrice = (ins?.precio ?? 0) / factor;
+                                                return acc + (unitPrice * ia.cantidadRequerida);
                                             }, 0).toLocaleString("es-CO")}
                                         </p>
                                     </div>
@@ -350,7 +373,9 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                         <div className="space-y-0.5">
                                             {p.insumosAsociados.map((ia, idx) => {
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
-                                                const insSubtotal = (ins?.precio ?? 0) * ia.cantidadRequerida;
+                                                const factor = parseRendimientoFactor(ins?.rendimiento);
+                                                const unitPrice = (ins?.precio ?? 0) / factor;
+                                                const insSubtotal = unitPrice * ia.cantidadRequerida;
                                                 return (
                                                     <div key={idx} className="flex justify-between items-center text-[10px] py-0.5 border-b border-gray-100/50 last:border-0">
                                                         <span className={`truncate max-w-[50%] ${!ins ? "text-red-400 line-through" : "text-gray-600"}`}>
