@@ -151,7 +151,7 @@ export default function TareasPage() {
 
         const finalReason = breakNote.trim() ? `${breakReason} - ${breakNote}` : breakReason;
         const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
-        let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+        const shiftTask = tasks.find(t => t.title === shiftTaskTitle);
         const newEntry = { date: new Date().toISOString(), action: `⏸️ Pausó Turno: ${finalReason}`, user: currentUserEmail };
         if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
         else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
@@ -176,7 +176,7 @@ export default function TareasPage() {
         setIsSaving(true);
 
         const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
-        let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+        const shiftTask = tasks.find(t => t.title === shiftTaskTitle);
         const newEntry = { date: new Date().toISOString(), action: "▶️ Reanudó Turno", user: currentUserEmail };
         if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
 
@@ -867,7 +867,7 @@ export default function TareasPage() {
 
     // Filtrar y Ordenar
     const filteredTasks = useMemo(() => {
-        let result = tasks.filter(task => {
+        const result = tasks.filter(task => {
             const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (task.tags && task.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
@@ -1506,7 +1506,7 @@ export default function TareasPage() {
                                         {!isShiftActive ? (
                                             <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-indigo-700 hover:bg-indigo-100 px-2 animate-pulse" onClick={async () => {
                                                 const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
-                                                let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+                                                const shiftTask = tasks.find(t => t.title === shiftTaskTitle);
                                                 const newEntry = { date: new Date().toISOString(), action: "▶️ Inició Turno/Jornada", user: currentUserEmail };
                                                 if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
                                                 else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });
@@ -1521,7 +1521,7 @@ export default function TareasPage() {
                                                 <div className="w-px h-4 bg-indigo-200"></div>
                                                 <Button size="sm" variant="ghost" className="h-7 text-xs font-bold text-slate-600 hover:bg-slate-200 px-2" onClick={async () => {
                                                     const shiftTaskTitle = `Registro de Asistencia - ${currentUserEmail}`;
-                                                    let shiftTask = tasks.find(t => t.title === shiftTaskTitle);
+                                                    const shiftTask = tasks.find(t => t.title === shiftTaskTitle);
                                                     const newEntry = { date: new Date().toISOString(), action: "⏹️ Terminó Turno/Jornada", user: currentUserEmail };
                                                     if (shiftTask) await updateTask(shiftTask.id, { history: [...(shiftTask.history || []), newEntry] });
                                                     else await createTask({ title: shiftTaskTitle, description: "Registro automático de entradas y salidas.", assigned_to: currentUserEmail, status: "Completada", priority: "Baja", history: [newEntry] });

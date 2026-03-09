@@ -432,7 +432,7 @@ export const GeneradorPedidoSection = ({
                 precio_estimado: ins.precioUnitario,
                 cantidad_recibida: 0,
             }));
-            const label = items.length > 1 ? `${items[0].insumo} +${items.length - 1} más` : items[0]?.insumo ?? "";
+            const label = items.map(i => i.insumo).join(', ');
             const totalBruto = items.reduce((s, i) => s + i.cantidad * i.precio_estimado, 0);
             const now = new Date().toISOString();
 

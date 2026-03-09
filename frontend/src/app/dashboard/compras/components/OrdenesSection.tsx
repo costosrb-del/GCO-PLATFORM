@@ -82,9 +82,7 @@ export const OrdenesSection = ({
             return { ...it, insumo: ins?.nombre || "" };
         });
 
-        const summaryLabel = itemsToSave.length > 1
-            ? `${itemsToSave[0].insumo} +${itemsToSave.length - 1} más`
-            : itemsToSave[0].insumo;
+        const summaryLabel = itemsToSave.map(it => it.insumo).join(', ');
 
         const totalQty = itemsToSave.reduce((sum, i) => sum + i.cantidad, 0);
         const totalBruto = itemsToSave.reduce((sum, i) => sum + (i.cantidad * i.precio_estimado), 0);

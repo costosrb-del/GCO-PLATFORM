@@ -98,16 +98,18 @@ def get_conciliacion_data(url: str, start_date: str, end_date: str, exclude_alma
         code = normalize_sku(code_raw)
         qty = float(row.get("quantity", 0))
         doc_type = row.get("doc_type", "FV")
-        
-        if "HUMAN" in comp_norm.upper() and inv_clean.startswith("2-"):
-             continue 
-             
         affected_inv_clean = inv_clean
+        
         if doc_type == "NC":
+            import re
             obs = str(row.get("observations", "")).upper()
             m = re.search(r'(?:FV|FACTURA)[\s-]*(\d+-\d+|\d+)', obs)
             if m:
                 affected_inv_clean = normalize_invoice(m.group(1))
+
+        if "HUMAN" in comp_norm.upper() and str(inv).strip().upper().startswith("FV-2"):
+             continue
+
                  
         key = f"{comp_norm}_{affected_inv_clean}"
         

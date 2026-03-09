@@ -249,7 +249,7 @@ export default function SaldosPage() {
   const handleShareWhatsApp = () => {
     // 1. Header
     const dateStr = new Date().toLocaleDateString("es-CO", { day: '2-digit', month: '2-digit', year: 'numeric' });
-    let message = `📊 *Reporte GCO - ${dateStr}*\n_SKU: Unds (Días Inv)_\n\n`;
+    const message = `📊 *Reporte GCO - ${dateStr}*\n_SKU: Unds (Días Inv)_\n\n`;
 
     // 2. Body (List)
     // Use consolidatedData if available (has averages), otherwise detailed
@@ -277,8 +277,8 @@ export default function SaldosPage() {
       return `• *${code}*: ${qty}unds | Inv: ${daysStr}${alert}`;
     });
 
-    let header = `📊 *REPORTE GCO - ${dateStr}*\nSKU | Unds | Días Inv\n`;
-    let body = lines.join("\n");
+    const header = `📊 *REPORTE GCO - ${dateStr}*\nSKU | Unds | Días Inv\n`;
+    const body = lines.join("\n");
     let footer = `\n_Generado desde GCO Platform_`;
 
     if (sourceData.length > limit) {

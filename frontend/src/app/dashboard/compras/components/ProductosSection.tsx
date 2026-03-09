@@ -325,7 +325,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                     </div>
                                     {p.insumosAsociados && p.insumosAsociados.length > 0 ? (
                                         <div className="space-y-0.5">
-                                            {p.insumosAsociados.slice(0, 4).map((ia, idx) => {
+                                            {p.insumosAsociados.map((ia, idx) => {
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
                                                 return (
                                                     <div key={idx} className="flex justify-between items-center text-[11px]">
@@ -336,9 +336,6 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                                     </div>
                                                 );
                                             })}
-                                            {p.insumosAsociados.length > 4 && (
-                                                <p className="text-[10px] text-fuchsia-500 font-semibold">+{p.insumosAsociados.length - 4} más...</p>
-                                            )}
                                         </div>
                                     ) : (
                                         <button onClick={() => editProducto(p)}
