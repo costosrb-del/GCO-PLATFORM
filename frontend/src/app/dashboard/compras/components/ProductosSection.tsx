@@ -54,7 +54,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
         const countProductos = p.productosAsociados?.length ?? 0;
         const completo = countInsumos > 0 || countProductos > 0;
 
-        const mandatory = ["Envase", "Tapa", "Sello", "Etiqueta", "Materia Prima", "Termoencogible", "Caja"];
+        const mandatory = ["ENVASE", "TAPA", "SELLO", "ETIQUETA", "MATERIA PRIMA", "TERMOENCOGIBLE", "CAJA"];
         const foundCategories = new Set<string>();
 
         const calcularCostoRecursivo = (prod: ProductoFabricado): number => {
@@ -62,7 +62,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
             if (prod.insumosAsociados) {
                 for (const ia of prod.insumosAsociados) {
                     const ins = insumos.find(i => i.id === ia.insumoId);
-                    if (ins?.clasificacion) foundCategories.add(ins.clasificacion);
+                    if (ins?.clasificacion) foundCategories.add(ins.clasificacion.trim().toUpperCase());
 
                     const rendStr = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins?.rendimiento;
                     const factor = parseRendimientoFactor(rendStr);
