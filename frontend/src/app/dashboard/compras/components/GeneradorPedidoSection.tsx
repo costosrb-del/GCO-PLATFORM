@@ -128,6 +128,7 @@ export const GeneradorPedidoSection = ({
     const [considerarOCPendientes, setConsiderarOCPendientes] = useState(true);
     const [lineas, setLineas] = useState<LineaPedido[]>([{ uuid: uid(), productoId: "", cantidad: 1 }]);
     const [cantidadesOverride, setCantidadesOverride] = useState<Record<string, number>>({});
+    const [preciosOverride, setPreciosOverride] = useState<Record<string, number>>({});
     const [proveedoresOverride, setProveedoresOverride] = useState<Record<string, string>>({});
     const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set(["__ALL__"]));
 
@@ -330,8 +331,14 @@ export const GeneradorPedidoSection = ({
             req.terceroNombreAsignado = provInfo?.nombre ?? terceros.find(t => t.id === provId)?.nombre ?? "⚠️ Sin Proveedor";
 
             // Lógica de escalas: Calcular precio según cantidadFinal
-            const precioBase = provInfo?.precio ?? req.precioUnitario;
-            req.precioUnitario = calcularPrecioEscala(precioBase, provInfo?.escalas, req.cantidadFinal);
+            const provPrice = provInfo?.precio ?? req.precioUnitario; // req.precioUnitario holds the initial price from first provider or insumo
+            const manualPrice = preciosOverride[req.insumoId];
+
+            if (manualPrice !== undefined) {
+                req.precioUnitario = manualPrice;
+            } else {
+                req.precioUnitario = calcularPrecioEscala(provPrice, provInfo?.escalas, req.cantidadFinal);
+            }
 
             req.subtotal = req.cantidadFinal * req.precioUnitario;
         }
@@ -410,7 +417,7 @@ export const GeneradorPedidoSection = ({
             numeroPedido, fechaSolicitada, tiempoEntrega, notas,
             colchonSeguridad, considerarStock, considerarOCPendientes,
             lineas: lineas.filter(l => l.productoId).map(l => ({ productoId: l.productoId, cantidad: l.cantidad })),
-            cantidadesOverride, proveedoresOverride, empaquesSplit,
+            cantidadesOverride, preciosOverride, proveedoresOverride, empaquesSplit,
         };
         if (borradorActualId) {
             await updateBorrador(borradorActualId, data);
@@ -433,6 +440,7 @@ export const GeneradorPedidoSection = ({
         setConsiderarOCPendientes(b.considerarOCPendientes ?? true);
         setLineas((b.lineas ?? []).map(l => ({ uuid: uid(), productoId: l.productoId, cantidad: l.cantidad })));
         setCantidadesOverride(b.cantidadesOverride ?? {});
+        setPreciosOverride(b.preciosOverride ?? {});
         setProveedoresOverride(b.proveedoresOverride ?? {});
         setEmpaquesSplit(b.empaquesSplit ?? {});
         setShowBorradores(false);
@@ -847,9 +855,16 @@ export const GeneradorPedidoSection = ({
                                                                             value={cantidadesOverride[ins.insumoId] ?? ins.cantidadFinal}
                                                                             onChange={e => setCantidadesOverride(prev => ({ ...prev, [ins.insumoId]: Number(e.target.value) }))}
                                                                             className="w-24 h-8 text-center font-bold text-sm" />
-                                                                        <p className="text-[10px] text-gray-400 mt-0.5">{ins.unidad} · ${ins.precioUnitario.toLocaleString()}/u</p>
+                                                                        <div className="flex items-center justify-end gap-1 mt-0.5">
+                                                                            <span className="text-[10px] text-gray-400">{ins.unidad} · $</span>
+                                                                            <Input type="number" min={0}
+                                                                                value={preciosOverride[ins.insumoId] ?? ins.precioUnitario}
+                                                                                onChange={e => setPreciosOverride(prev => ({ ...prev, [ins.insumoId]: Number(e.target.value) }))}
+                                                                                className="w-20 h-6 text-right px-1 font-bold text-[10px] bg-amber-50 border-amber-200" />
+                                                                            <span className="text-[10px] text-gray-400">/u</span>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="text-right shrink-0">
+                                                                    <div className="text-right shrink-0 min-w-[80px]">
                                                                         <p className="font-black text-teal-600 text-sm">${ins.subtotal.toLocaleString("es-CO")}</p>
                                                                     </div>
                                                                 </div>

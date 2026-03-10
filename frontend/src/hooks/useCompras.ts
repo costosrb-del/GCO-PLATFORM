@@ -49,6 +49,7 @@ export interface BorradorMRP {
     considerarOCPendientes?: boolean;
     lineas?: { productoId: string; cantidad: number }[];
     cantidadesOverride?: Record<string, number>;
+    preciosOverride?: Record<string, number>;
     proveedoresOverride?: Record<string, string>;
     empaquesSplit?: Record<string, Record<string, number>>;
     updated_at?: string;
