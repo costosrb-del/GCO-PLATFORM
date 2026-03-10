@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Package, Trash2, Filter, X, Edit2 } from "lucide-react";
 import { Insumo } from "@/hooks/useCompras";
+import { toast } from "sonner";
 
 interface InsumosSectionProps {
     insumos: Insumo[];
@@ -23,6 +24,18 @@ export const InsumosSection = ({ insumos, createInsumo, updateInsumo, deleteInsu
 
     const handleSaveInsumo = async () => {
         if (!insumoForm.nombre) return;
+
+        // BARRERA: Evitar insumos repetidos (mismo nombre o mismo SKU)
+        const duplicate = insumos.find(i =>
+            (i.nombre.toLowerCase().trim() === (insumoForm.nombre ?? "").toLowerCase().trim() ||
+                (i.sku && i.sku.trim() !== "" && i.sku.toLowerCase().trim() === (insumoForm.sku ?? "").toLowerCase().trim()))
+            && i.id !== insumoForm.id
+        );
+
+        if (duplicate) {
+            toast.error(`Ya existe un insumo con el nombre "${duplicate.nombre}" o SKU "${duplicate.sku}". No se permiten duplicados.`);
+            return;
+        }
 
         if (insumoForm.id) {
             await updateInsumo(insumoForm.id, insumoForm);

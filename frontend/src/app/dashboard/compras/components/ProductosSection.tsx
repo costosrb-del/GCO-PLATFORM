@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Plus, Factory, Edit2, Trash2, X, AlertCircle, CheckCircle2,
-    DollarSign, Copy, Filter, Search
+    DollarSign, Copy, Filter, Search, FileDown, Layers
 } from "lucide-react";
 import { ProductoFabricado, Insumo } from "@/hooks/useCompras";
+import { exportarBOMPDF, descargarZIPBOMs } from "../utils/pdfExport";
 import { toast } from "sonner";
 
 /**
@@ -41,23 +42,44 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
     const [searchProductos, setSearchProductos] = useState("");
     const [filterMode, setFilterMode] = useState<"todos" | "completos" | "incompletos">("todos");
     const [productoForm, setProductoForm] = useState<Partial<ProductoFabricado>>({
-        nombre: "", sku: "", descripcion: "", categoria: "", insumosAsociados: []
+        nombre: "", sku: "", descripcion: "", categoria: "", insumosAsociados: [], productosAsociados: []
     });
     const [searchInsumoText, setSearchInsumoText] = useState("");
+    const [searchSubProductoText, setSearchSubProductoText] = useState("");
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // ── Calcular costo y completitud ─────────────────────────────────────────
     const getProductStats = (p: ProductoFabricado) => {
-        const count = p.insumosAsociados?.length ?? 0;
-        const completo = count > 0;
-        const costo = p.insumosAsociados?.reduce((acc, ia) => {
-            const ins = insumos.find(i => i.id === ia.insumoId);
-            const factor = parseRendimientoFactor(ins?.rendimiento);
-            const unitPrice = (ins?.precio ?? 0) / factor;
-            return acc + (unitPrice * ia.cantidadRequerida);
-        }, 0) ?? 0;
-        // Insumos con SKU huérfano (insumo eliminado)
+        const countInsumos = p.insumosAsociados?.length ?? 0;
+        const countProductos = p.productosAsociados?.length ?? 0;
+        const completo = countInsumos > 0 || countProductos > 0;
+
+        const calcularCostoRecursivo = (prod: ProductoFabricado): number => {
+            let costo = 0;
+            // Costo de insumos directos
+            if (prod.insumosAsociados) {
+                for (const ia of prod.insumosAsociados) {
+                    const ins = insumos.find(i => i.id === ia.insumoId);
+                    const factor = parseRendimientoFactor(ins?.rendimiento);
+                    const unitPrice = (ins?.precio ?? 0) / factor;
+                    costo += unitPrice * ia.cantidadRequerida;
+                }
+            }
+            // Costo de sub-productos
+            if (prod.productosAsociados) {
+                for (const pa of prod.productosAsociados) {
+                    const sp = productos.find(sub => sub.id === pa.productoId);
+                    if (sp) {
+                        costo += calcularCostoRecursivo(sp) * pa.cantidadRequerida;
+                    }
+                }
+            }
+            return costo;
+        };
+
+        const costo = calcularCostoRecursivo(p);
         const rotos = p.insumosAsociados?.filter(ia => !insumos.find(i => i.id === ia.insumoId)).length ?? 0;
-        return { count, completo, costo, rotos };
+        return { count: countInsumos + countProductos, completo, costo, rotos };
     };
 
     // ── Filtros ────────────────────────────────────────────────────────────────
@@ -75,33 +97,52 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
     }, [productos, searchProductos, filterMode, insumos]);
 
     // ── Estadísticas globales ─────────────────────────────────────────────────
+    // ── Estadísticas globales ─────────────────────────────────────────────────
     const globalStats = useMemo(() => {
-        const completos = productos.filter(p => (p.insumosAsociados?.length ?? 0) > 0).length;
+        const stats = productos.map(p => getProductStats(p));
+        const completos = stats.filter(s => s.completo).length;
         const sinFicha = productos.length - completos;
-        const costoTotal = productos.reduce((acc, p) =>
-            acc + (p.insumosAsociados?.reduce((s, ia) => {
-                const ins = insumos.find(i => i.id === ia.insumoId);
-                const factor = parseRendimientoFactor(ins?.rendimiento);
-                const unitPrice = (ins?.precio ?? 0) / factor;
-                return s + (unitPrice * ia.cantidadRequerida);
-            }, 0) ?? 0), 0);
+        const costoTotal = stats.reduce((acc, s) => acc + s.costo, 0);
         return { completos, sinFicha, costoTotal };
-    }, [productos, insumos]);
+    }, [productos, getProductStats]);
 
     const handleSaveProducto = async () => {
         if (!productoForm.nombre) return;
-        const autoSku = productoForm.sku || `PRD-${Math.floor(1000 + Math.random() * 9000)}`;
-        if (productoForm.id) {
-            await updateProducto(productoForm.id, { ...productoForm, sku: autoSku });
-        } else {
-            await createProducto({ ...productoForm, sku: autoSku });
+
+        // BARRERA: Evitar productos/kits repetidos (mismo nombre o mismo SKU)
+        const duplicate = productos.find(p =>
+            (p.nombre.toLowerCase().trim() === (productoForm.nombre ?? "").toLowerCase().trim() ||
+                (p.sku && p.sku.trim() !== "" && p.sku.toLowerCase().trim() === (productoForm.sku ?? "").toLowerCase().trim()))
+            && p.id !== productoForm.id
+        );
+
+        if (duplicate) {
+            toast.error(`Ya existe un producto con el nombre "${duplicate.nombre}"${duplicate.sku ? ` o SKU "${duplicate.sku}"` : ""}. No se permiten repetidos.`);
+            return;
         }
-        setProductoForm({ id: undefined, sku: "", nombre: "", descripcion: "", categoria: "", insumosAsociados: [] });
+
+        const autoSku = productoForm.sku || `PRD-${Math.floor(1000 + Math.random() * 9000)}`;
+        const payload = {
+            ...productoForm,
+            sku: autoSku,
+            insumosAsociados: productoForm.insumosAsociados || [],
+            productosAsociados: productoForm.productosAsociados || []
+        };
+        if (productoForm.id) {
+            await updateProducto(productoForm.id, payload);
+        } else {
+            await createProducto(payload);
+        }
+        setProductoForm({ id: undefined, sku: "", nombre: "", descripcion: "", categoria: "", insumosAsociados: [], productosAsociados: [] });
         setIsProductoDialogOpen(false);
     };
 
     const editProducto = (p: ProductoFabricado) => {
-        setProductoForm({ ...p, insumosAsociados: p.insumosAsociados || [] });
+        setProductoForm({
+            ...p,
+            insumosAsociados: p.insumosAsociados || [],
+            productosAsociados: p.productosAsociados || []
+        });
         setIsProductoDialogOpen(true);
     };
 
@@ -123,159 +164,234 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                 <div>
                     <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                         <Factory className="w-5 h-5 text-fuchsia-600" />
-                        Base de Productos Fabricados
+                        Base de Productos Fabricados / Kits
                     </h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{productos.length} productos · Fichas técnicas de insumos (BOM)</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{productos.length} productos · {globalStats.completos} con ficha técnica</p>
                 </div>
-                <Dialog open={isProductoDialogOpen} onOpenChange={setIsProductoDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl shadow-md shrink-0"
-                            onClick={() => setProductoForm({ id: undefined, sku: "", nombre: "", descripcion: "", categoria: "", insumosAsociados: [] })}>
-                            <Plus className="w-4 h-4 mr-2" /> Nuevo Producto
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-black text-slate-800">
-                                {productoForm.id ? "Editar Producto" : "Registrar Producto Fabricado"}
-                            </DialogTitle>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-2">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">SKU (Opcional)</label>
-                                    <Input value={productoForm.sku} className="h-10 font-mono"
-                                        onChange={e => setProductoForm({ ...productoForm, sku: e.target.value.toUpperCase() })}
-                                        placeholder="Autogenerado" />
-                                </div>
-                                <div className="space-y-1 col-span-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre del Producto *</label>
-                                    <Input value={productoForm.nombre} className="h-10"
-                                        onChange={e => setProductoForm({ ...productoForm, nombre: e.target.value })}
-                                        placeholder="Ej. Kit Capilar 120ml" />
-                                </div>
-                            </div>
-
-                            {/* Copiar BOM de otro producto */}
-                            {productos.filter(p => p.id !== productoForm.id && (p.insumosAsociados?.length ?? 0) > 0).length > 0 && (
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                                        <Copy className="w-3 h-3 text-fuchsia-400" /> Copiar BOM de otro producto
-                                    </label>
-                                    <Select value="" onValueChange={copiarBOM}>
-                                        <SelectTrigger className="h-9 text-sm border-fuchsia-100 bg-fuchsia-50/50">
-                                            <SelectValue placeholder="Seleccionar producto fuente..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {productos.filter(p => p.id !== productoForm.id && (p.insumosAsociados?.length ?? 0) > 0).map(p => (
-                                                <SelectItem key={p.id} value={p.id}>
-                                                    <span className="font-mono text-[10px] text-gray-400 mr-1">{p.sku}</span>
-                                                    {p.nombre} ({p.insumosAsociados?.length} insumos)
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-                            {/* Agregar insumos al BOM */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Insumos del BOM</label>
-                                <div className="space-y-2 mb-2">
-                                    <Input
-                                        placeholder="🔍 Buscar insumo para agregar..."
-                                        value={searchInsumoText}
-                                        onChange={(e) => setSearchInsumoText(e.target.value)}
-                                        className="h-9 text-xs border-fuchsia-100 placeholder:text-gray-400"
-                                    />
-                                </div>
-                                <Select value="" onValueChange={v => {
-                                    const existe = productoForm.insumosAsociados?.find(ia => ia.insumoId === v);
-                                    if (!existe) {
-                                        const ins = insumos.find(i => i.id === v);
-                                        setProductoForm({
-                                            ...productoForm,
-                                            insumosAsociados: [...(productoForm.insumosAsociados ?? []), { insumoId: v, cantidadRequerida: 1 }]
-                                        });
-                                        setSearchInsumoText(""); // Clear search after selection
-                                    }
-                                }}>
-                                    <SelectTrigger className="h-10"><SelectValue placeholder="Seleccionar insumo filtrado..." /></SelectTrigger>
-                                    <SelectContent className="max-h-[300px]">
-                                        {insumos
-                                            .filter(i => 
-                                                i.nombre.toLowerCase().includes(searchInsumoText.toLowerCase()) || 
-                                                i.sku.toLowerCase().includes(searchInsumoText.toLowerCase())
-                                            )
-                                            .map(i => (
-                                                <SelectItem key={i.id} value={i.id}>
-                                                    <span className="font-mono text-[10px] text-gray-400 mr-1">{i.sku}</span>
-                                                    {i.nombre}
-                                                    {i.precio ? <span className="ml-1 text-emerald-600 text-[10px]">${i.precio.toLocaleString()}</span> : null}
-                                                </SelectItem>
-                                            ))}
-                                        {insumos.filter(i => 
-                                                i.nombre.toLowerCase().includes(searchInsumoText.toLowerCase()) || 
-                                                i.sku.toLowerCase().includes(searchInsumoText.toLowerCase())
-                                            ).length === 0 && (
-                                            <div className="p-2 text-xs text-center text-gray-400">No se encontraron resultados</div>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Lista de insumos del BOM actual */}
-                            {(productoForm.insumosAsociados ?? []).length > 0 && (
-                                <div className="border border-gray-100 rounded-xl overflow-hidden">
-                                    <div className="bg-gray-50 px-3 py-2 flex justify-between items-center">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">BOM — {productoForm.insumosAsociados?.length} insumos</p>
-                                        <p className="text-xs font-bold text-teal-700">
-                                            Costo base: ${productoForm.insumosAsociados?.reduce((acc, ia) => {
-                                                const ins = insumos.find(i => i.id === ia.insumoId);
-                                                const factor = parseRendimientoFactor(ins?.rendimiento);
-                                                const unitPrice = (ins?.precio ?? 0) / factor;
-                                                return acc + (unitPrice * ia.cantidadRequerida);
-                                            }, 0).toLocaleString("es-CO")}
-                                        </p>
-                                    </div>
-                                    <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
-                                        {(productoForm.insumosAsociados ?? []).map((ia, index) => {
-                                            const ins = insumos.find(i => i.id === ia.insumoId);
-                                            const subtotal = (ins?.precio ?? 0) * ia.cantidadRequerida;
-                                            return (
-                                                <div key={index} className="flex items-center gap-2 px-3 py-2">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-semibold text-gray-800 truncate">{ins?.nombre ?? "Insumo eliminado"}</p>
-                                                        <p className="text-[10px] text-gray-400">{ins?.unidad} {subtotal > 0 && `· $${subtotal.toLocaleString()}`}</p>
-                                                    </div>
-                                                    <Input className="w-20 h-7 text-center text-xs font-bold" type="number" step="0.01" min={0}
-                                                        value={ia.cantidadRequerida}
-                                                        onChange={e => {
-                                                            const newArr = [...(productoForm.insumosAsociados ?? [])];
-                                                            newArr[index] = { ...newArr[index], cantidadRequerida: Number(e.target.value) };
-                                                            setProductoForm({ ...productoForm, insumosAsociados: newArr });
-                                                        }} />
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-50"
-                                                        onClick={() => {
-                                                            const newArr = (productoForm.insumosAsociados ?? []).filter((_, i) => i !== index);
-                                                            setProductoForm({ ...productoForm, insumosAsociados: newArr });
-                                                        }}>
-                                                        <X className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            <Button onClick={handleSaveProducto}
-                                className="h-11 bg-[#183C30] hover:bg-[#122e24] text-white font-bold rounded-xl">
-                                Guardar Producto
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="h-9 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50"
+                        disabled={isDownloading || productos.length === 0}
+                        onClick={async () => {
+                            setIsDownloading(true);
+                            await descargarZIPBOMs(productos, productos, insumos);
+                            setIsDownloading(false);
+                        }}>
+                        <FileDown className="w-4 h-4 mr-2" />
+                        {isDownloading ? "Generando..." : "Bajar Todos (ZIP)"}
+                    </Button>
+                    <Dialog open={isProductoDialogOpen} onOpenChange={setIsProductoDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl shadow-md shrink-0"
+                                onClick={() => setProductoForm({ id: undefined, sku: "", nombre: "", descripcion: "", categoria: "", insumosAsociados: [], productosAsociados: [] })}>
+                                <Plus className="w-4 h-4 mr-2" /> Nuevo Producto / Kit
                             </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-black text-slate-800">
+                                    {productoForm.id ? "Editar Producto" : "Registrar Producto Fabricado"}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-2">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">SKU (Opcional)</label>
+                                        <Input value={productoForm.sku} className="h-10 font-mono"
+                                            onChange={e => setProductoForm({ ...productoForm, sku: e.target.value.toUpperCase() })}
+                                            placeholder="Autogenerado" />
+                                    </div>
+                                    <div className="space-y-1 col-span-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre del Producto *</label>
+                                        <Input value={productoForm.nombre} className="h-10"
+                                            onChange={e => setProductoForm({ ...productoForm, nombre: e.target.value })}
+                                            placeholder="Ej. Kit Capilar 120ml" />
+                                    </div>
+                                </div>
+
+                                {/* Copiar BOM de otro producto */}
+                                {productos.filter(p => p.id !== productoForm.id && (p.insumosAsociados?.length ?? 0) > 0).length > 0 && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                                            <Copy className="w-3 h-3 text-fuchsia-400" /> Copiar BOM de otro producto
+                                        </label>
+                                        <Select value="" onValueChange={copiarBOM}>
+                                            <SelectTrigger className="h-9 text-sm border-fuchsia-100 bg-fuchsia-50/50">
+                                                <SelectValue placeholder="Seleccionar producto fuente..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {productos.filter(p => p.id !== productoForm.id && (p.insumosAsociados?.length ?? 0) > 0).map(p => (
+                                                    <SelectItem key={p.id} value={p.id}>
+                                                        <span className="font-mono text-[10px] text-gray-400 mr-1">{p.sku}</span>
+                                                        {p.nombre} ({p.insumosAsociados?.length} insumos)
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {/* Agregar insumos / productos al BOM */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                            <Plus className="w-3 h-3" /> Agregar Insumos
+                                        </label>
+                                        <div className="relative">
+                                            <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                            <Input
+                                                placeholder="Buscar insumo..."
+                                                value={searchInsumoText}
+                                                onChange={(e) => setSearchInsumoText(e.target.value)}
+                                                className="h-9 pl-8 text-xs border-fuchsia-100 placeholder:text-gray-400"
+                                            />
+                                        </div>
+                                        <div className="border rounded-lg max-h-40 overflow-y-auto bg-gray-50/50">
+                                            {insumos
+                                                .filter(i =>
+                                                    i.nombre.toLowerCase().includes(searchInsumoText.toLowerCase()) ||
+                                                    i.sku.toLowerCase().includes(searchInsumoText.toLowerCase())
+                                                )
+                                                .slice(0, 50)
+                                                .map(i => {
+                                                    const yaEsta = (productoForm.insumosAsociados ?? []).some(ia => ia.insumoId === i.id);
+                                                    return (
+                                                        <button key={i.id}
+                                                            onClick={() => {
+                                                                if (!yaEsta) {
+                                                                    setProductoForm({
+                                                                        ...productoForm,
+                                                                        insumosAsociados: [...(productoForm.insumosAsociados ?? []), { insumoId: i.id, cantidadRequerida: 1 }]
+                                                                    });
+                                                                }
+                                                            }}
+                                                            className={`w-full text-left px-3 py-2 text-xs hover:bg-white flex justify-between items-center border-b last:border-0 ${yaEsta ? "opacity-50 cursor-not-allowed bg-emerald-50" : ""}`}>
+                                                            <span className="truncate flex-1">
+                                                                <span className="font-mono text-[9px] text-gray-400 mr-2">{i.sku}</span>
+                                                                {i.nombre}
+                                                            </span>
+                                                            {yaEsta ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Plus className="w-3 h-3 text-gray-300" />}
+                                                        </button>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                            <Layers className="w-3 h-3" /> Agregar Productos (Kits)
+                                        </label>
+                                        <div className="relative">
+                                            <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                            <Input
+                                                placeholder="Buscar producto..."
+                                                value={searchSubProductoText}
+                                                onChange={(e) => setSearchSubProductoText(e.target.value)}
+                                                className="h-9 pl-8 text-xs border-fuchsia-100 placeholder:text-gray-400"
+                                            />
+                                        </div>
+                                        <div className="border rounded-lg max-h-40 overflow-y-auto bg-gray-50/50">
+                                            {productos
+                                                .filter(p => p.id !== productoForm.id) // Evitar autoreferencia
+                                                .filter(p =>
+                                                    p.nombre.toLowerCase().includes(searchSubProductoText.toLowerCase()) ||
+                                                    (p.sku ?? "").toLowerCase().includes(searchSubProductoText.toLowerCase())
+                                                )
+                                                .map(p => {
+                                                    const yaEsta = (productoForm.productosAsociados ?? []).some(pa => pa.productoId === p.id);
+                                                    return (
+                                                        <button key={p.id}
+                                                            onClick={() => {
+                                                                if (!yaEsta) {
+                                                                    setProductoForm({
+                                                                        ...productoForm,
+                                                                        productosAsociados: [...(productoForm.productosAsociados ?? []), { productoId: p.id, cantidadRequerida: 1 }]
+                                                                    });
+                                                                }
+                                                            }}
+                                                            className={`w-full text-left px-3 py-2 text-xs hover:bg-white flex justify-between items-center border-b last:border-0 ${yaEsta ? "opacity-50 cursor-not-allowed bg-emerald-50" : ""}`}>
+                                                            <span className="truncate flex-1">
+                                                                <span className="font-mono text-[9px] text-gray-400 mr-2">{p.sku}</span>
+                                                                {p.nombre}
+                                                            </span>
+                                                            {yaEsta ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Plus className="w-3 h-3 text-gray-300" />}
+                                                        </button>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Lista de items del BOM actual */}
+                                {((productoForm.insumosAsociados ?? []).length > 0 || (productoForm.productosAsociados ?? []).length > 0) && (
+                                    <div className="border border-gray-100 rounded-xl overflow-hidden">
+                                        <div className="bg-gray-50 px-3 py-2 flex justify-between items-center">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Detalle del BOM</p>
+                                        </div>
+                                        <div className="divide-y divide-gray-50 max-h-60 overflow-y-auto">
+                                            {/* Insumos */}
+                                            {(productoForm.insumosAsociados ?? []).map((ia, index) => {
+                                                const ins = insumos.find(i => i.id === ia.insumoId);
+                                                return (
+                                                    <div key={`ins-${index}`} className="flex items-center gap-2 px-3 py-2 bg-white">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-semibold text-gray-800 truncate">{ins?.nombre ?? "Insumo eliminado"}</p>
+                                                            <p className="text-[9px] text-fuchsia-600 font-bold uppercase">Insumo · {ins?.unidad}</p>
+                                                        </div>
+                                                        <Input className="w-20 h-7 text-center text-xs font-bold" type="number" step="0.01" min={0}
+                                                            value={ia.cantidadRequerida}
+                                                            onChange={e => {
+                                                                const newArr = [...(productoForm.insumosAsociados ?? [])];
+                                                                newArr[index] = { ...newArr[index], cantidadRequerida: Number(e.target.value) };
+                                                                setProductoForm({ ...productoForm, insumosAsociados: newArr });
+                                                            }} />
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500"
+                                                            onClick={() => {
+                                                                const newArr = (productoForm.insumosAsociados ?? []).filter((_, i) => i !== index);
+                                                                setProductoForm({ ...productoForm, insumosAsociados: newArr });
+                                                            }}>
+                                                            <X className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                            {/* Sub-Productos */}
+                                            {(productoForm.productosAsociados ?? []).map((pa, index) => {
+                                                const subP = productos.find(p => p.id === pa.productoId);
+                                                return (
+                                                    <div key={`prod-${index}`} className="flex items-center gap-2 px-3 py-2 bg-violet-50/30">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-semibold text-gray-800 truncate">{subP?.nombre ?? "Producto eliminado"}</p>
+                                                            <p className="text-[9px] text-violet-600 font-bold uppercase">Sub-Producto (Kit)</p>
+                                                        </div>
+                                                        <Input className="w-20 h-7 text-center text-xs font-bold border-violet-200" type="number" step="1" min={0}
+                                                            value={pa.cantidadRequerida}
+                                                            onChange={e => {
+                                                                const newArr = [...(productoForm.productosAsociados ?? [])];
+                                                                newArr[index] = { ...newArr[index], cantidadRequerida: Number(e.target.value) };
+                                                                setProductoForm({ ...productoForm, productosAsociados: newArr });
+                                                            }} />
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500"
+                                                            onClick={() => {
+                                                                const newArr = (productoForm.productosAsociados ?? []).filter((_, i) => i !== index);
+                                                                setProductoForm({ ...productoForm, productosAsociados: newArr });
+                                                            }}>
+                                                            <X className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <Button onClick={handleSaveProducto}
+                                    className="h-11 bg-[#183C30] hover:bg-[#122e24] text-white font-bold rounded-xl">
+                                    Guardar Producto
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             {/* KPIs rápidos */}
@@ -338,6 +454,10 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
 
                             {/* Acciones hover */}
                             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
+                                <Button variant="ghost" size="icon" onClick={() => exportarBOMPDF(p, productos, insumos)}
+                                    className="text-fuchsia-600 hover:bg-fuchsia-50 h-7 w-7 bg-white shadow-sm border border-gray-100">
+                                    <FileDown className="w-3.5 h-3.5" />
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={() => editProducto(p)}
                                     className="text-blue-500 hover:bg-blue-50 h-7 w-7 bg-white shadow-sm border border-gray-100">
                                     <Edit2 className="w-3.5 h-3.5" />
@@ -388,6 +508,20 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                                                     ${insSubtotal.toLocaleString("es-CO")}
                                                                 </span>
                                                             )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {p.productosAsociados?.map((pa, idx) => {
+                                                const subP = productos.find(sub => sub.id === pa.productoId);
+                                                return (
+                                                    <div key={`sub-${idx}`} className="flex justify-between items-center text-[10px] py-0.5 border-b border-gray-100/50 last:border-0 italic">
+                                                        <span className="truncate max-w-[50%] text-violet-600 font-semibold">
+                                                            {subP?.nombre ?? "Producto eliminado"}
+                                                        </span>
+                                                        <div className="flex gap-2 items-center shrink-0">
+                                                            <span className="font-bold text-gray-400">× {pa.cantidadRequerida} kit</span>
+                                                            <Layers className="w-2.5 h-2.5 text-violet-400" />
                                                         </div>
                                                     </div>
                                                 );

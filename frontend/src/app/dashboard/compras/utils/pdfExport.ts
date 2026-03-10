@@ -1,4 +1,4 @@
-import { OrdenCompra, Tercero, Insumo } from "@/hooks/useCompras";
+import { OrdenCompra, Tercero, Insumo, ProductoFabricado } from "@/hooks/useCompras";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
@@ -486,3 +486,194 @@ export const descargarZIPPedido = async (
     URL.revokeObjectURL(url);
 };
 
+/**
+ * Explota recursivamente un producto fabricado en sus insumos básicos.
+ */
+interface InsumoExplotado {
+    id: string;
+    nombre: string;
+    sku: string;
+    unidad: string;
+    cantidadTotal: number;
+    ruta?: string; // Para mostrar de dónde viene (kit > subkit)
+}
+
+function explotarBOM(
+    producto: ProductoFabricado,
+    productos: ProductoFabricado[],
+    insumos: Insumo[],
+    cantidadPadre: number = 1,
+    rutaPadre: string = ""
+): InsumoExplotado[] {
+    let result: InsumoExplotado[] = [];
+    const rutaActual = rutaPadre ? `${rutaPadre} > ${producto.nombre}` : producto.nombre;
+
+    // 1. Insumos directos
+    if (producto.insumosAsociados) {
+        for (const ia of producto.insumosAsociados) {
+            const ins = insumos.find(i => i.id === ia.insumoId);
+            if (ins) {
+                result.push({
+                    id: ins.id,
+                    nombre: ins.nombre,
+                    sku: ins.sku,
+                    unidad: ins.unidad,
+                    cantidadTotal: ia.cantidadRequerida * cantidadPadre,
+                    ruta: rutaActual
+                });
+            }
+        }
+    }
+
+    // 2. Sub-productos (Kits)
+    if (producto.productosAsociados) {
+        for (const pa of producto.productosAsociados) {
+            const subProd = productos.find(p => p.id === pa.productoId);
+            if (subProd) {
+                const subExplosion = explotarBOM(subProd, productos, insumos, pa.cantidadRequerida * cantidadPadre, rutaActual);
+                result = [...result, ...subExplosion];
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Agrupa insumos repetidos sumando sus cantidades
+ */
+function consolidarInsumos(lista: InsumoExplotado[]): InsumoExplotado[] {
+    const map = new Map<string, InsumoExplotado>();
+    for (const item of lista) {
+        if (map.has(item.id)) {
+            const ex = map.get(item.id)!;
+            ex.cantidadTotal += item.cantidadTotal;
+        } else {
+            map.set(item.id, { ...item });
+        }
+    }
+    return Array.from(map.values());
+}
+
+export const exportarBOMPDF = async (
+    producto: ProductoFabricado,
+    productos: ProductoFabricado[],
+    insumos: Insumo[]
+) => {
+    const doc = new jsPDF();
+    const logoBase64 = await loadLogoBase64();
+
+    // Header
+    addLogoToDoc(doc, logoBase64);
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("FICHA TÉCNICA - BOM", 52, 22);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Producto: ${producto.nombre}`, 52, 32);
+    doc.text(`SKU: ${producto.sku ?? "N/A"}`, 52, 38);
+
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detalle de Insumos (Explosión Total)", 14, 60);
+
+    const explosion = explotarBOM(producto, productos, insumos);
+    const consolidado = consolidarInsumos(explosion);
+
+    const tableBody = consolidado.map((ins, idx) => [
+        (idx + 1).toString(),
+        ins.nombre,
+        ins.sku,
+        ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+        ins.unidad
+    ]);
+
+    autoTable(doc, {
+        startY: 65,
+        head: [["No.", "Insumo", "SKU", "Cant. Requerida", "Unidad"]],
+        body: tableBody,
+        theme: "grid",
+        headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: "bold" },
+        styles: { fontSize: 9 },
+        columnStyles: {
+            0: { cellWidth: 10 },
+            3: { halign: "right", fontStyle: "bold" },
+            4: { halign: "center" }
+        }
+    });
+
+    // Pie de página
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(24, 60, 48);
+        doc.rect(0, 285, 210, 15, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text(`FICHA TÉCNICA - ${producto.nombre} - ${format(new Date(), "dd/MM/yyyy")}`, 14, 292);
+        doc.text(`Página ${i} de ${pageCount}`, 180, 292);
+    }
+
+    doc.save(`BOM_${producto.nombre.replace(/ /g, "_")}.pdf`);
+};
+
+export const descargarZIPBOMs = async (
+    productos: ProductoFabricado[],
+    todosProductos: ProductoFabricado[],
+    insumos: Insumo[],
+    onProgress?: (pct: number) => void
+) => {
+    const JSZip = (await import("jszip" as any)).default as any;
+    const zip = new JSZip();
+    const folder = zip.folder("Fichas_Tecnicas_BOM");
+
+    let done = 0;
+    for (const p of productos) {
+        const doc = new jsPDF();
+        const logoBase64 = await loadLogoBase64();
+        addLogoToDoc(doc, logoBase64);
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16); doc.setFont("helvetica", "bold");
+        doc.text("FICHA TÉCNICA - BOM", 52, 22);
+        doc.setFontSize(9); doc.setFont("helvetica", "normal");
+        doc.text(`Producto: ${p.nombre}`, 52, 32);
+        doc.text(`SKU: ${p.sku ?? "N/A"}`, 52, 38);
+
+        const explosion = explotarBOM(p, todosProductos, insumos);
+        const consolidado = consolidarInsumos(explosion);
+        const tableBody = consolidado.map((ins, idx) => [
+            (idx + 1).toString(), ins.nombre, ins.sku,
+            ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+            ins.unidad
+        ]);
+
+        autoTable(doc, {
+            startY: 65,
+            head: [["No.", "Insumo", "SKU", "Cant. Requerida", "Unidad"]],
+            body: tableBody,
+            theme: "grid",
+            headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: "bold" },
+            styles: { fontSize: 9 },
+        });
+
+        const blob = doc.output("blob") as unknown as Blob;
+        folder.file(`BOM_${p.sku || p.id}_${p.nombre.replace(/ /g, "_")}.pdf`, blob);
+
+        done++;
+        onProgress?.(Math.round((done / productos.length) * 100));
+    }
+
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `BOMs_Productos_${format(new Date(), "yyyyMMdd")}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};

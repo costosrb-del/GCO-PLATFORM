@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
     Plus, Building2, Edit2, Trash2, Phone, Mail,
-    Package, DollarSign, AlertCircle, Search, X, ChevronDown, ChevronUp
+    Package, DollarSign, AlertCircle, Search, X, ChevronDown, ChevronUp, CheckCircle2
 } from "lucide-react";
 import { Tercero, Insumo, OrdenCompra } from "@/hooks/useCompras";
+import { toast } from "sonner";
 
 
 interface TercerosSectionProps {
@@ -26,6 +27,7 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
         nombre: "", nit: "", correo: "", personaContacto: "", numeroContacto: "", insumos: "",
         insumosPrecios: []
     });
+    const [searchInsumoText, setSearchInsumoText] = useState("");
 
     // ── Estadísticas por proveedor ────────────────────────────────────────────
     const statsMap = useMemo(() => {
@@ -63,6 +65,19 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
 
     const handleSaveTercero = async () => {
         if (!terceroForm.nombre || !terceroForm.nit) return;
+
+        // BARRERA: Evitar proveedores repetidos (mismo nombre o mismo NIT)
+        const duplicate = terceros.find(t =>
+            (t.nombre.toLowerCase().trim() === (terceroForm.nombre ?? "").toLowerCase().trim() ||
+                (t.nit.trim() !== "" && t.nit.toLowerCase().trim() === (terceroForm.nit ?? "").toLowerCase().trim()))
+            && t.id !== terceroForm.id
+        );
+
+        if (duplicate) {
+            toast.error(`Ya existe un proveedor con el nombre "${duplicate.nombre}" o NIT "${duplicate.nit}". No se permiten duplicados.`);
+            return;
+        }
+
         if (terceroForm.id) {
             await updateTercero(terceroForm.id, terceroForm);
         } else {
@@ -154,23 +169,42 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
                                 {/* Selector visual de insumos con precio por insumo */}
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                                        <Package className="w-3.5 h-3.5" /> Insumos que suministra + Precio
+                                        <Package className="w-3.5 h-3.5" /> Vincular Insumos (Buscador)
                                     </label>
-                                    <div className="max-h-36 overflow-y-auto border border-gray-100 rounded-xl p-2 bg-gray-50 flex flex-wrap gap-1.5">
-                                        {insumos.map(i => {
-                                            const sel = terceroForm.insumos?.toLowerCase().includes(`[${i.sku.toLowerCase()}]`);
-                                            return (
-                                                <div key={i.id}
-                                                    onClick={() => {
-                                                        const cur = terceroForm.insumos || "";
-                                                        const tag = `[${i.sku}] ${i.nombre}, `;
-                                                        setTerceroForm({ ...terceroForm, insumos: sel ? cur.replace(tag, "") : cur + tag });
-                                                    }}
-                                                    className={`px-2 py-1 cursor-pointer text-[10px] rounded-full border transition-all ${sel ? "bg-indigo-100 border-indigo-300 text-indigo-700 font-bold" : "bg-white border-gray-200 text-gray-500 hover:border-indigo-200"}`}>
-                                                    {i.sku} · {i.nombre}
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                        <Input
+                                            placeholder="Filtrar insumos por nombre o SKU..."
+                                            value={searchInsumoText}
+                                            onChange={(e) => setSearchInsumoText(e.target.value)}
+                                            className="h-9 pl-8 text-xs border-indigo-100 placeholder:text-gray-400"
+                                        />
+                                    </div>
+                                    <div className="max-h-40 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50/50">
+                                        {insumos
+                                            .filter(i =>
+                                                i.nombre.toLowerCase().includes(searchInsumoText.toLowerCase()) ||
+                                                i.sku.toLowerCase().includes(searchInsumoText.toLowerCase())
+                                            )
+                                            .slice(0, 50)
+                                            .map(i => {
+                                                const sel = terceroForm.insumos?.toLowerCase().includes(`[${i.sku.toLowerCase()}]`);
+                                                return (
+                                                    <div key={i.id}
+                                                        onClick={() => {
+                                                            const cur = terceroForm.insumos || "";
+                                                            const tag = `[${i.sku}] ${i.nombre}, `;
+                                                            setTerceroForm({ ...terceroForm, insumos: sel ? cur.replace(tag, "") : cur + tag });
+                                                        }}
+                                                        className={`px-3 py-2 cursor-pointer text-xs flex justify-between items-center border-b last:border-0 hover:bg-white transition-colors ${sel ? "bg-indigo-50/50 text-indigo-700 font-bold" : "text-gray-600"}`}>
+                                                        <span className="truncate">
+                                                            <span className="font-mono text-[10px] text-gray-400 mr-2">{i.sku}</span>
+                                                            {i.nombre}
+                                                        </span>
+                                                        {sel ? <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> : <Plus className="w-3.5 h-3.5 text-gray-300" />}
+                                                    </div>
+                                                );
+                                            })}
                                     </div>
                                 </div>
 
@@ -342,7 +376,7 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };

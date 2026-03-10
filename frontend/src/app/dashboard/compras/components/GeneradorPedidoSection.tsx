@@ -154,90 +154,110 @@ export const GeneradorPedidoSection = ({
 
         // PASO 1: Explosión BOM
         const insumoMap = new Map<string, InsumoRequerido>();
-        // grupoEmpaque: por producto + clasificación → [insumoId, ...]
+        // GRUPOS DE EMPAQUE (para aplicar split luego)
+        // grupoEmpaque: por productoId : clasificación → [insumoId, ...]
         const gruposEmpaque = new Map<string, string[]>();
 
-        for (const linea of validas) {
-            const prod = productos.find(p => p.id === linea.productoId);
-            if (!prod?.insumosAsociados?.length) continue;
+        const procesarProductoBOM = (productoId: string, cantidadTotal: number, nombreRuta: string) => {
+            const prod = productos.find(p => p.id === productoId);
+            if (!prod) return;
 
-            for (const ia of prod.insumosAsociados) {
-                const ins = insumos.find(i => i.id === ia.insumoId);
-                if (!ins) continue;
+            // 1. Procesar Insumos Directos del Producto
+            if (prod.insumosAsociados) {
+                for (const ia of prod.insumosAsociados) {
+                    const ins = insumos.find(i => i.id === ia.insumoId);
+                    if (!ins) continue;
 
-                const rendFactor = parseRendimientoFactor(ins.rendimiento);
-                const esEmpq = esEmpaque(ins.rendimiento);
-                const unidadesPorEmpq = esEmpq ? rendFactor : 1;
+                    const rendFactor = parseRendimientoFactor(ins.rendimiento);
+                    const esEmpq = esEmpaque(ins.rendimiento);
+                    const unidadesPorEmpq = esEmpq ? rendFactor : 1;
 
-                // Para empaques: cantBruta = unidades del producto a fabricar
-                // Para materia prima normal: cantBruta = cantidadRequerida * cantidad
-                let cantBruta: number;
-                let cantConRend: number;
+                    let cantBruta: number;
+                    let cantConRend: number;
 
-                if (esEmpq) {
-                    // El campo cantidadRequerida en BOM puede ser 1 (relativo a la unidad de producto)
-                    // La cantidad de cajas = ceil(unidades / unidadesPorCaja * pctSplit)
-                    // Acumulamos unidades brutas para luego aplicar el split
-                    cantBruta = linea.cantidad;      // unidades de producto
-                    cantConRend = linea.cantidad;    // se calculará al aplicar split
-                } else {
-                    cantBruta = ia.cantidadRequerida * linea.cantidad;
-                    cantConRend = cantBruta / rendFactor;
-                }
-
-                if (insumoMap.has(ia.insumoId)) {
-                    const ex = insumoMap.get(ia.insumoId)!;
-                    ex.cantidadBruta += cantBruta;
-                    ex.cantidadConRendimiento += cantConRend;
-                    ex.origenProductos.push({ nombre: prod.nombre, cantidad: linea.cantidad, cantUnitaria: ia.cantidadRequerida, totalUnidades: linea.cantidad });
-                } else {
-                    const provsDisponibles = terceros
-                        .filter(t => (t.insumos || "").toLowerCase().includes(`[${ins.sku.toLowerCase()}]`) ||
-                            t.insumosPrecios?.some(ip => ip.insumoId === ia.insumoId))
-                        .map(t => ({
-                            terceroId: t.id,
-                            nombre: t.nombre,
-                            precio: t.insumosPrecios?.find(ip => ip.insumoId === ia.insumoId)?.precio ?? ins.precio ?? 0,
-                        }))
-                        .sort((a, b) => a.precio - b.precio);
-
-                    // Detectar grupo de empaques alternativos
-                    const clasificacion = ins.clasificacion || "General";
-                    const grupoKey = esEmpq ? `${prod.id}:${clasificacion}` : undefined;
-                    if (grupoKey) {
-                        const arr = gruposEmpaque.get(grupoKey) ?? [];
-                        arr.push(ia.insumoId);
-                        gruposEmpaque.set(grupoKey, arr);
+                    if (esEmpq) {
+                        cantBruta = cantidadTotal;
+                        cantConRend = cantidadTotal;
+                    } else {
+                        cantBruta = ia.cantidadRequerida * cantidadTotal;
+                        cantConRend = cantBruta / (rendFactor || 1);
                     }
 
-                    insumoMap.set(ia.insumoId, {
-                        insumoId: ia.insumoId,
-                        insumoNombre: ins.nombre,
-                        insumoSku: ins.sku,
-                        cantidadBruta: cantBruta,
-                        cantidadConRendimiento: cantConRend,
-                        rendimientoFactor: rendFactor,
-                        esEmpaqueInsumo: esEmpq,
-                        unidadesPorEmpaque: unidadesPorEmpq,
-                        stockDisponible: 0,
-                        ocPendiente: 0,
-                        cantidadNeta: 0,
-                        cantidadConColchon: 0,
-                        cantidadLote: 0,
-                        cantidadFinal: 0,
-                        unidad: ins.unidad,
-                        precioUnitario: provsDisponibles[0]?.precio ?? ins.precio ?? 0,
-                        subtotal: 0,
-                        loteMinimo: ins.loteMinimo ?? 0,
-                        origenProductos: [{ nombre: prod.nombre, cantidad: linea.cantidad, cantUnitaria: ia.cantidadRequerida, totalUnidades: linea.cantidad }],
-                        proveedoresDisponibles: provsDisponibles,
-                        terceroIdAsignado: proveedoresOverride[ia.insumoId] ?? provsDisponibles[0]?.terceroId ?? "__SIN_PROVEEDOR__",
-                        terceroNombreAsignado: "",
-                        grupoEmpaque: grupoKey,
-                        pctSplit: 100,
-                    });
+                    if (insumoMap.has(ia.insumoId)) {
+                        const ex = insumoMap.get(ia.insumoId)!;
+                        ex.cantidadBruta += cantBruta;
+                        ex.cantidadConRendimiento += cantConRend;
+                        ex.origenProductos.push({
+                            nombre: nombreRuta,
+                            cantidad: cantidadTotal,
+                            cantUnitaria: ia.cantidadRequerida,
+                            totalUnidades: cantidadTotal
+                        });
+                    } else {
+                        const provsDisponibles = terceros
+                            .filter(t => (t.insumos || "").toLowerCase().includes(`[${ins.sku.toLowerCase()}]`) ||
+                                t.insumosPrecios?.some(ip => ip.insumoId === ia.insumoId))
+                            .map(t => ({
+                                terceroId: t.id,
+                                nombre: t.nombre,
+                                precio: t.insumosPrecios?.find(ip => ip.insumoId === ia.insumoId)?.precio ?? ins.precio ?? 0,
+                            }))
+                            .sort((a, b) => a.precio - b.precio);
+
+                        const clasificacion = ins.clasificacion || "General";
+                        const grupoKey = esEmpq ? `${productoId}:${clasificacion}` : undefined;
+                        if (grupoKey) {
+                            const arr = gruposEmpaque.get(grupoKey) ?? [];
+                            if (!arr.includes(ia.insumoId)) arr.push(ia.insumoId);
+                            gruposEmpaque.set(grupoKey, arr);
+                        }
+
+                        insumoMap.set(ia.insumoId, {
+                            insumoId: ia.insumoId,
+                            insumoNombre: ins.nombre,
+                            insumoSku: ins.sku,
+                            cantidadBruta: cantBruta,
+                            cantidadConRendimiento: cantConRend,
+                            rendimientoFactor: rendFactor,
+                            esEmpaqueInsumo: esEmpq,
+                            unidadesPorEmpaque: unidadesPorEmpq,
+                            stockDisponible: 0,
+                            ocPendiente: 0,
+                            cantidadNeta: 0,
+                            cantidadConColchon: 0,
+                            cantidadLote: 0,
+                            cantidadFinal: 0,
+                            unidad: ins.unidad,
+                            precioUnitario: provsDisponibles[0]?.precio ?? ins.precio ?? 0,
+                            subtotal: 0,
+                            loteMinimo: ins.loteMinimo ?? 0,
+                            origenProductos: [{
+                                nombre: nombreRuta,
+                                cantidad: cantidadTotal,
+                                cantUnitaria: ia.cantidadRequerida,
+                                totalUnidades: cantidadTotal
+                            }],
+                            proveedoresDisponibles: provsDisponibles,
+                            terceroIdAsignado: proveedoresOverride[ia.insumoId] ?? provsDisponibles[0]?.terceroId ?? "__SIN_PROVEEDOR__",
+                            terceroNombreAsignado: "",
+                            grupoEmpaque: grupoKey,
+                            pctSplit: 100,
+                        });
+                    }
                 }
             }
+
+            // 2. Procesar Sub-Productos (RECURSIÓN PARA KITS)
+            if (prod.productosAsociados) {
+                for (const pa of prod.productosAsociados) {
+                    const subCantidad = pa.cantidadRequerida * cantidadTotal;
+                    procesarProductoBOM(pa.productoId, subCantidad, `${nombreRuta} > ${prod.nombre}`);
+                }
+            }
+        };
+
+        for (const linea of validas) {
+            procesarProductoBOM(linea.productoId!, linea.cantidad, "Pedido");
         }
 
         // PASO 1b: Aplicar splits a grupos de empaques alternativos
@@ -607,9 +627,9 @@ export const GeneradorPedidoSection = ({
                                         </SelectTrigger>
                                         <SelectContent className="max-h-[300px]">
                                             <div className="p-2 border-b">
-                                                <Input 
-                                                    placeholder="🔍 Buscar producto..." 
-                                                    className="h-8 text-xs" 
+                                                <Input
+                                                    placeholder="🔍 Buscar producto..."
+                                                    className="h-8 text-xs"
                                                     value={searchTerm}
                                                     onChange={(e) => setSearchTerm(e.target.value)}
                                                     onKeyDown={(e) => e.stopPropagation()} // Prevent select from closing
@@ -692,11 +712,11 @@ export const GeneradorPedidoSection = ({
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Buscador de resultados */}
                             <div className="space-y-2">
-                                <Input 
-                                    placeholder="🔍 Buscar en resultados (proveedor, insumo, SKU...)" 
+                                <Input
+                                    placeholder="🔍 Buscar en resultados (proveedor, insumo, SKU...)"
                                     className="h-10 text-xs bg-white border-violet-200"
                                     value={searchResult}
                                     onChange={(e) => setSearchResult(e.target.value)}
@@ -762,137 +782,137 @@ export const GeneradorPedidoSection = ({
                                         const query = searchResult.toLowerCase();
                                         return (
                                             prov.terceroNombre.toLowerCase().includes(query) ||
-                                            prov.insumos.some(i => 
-                                                i.insumoNombre.toLowerCase().includes(query) || 
+                                            prov.insumos.some(i =>
+                                                i.insumoNombre.toLowerCase().includes(query) ||
                                                 i.insumoSku.toLowerCase().includes(query)
                                             )
                                         );
                                     })
                                     .map((prov, idx) => {
-                                    const sinProv = prov.terceroId === "__SIN_PROVEEDOR__";
-                                    const isSelected = seleccionados.has("__ALL__") || seleccionados.has(prov.terceroId);
-                                    return (
-                                        <div key={idx} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${sinProv ? "border-red-200" : isSelected ? "border-violet-200" : "border-gray-100 opacity-60"}`}>
-                                            <div className={`px-4 py-3 flex items-center gap-3 ${sinProv ? "bg-red-50" : "bg-gray-50"}`}>
-                                                {/* Checkbox selección */}
-                                                {!sinProv && (
-                                                    <input type="checkbox" checked={isSelected}
-                                                        onChange={() => toggleSeleccionado(prov.terceroId)}
-                                                        className="w-4 h-4 accent-violet-600 cursor-pointer" />
+                                        const sinProv = prov.terceroId === "__SIN_PROVEEDOR__";
+                                        const isSelected = seleccionados.has("__ALL__") || seleccionados.has(prov.terceroId);
+                                        return (
+                                            <div key={idx} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${sinProv ? "border-red-200" : isSelected ? "border-violet-200" : "border-gray-100 opacity-60"}`}>
+                                                <div className={`px-4 py-3 flex items-center gap-3 ${sinProv ? "bg-red-50" : "bg-gray-50"}`}>
+                                                    {/* Checkbox selección */}
+                                                    {!sinProv && (
+                                                        <input type="checkbox" checked={isSelected}
+                                                            onChange={() => toggleSeleccionado(prov.terceroId)}
+                                                            className="w-4 h-4 accent-violet-600 cursor-pointer" />
+                                                    )}
+                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-black ${sinProv ? "bg-red-400" : "bg-[#183C30]"}`}>
+                                                        {sinProv ? "!" : (idx + 1)}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={`font-bold text-sm truncate ${sinProv ? "text-red-700" : "text-gray-800"}`}>{prov.terceroNombre}</p>
+                                                        {!sinProv && <p className="text-[10px] text-gray-400">NIT: {prov.terceroNit}</p>}
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="font-black text-[#183C30] text-sm">${prov.totalEstimado.toLocaleString("es-CO")}</p>
+                                                        <p className="text-[10px] text-gray-400">{prov.insumos.length} ítems</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="divide-y divide-gray-50">
+                                                    {prov.insumos.map((ins, iIdx) => (
+                                                        <div key={iIdx} className="px-4 py-3 space-y-2">
+                                                            <div className="flex items-start gap-2 justify-between">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="font-semibold text-sm text-gray-800 truncate">{ins.insumoNombre}</p>
+                                                                    <p className="text-[10px] text-gray-400 font-mono">{ins.insumoSku}</p>
+                                                                </div>
+                                                                {/* Cantidad editable */}
+                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                    <div className="text-right">
+                                                                        <Input type="number" min={0} step={ins.loteMinimo || 1}
+                                                                            value={cantidadesOverride[ins.insumoId] ?? ins.cantidadFinal}
+                                                                            onChange={e => setCantidadesOverride(prev => ({ ...prev, [ins.insumoId]: Number(e.target.value) }))}
+                                                                            className="w-24 h-8 text-center font-bold text-sm" />
+                                                                        <p className="text-[10px] text-gray-400 mt-0.5">{ins.unidad} · ${ins.precioUnitario.toLocaleString()}/u</p>
+                                                                    </div>
+                                                                    <div className="text-right shrink-0">
+                                                                        <p className="font-black text-teal-600 text-sm">${ins.subtotal.toLocaleString("es-CO")}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Descomposición del cálculo */}
+                                                            <div className="grid grid-cols-3 gap-1 text-[10px] bg-gray-50 rounded-lg p-2">
+                                                                <div className="text-center">
+                                                                    <p className="text-gray-400">BOM bruto</p>
+                                                                    <p className="font-bold">{ins.cantidadBruta.toLocaleString()}</p>
+                                                                </div>
+                                                                {ins.cantidadBruta !== ins.cantidadConRendimiento && (
+                                                                    <div className="text-center">
+                                                                        <p className="text-amber-500">+Rendimiento</p>
+                                                                        <p className="font-bold text-amber-600">{ins.cantidadConRendimiento.toFixed(1)}</p>
+                                                                    </div>
+                                                                )}
+                                                                {ins.stockDisponible > 0 && (
+                                                                    <div className="text-center">
+                                                                        <p className="text-emerald-500">-Stock</p>
+                                                                        <p className="font-bold text-emerald-600">-{ins.stockDisponible.toLocaleString()}</p>
+                                                                    </div>
+                                                                )}
+                                                                {ins.ocPendiente > 0 && (
+                                                                    <div className="text-center">
+                                                                        <p className="text-blue-500">-En tránsito</p>
+                                                                        <p className="font-bold text-blue-600">-{ins.ocPendiente.toLocaleString()}</p>
+                                                                    </div>
+                                                                )}
+                                                                {ins.loteMinimo > 0 && (
+                                                                    <div className="text-center">
+                                                                        <p className="text-violet-500">Lote mín.</p>
+                                                                        <p className="font-bold text-violet-600">x{ins.loteMinimo}</p>
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-center font-black">
+                                                                    <p className="text-gray-500">A pedir</p>
+                                                                    <p className="text-[#183C30]">{ins.cantidadFinal.toLocaleString()}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Comparación de proveedores alternativos */}
+                                                            {ins.proveedoresDisponibles.length > 1 && (
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                                                                        <ArrowRightLeft className="w-3 h-3" /> Proveedores disponibles:
+                                                                    </p>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {ins.proveedoresDisponibles.map(pd => (
+                                                                            <button key={pd.terceroId}
+                                                                                onClick={() => setProveedoresOverride(prev => ({ ...prev, [ins.insumoId]: pd.terceroId }))}
+                                                                                className={`text-[10px] px-2 py-0.5 rounded-full border font-bold transition-all ${proveedoresOverride[ins.insumoId] === pd.terceroId || (!proveedoresOverride[ins.insumoId] && pd.terceroId === ins.proveedoresDisponibles[0]?.terceroId) ? "bg-violet-600 text-white border-violet-600" : "border-gray-200 text-gray-500 hover:border-violet-300"}`}>
+                                                                                {pd.nombre} · ${pd.precio.toLocaleString()}/u
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Trazabilidad de origen */}
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {ins.origenProductos.map((o, oIdx) => (
+                                                                    <span key={oIdx} className="text-[10px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full">
+                                                                        {o.nombre} × {o.cantidad} → {(o.cantUnitaria * o.cantidad).toFixed(2)} {ins.unidad}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {sinProv && (
+                                                    <div className="px-4 pb-3">
+                                                        <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                                                            <AlertCircle className="w-3.5 h-3.5" />
+                                                            Sin proveedor asignado. Agrega el SKU del insumo en el perfil del proveedor.
+                                                        </div>
+                                                    </div>
                                                 )}
-                                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-black ${sinProv ? "bg-red-400" : "bg-[#183C30]"}`}>
-                                                    {sinProv ? "!" : (idx + 1)}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`font-bold text-sm truncate ${sinProv ? "text-red-700" : "text-gray-800"}`}>{prov.terceroNombre}</p>
-                                                    {!sinProv && <p className="text-[10px] text-gray-400">NIT: {prov.terceroNit}</p>}
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <p className="font-black text-[#183C30] text-sm">${prov.totalEstimado.toLocaleString("es-CO")}</p>
-                                                    <p className="text-[10px] text-gray-400">{prov.insumos.length} ítems</p>
-                                                </div>
                                             </div>
-
-                                            <div className="divide-y divide-gray-50">
-                                                {prov.insumos.map((ins, iIdx) => (
-                                                    <div key={iIdx} className="px-4 py-3 space-y-2">
-                                                        <div className="flex items-start gap-2 justify-between">
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="font-semibold text-sm text-gray-800 truncate">{ins.insumoNombre}</p>
-                                                                <p className="text-[10px] text-gray-400 font-mono">{ins.insumoSku}</p>
-                                                            </div>
-                                                            {/* Cantidad editable */}
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <div className="text-right">
-                                                                    <Input type="number" min={0} step={ins.loteMinimo || 1}
-                                                                        value={cantidadesOverride[ins.insumoId] ?? ins.cantidadFinal}
-                                                                        onChange={e => setCantidadesOverride(prev => ({ ...prev, [ins.insumoId]: Number(e.target.value) }))}
-                                                                        className="w-24 h-8 text-center font-bold text-sm" />
-                                                                    <p className="text-[10px] text-gray-400 mt-0.5">{ins.unidad} · ${ins.precioUnitario.toLocaleString()}/u</p>
-                                                                </div>
-                                                                <div className="text-right shrink-0">
-                                                                    <p className="font-black text-teal-600 text-sm">${ins.subtotal.toLocaleString("es-CO")}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Descomposición del cálculo */}
-                                                        <div className="grid grid-cols-3 gap-1 text-[10px] bg-gray-50 rounded-lg p-2">
-                                                            <div className="text-center">
-                                                                <p className="text-gray-400">BOM bruto</p>
-                                                                <p className="font-bold">{ins.cantidadBruta.toLocaleString()}</p>
-                                                            </div>
-                                                            {ins.cantidadBruta !== ins.cantidadConRendimiento && (
-                                                                <div className="text-center">
-                                                                    <p className="text-amber-500">+Rendimiento</p>
-                                                                    <p className="font-bold text-amber-600">{ins.cantidadConRendimiento.toFixed(1)}</p>
-                                                                </div>
-                                                            )}
-                                                            {ins.stockDisponible > 0 && (
-                                                                <div className="text-center">
-                                                                    <p className="text-emerald-500">-Stock</p>
-                                                                    <p className="font-bold text-emerald-600">-{ins.stockDisponible.toLocaleString()}</p>
-                                                                </div>
-                                                            )}
-                                                            {ins.ocPendiente > 0 && (
-                                                                <div className="text-center">
-                                                                    <p className="text-blue-500">-En tránsito</p>
-                                                                    <p className="font-bold text-blue-600">-{ins.ocPendiente.toLocaleString()}</p>
-                                                                </div>
-                                                            )}
-                                                            {ins.loteMinimo > 0 && (
-                                                                <div className="text-center">
-                                                                    <p className="text-violet-500">Lote mín.</p>
-                                                                    <p className="font-bold text-violet-600">x{ins.loteMinimo}</p>
-                                                                </div>
-                                                            )}
-                                                            <div className="text-center font-black">
-                                                                <p className="text-gray-500">A pedir</p>
-                                                                <p className="text-[#183C30]">{ins.cantidadFinal.toLocaleString()}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Comparación de proveedores alternativos */}
-                                                        {ins.proveedoresDisponibles.length > 1 && (
-                                                            <div className="space-y-1">
-                                                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
-                                                                    <ArrowRightLeft className="w-3 h-3" /> Proveedores disponibles:
-                                                                </p>
-                                                                <div className="flex flex-wrap gap-1">
-                                                                    {ins.proveedoresDisponibles.map(pd => (
-                                                                        <button key={pd.terceroId}
-                                                                            onClick={() => setProveedoresOverride(prev => ({ ...prev, [ins.insumoId]: pd.terceroId }))}
-                                                                            className={`text-[10px] px-2 py-0.5 rounded-full border font-bold transition-all ${proveedoresOverride[ins.insumoId] === pd.terceroId || (!proveedoresOverride[ins.insumoId] && pd.terceroId === ins.proveedoresDisponibles[0]?.terceroId) ? "bg-violet-600 text-white border-violet-600" : "border-gray-200 text-gray-500 hover:border-violet-300"}`}>
-                                                                            {pd.nombre} · ${pd.precio.toLocaleString()}/u
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Trazabilidad de origen */}
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {ins.origenProductos.map((o, oIdx) => (
-                                                                <span key={oIdx} className="text-[10px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full">
-                                                                    {o.nombre} × {o.cantidad} → {(o.cantUnitaria * o.cantidad).toFixed(2)} {ins.unidad}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {sinProv && (
-                                                <div className="px-4 pb-3">
-                                                    <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                                                        <AlertCircle className="w-3.5 h-3.5" />
-                                                        Sin proveedor asignado. Agrega el SKU del insumo en el perfil del proveedor.
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
                             </div>
 
                             {/* Botón Generar / Confirmación */}
