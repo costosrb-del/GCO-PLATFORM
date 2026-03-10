@@ -2,12 +2,13 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     Sparkles, Plus, X, ChevronRight, ShoppingCart, Package, Building2,
     AlertCircle, CheckCircle2, Wand2, FileDown, Trash2, Save, FolderOpen,
-    Settings2, ArrowRightLeft, Clock, Boxes, TrendingUp, Archive, Loader2
+    Settings2, ArrowRightLeft, Clock, Boxes, TrendingUp, Archive, Loader2,
+    ChevronDown, Search
 } from "lucide-react";
 import { ProductoFabricado, Insumo, Tercero, OrdenCompra, BorradorMRP } from "@/hooks/useCompras";
 import { useOCSnapshot, useInventoryStock, useBorradores } from "@/hooks/useMRP";
@@ -114,6 +115,86 @@ interface GeneradorPedidoSectionProps {
     updateOrden: (id: string, o: Partial<OrdenCompra>) => Promise<boolean>;
 }
 
+// ── Componente Selector de Producto (Combobox estable) ───────────────────
+const ProductoSelectorCombobox = ({
+    value,
+    onChange,
+    productos
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    productos: ProductoFabricado[];
+}) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+
+    const selectedProduct = productos.find(p => p.id === value);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {selectedProduct ? (
+                        <span className="truncate flex items-center gap-1">
+                            <span className="font-mono text-[10px] text-gray-400">{selectedProduct.sku}</span>
+                            {selectedProduct.nombre}
+                            {!selectedProduct.insumosAsociados?.length && <span className="ml-1 text-[10px] text-red-400 font-bold">⚠️ sin ficha</span>}
+                        </span>
+                    ) : (
+                        <span className="text-gray-400">Seleccionar producto...</span>
+                    )}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="p-2 border-b border-gray-100">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                        <Input
+                            placeholder="Buscar producto o SKU..."
+                            className="h-8 text-xs pl-8 bg-gray-50/50"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onKeyDown={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                </div>
+                <div className="max-h-[250px] overflow-y-auto p-1">
+                    {productos
+                        .filter(p => !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())))
+                        .map(p => (
+                            <button
+                                key={p.id}
+                                className={`w-full flex items-center justify-between text-left px-2 py-2 text-xs rounded-md hover:bg-violet-50 hover:text-violet-900 transition-colors ${value === p.id ? "bg-violet-100 text-violet-900 font-medium" : "text-gray-700"}`}
+                                onClick={() => {
+                                    onChange(p.id);
+                                    setSearch("");
+                                    setOpen(false);
+                                }}
+                            >
+                                <span className="truncate">
+                                    <span className="font-mono text-[10px] text-gray-400 mr-2">{p.sku}</span>
+                                    {p.nombre}
+                                </span>
+                                {value === p.id && <CheckCircle2 className="w-3.5 h-3.5 text-violet-600 shrink-0" />}
+                                {!p.insumosAsociados?.length && value !== p.id && <span className="ml-1 text-[10px] text-red-400 shrink-0">⚠️ sin ficha</span>}
+                            </button>
+                        ))}
+                    {productos.filter(p => !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))).length === 0 && (
+                        <div className="py-4 text-center text-xs text-gray-400">
+                            No se encontraron productos.
+                        </div>
+                    )}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+
 export const GeneradorPedidoSection = ({
     productos, insumos, terceros, ordenes, createOrden,
 }: GeneradorPedidoSectionProps) => {
@@ -142,7 +223,6 @@ export const GeneradorPedidoSection = ({
     const [showBorradores, setShowBorradores] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
     const [borradorNombre, setBorradorNombre] = useState("");
-    const [searchTerm, setSearchTerm] = useState("");
     const [borradorActualId, setBorradorActualId] = useState<string | null>(null);
     const [searchResult, setSearchResult] = useState("");
     // Split % para empaques alternativos: key = grupoeId, value = Record<insumoId, pct>
@@ -648,31 +728,11 @@ export const GeneradorPedidoSection = ({
                             <div key={linea.uuid} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
                                 <span className="text-xs font-black text-gray-300 w-4 shrink-0">{idx + 1}</span>
                                 <div className="flex-1 min-w-0">
-                                    <Select value={linea.productoId} onValueChange={v => updateLinea(linea.uuid, "productoId", v)}>
-                                        <SelectTrigger className="h-9 bg-white text-xs">
-                                            <SelectValue placeholder="Seleccionar producto..." />
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-[300px]">
-                                            <div className="p-2 border-b">
-                                                <Input
-                                                    placeholder="🔍 Buscar producto..."
-                                                    className="h-8 text-xs"
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    onKeyDown={(e) => e.stopPropagation()} // Prevent select from closing
-                                                />
-                                            </div>
-                                            {productos
-                                                .filter(p => !searchTerm || p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())))
-                                                .map(p => (
-                                                    <SelectItem key={p.id} value={p.id}>
-                                                        <span className="font-mono text-[10px] text-gray-400 mr-1">{p.sku}</span>
-                                                        {p.nombre}
-                                                        {!p.insumosAsociados?.length && <span className="ml-1 text-[10px] text-red-400">⚠️ sin ficha</span>}
-                                                    </SelectItem>
-                                                ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <ProductoSelectorCombobox
+                                        value={linea.productoId}
+                                        onChange={v => updateLinea(linea.uuid, "productoId", v)}
+                                        productos={productos}
+                                    />
                                 </div>
                                 <Input type="number" min={1} value={linea.cantidad}
                                     onChange={e => updateLinea(linea.uuid, "cantidad", Number(e.target.value))}
