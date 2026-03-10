@@ -222,7 +222,7 @@ export const OrdenesSection = ({
                                 Nueva Orden
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-[95vw] sm:max-w-[900px] lg:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto rounded-3xl">
                             <DialogHeader>
                                 <DialogTitle>{ordenForm.id ? `EDITAR ORDEN ${ordenForm.id}` : 'NUEVA ORDEN DE COMPRA ORIGEN BOTÁNICO'} - {format(new Date(), 'dd/MM/yyyy')}</DialogTitle>
                             </DialogHeader>
@@ -565,7 +565,7 @@ function EmailModal({
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[540px]">
+            <DialogContent className="max-w-[95vw] sm:max-w-[700px] lg:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl font-black">
                         <Mail className="w-5 h-5 text-blue-500" />

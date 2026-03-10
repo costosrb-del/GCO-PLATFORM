@@ -86,7 +86,7 @@ export const InsumosSection = ({ insumos, createInsumo, updateInsumo, deleteInsu
                                 Nuevo Insumo
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
+                        <DialogContent className="max-w-[95vw] sm:max-w-[700px] lg:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-3xl">
                             <DialogHeader>
                                 <DialogTitle className="text-xl font-black text-slate-800 uppercase tracking-tight">
                                     {insumoForm.id ? "Actualizar Insumo" : "Registrar Nuevo Insumo"}

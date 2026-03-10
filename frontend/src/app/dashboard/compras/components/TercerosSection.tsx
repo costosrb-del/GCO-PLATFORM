@@ -148,7 +148,7 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
                                 <Plus className="w-4 h-4 mr-2" /> Nuevo Proveedor
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-[95vw] sm:max-w-[800px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto rounded-3xl">
                             <DialogHeader>
                                 <DialogTitle className="text-xl font-black text-slate-800">
                                     {terceroForm.id ? "Editar Proveedor" : "Registrar Proveedor"}

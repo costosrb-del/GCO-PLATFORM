@@ -208,7 +208,7 @@ export const ImportadorMasivo = ({
                     Carga Masiva Excel
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px]">
+            <DialogContent className="max-w-[95vw] sm:max-w-[600px] w-full rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
                         <UploadCloud className="w-6 h-6 text-[#183C30]" />

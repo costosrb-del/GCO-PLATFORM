@@ -194,7 +194,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                 <Plus className="w-4 h-4 mr-2" /> Nuevo Producto / Kit
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-[95vw] sm:max-w-[800px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto rounded-3xl">
                             <DialogHeader>
                                 <DialogTitle className="text-xl font-black text-slate-800">
                                     {productoForm.id ? "Editar Producto" : "Registrar Producto Fabricado"}

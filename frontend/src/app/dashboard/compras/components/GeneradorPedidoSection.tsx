@@ -1000,7 +1000,7 @@ export const GeneradorPedidoSection = ({
 
             {/* ── Modal Confirmación ───────────────────────────────────────── */}
             <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-                <DialogContent className="sm:max-w-[560px]">
+                <DialogContent className="max-w-[95vw] sm:max-w-[700px] w-full rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-black text-gray-900">
                             Confirmar Generación de OC · Pedido {numeroPedido}
@@ -1032,7 +1032,7 @@ export const GeneradorPedidoSection = ({
 
             {/* ── Modal Borradores ─────────────────────────────────────────── */}
             <Dialog open={showBorradores} onOpenChange={setShowBorradores}>
-                <DialogContent className="sm:max-w-[480px]">
+                <DialogContent className="max-w-[95vw] sm:max-w-[700px] w-full rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <FolderOpen className="w-5 h-5 text-violet-600" /> Borradores Guardados
