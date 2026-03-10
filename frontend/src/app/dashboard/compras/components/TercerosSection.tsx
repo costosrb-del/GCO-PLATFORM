@@ -6,7 +6,7 @@ import {
     Plus, Building2, Edit2, Trash2, Phone, Mail,
     Package, DollarSign, AlertCircle, Search, X, ChevronDown, ChevronUp, CheckCircle2
 } from "lucide-react";
-import { Tercero, Insumo, OrdenCompra } from "@/hooks/useCompras";
+import { Tercero, Insumo, OrdenCompra, PrecioEscala } from "@/hooks/useCompras";
 import { toast } from "sonner";
 
 
@@ -54,12 +54,24 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
     const getPrecioPorInsumo = (t: Tercero, insumoId: string): number =>
         t.insumosPrecios?.find(ip => ip.insumoId === insumoId)?.precio ?? 0;
 
+    const getEscalasPorInsumo = (t: Tercero, insumoId: string): PrecioEscala[] =>
+        t.insumosPrecios?.find(ip => ip.insumoId === insumoId)?.escalas ?? [];
+
     const setPrecioPorInsumo = (insumoId: string, precio: number) => {
         const current = terceroForm.insumosPrecios || [];
         const idx = current.findIndex(ip => ip.insumoId === insumoId);
         const updated = [...current];
         if (idx >= 0) updated[idx] = { ...updated[idx], precio };
         else updated.push({ insumoId, precio });
+        setTerceroForm({ ...terceroForm, insumosPrecios: updated });
+    };
+
+    const setEscalasPorInsumo = (insumoId: string, escalas: PrecioEscala[]) => {
+        const current = terceroForm.insumosPrecios || [];
+        const idx = current.findIndex(ip => ip.insumoId === insumoId);
+        const updated = [...current];
+        if (idx >= 0) updated[idx] = { ...updated[idx], escalas };
+        else updated.push({ insumoId, precio: 0, escalas });
         setTerceroForm({ ...terceroForm, insumosPrecios: updated });
     };
 
@@ -215,22 +227,67 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
                                             <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Precio pactado por insumo (COP/unidad)
                                         </label>
                                         <div className="space-y-2 max-h-40 overflow-y-auto">
-                                            {insumosSeleccionados.map(i => (
-                                                <div key={i.id} className="flex items-center gap-3 p-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-bold text-gray-800 truncate">{i.nombre}</p>
-                                                        <p className="text-[10px] text-gray-400 font-mono">{i.sku} · {i.unidad}</p>
+                                            {insumosSeleccionados.map(i => {
+                                                const escalas = getEscalasPorInsumo(terceroForm as Tercero, i.id);
+                                                return (
+                                                    <div key={i.id} className="space-y-2 p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-bold text-gray-800 truncate">{i.nombre}</p>
+                                                                <p className="text-[10px] text-gray-400 font-mono">{i.sku} · {i.unidad}</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <span className="text-[10px] text-gray-400 font-bold uppercase mr-1">Base</span>
+                                                                <span className="text-xs text-gray-400">$</span>
+                                                                <Input type="number" min={0}
+                                                                    value={getPrecioPorInsumo(terceroForm as Tercero, i.id) || ""}
+                                                                    onChange={e => setPrecioPorInsumo(i.id, Number(e.target.value))}
+                                                                    className="w-24 h-8 text-sm font-bold text-right"
+                                                                    placeholder="0" />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Escalas de precios */}
+                                                        <div className="pl-4 border-l-2 border-emerald-200 space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[9px] font-black text-emerald-800 uppercase tracking-widest">Escalas de Volumen</span>
+                                                                <Button variant="ghost" size="sm" onClick={() => setEscalasPorInsumo(i.id, [...escalas, { min: 0, precio: 0 }])}
+                                                                    className="h-5 text-[9px] font-bold text-emerald-600 hover:bg-white px-2">
+                                                                    <Plus className="w-2.5 h-2.5 mr-1" /> Añadir Escala
+                                                                </Button>
+                                                            </div>
+                                                            {escalas.map((esc, eIdx) => (
+                                                                <div key={eIdx} className="flex items-center gap-2 animate-in slide-in-from-left-1">
+                                                                    <span className="text-[10px] text-gray-400 min-w-[30px]">Min.</span>
+                                                                    <Input type="number"
+                                                                        value={esc.min || ""}
+                                                                        onChange={e => {
+                                                                            const next = [...escalas];
+                                                                            next[eIdx].min = Number(e.target.value);
+                                                                            setEscalasPorInsumo(i.id, next);
+                                                                        }}
+                                                                        className="h-7 w-16 text-[10px] font-bold" placeholder="0" />
+                                                                    <span className="text-[10px] text-gray-400">Precio</span>
+                                                                    <Input type="number"
+                                                                        value={esc.precio || ""}
+                                                                        onChange={e => {
+                                                                            const next = [...escalas];
+                                                                            next[eIdx].precio = Number(e.target.value);
+                                                                            setEscalasPorInsumo(i.id, next);
+                                                                        }}
+                                                                        className="h-7 flex-1 text-[10px] font-bold" placeholder="$" />
+                                                                    <Button variant="ghost" size="sm" onClick={() => {
+                                                                        const next = escalas.filter((_, idx) => idx !== eIdx);
+                                                                        setEscalasPorInsumo(i.id, next);
+                                                                    }} className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                        <span className="text-xs text-gray-400">$</span>
-                                                        <Input type="number" min={0}
-                                                            value={getPrecioPorInsumo(terceroForm as Tercero, i.id) || ""}
-                                                            onChange={e => setPrecioPorInsumo(i.id, Number(e.target.value))}
-                                                            className="w-28 h-8 text-sm font-bold text-right"
-                                                            placeholder="0" />
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}

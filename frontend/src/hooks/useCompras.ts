@@ -3,6 +3,11 @@ import { API_URL } from "@/lib/config";
 import { toast } from "sonner";
 import { getAuthToken } from "./useAuth";
 
+export interface PrecioEscala {
+    min: number;
+    precio: number;
+}
+
 export interface Tercero {
     id: string;
     nombre: string;
@@ -11,7 +16,11 @@ export interface Tercero {
     personaContacto: string;
     numeroContacto: string;
     insumos: string;
-    insumosPrecios?: { insumoId: string, precio: number }[];
+    insumosPrecios?: {
+        insumoId: string,
+        precio: number,
+        escalas?: PrecioEscala[]
+    }[];
     created_at?: string;
 }
 

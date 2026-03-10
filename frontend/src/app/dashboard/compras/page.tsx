@@ -12,6 +12,7 @@ import { GeneradorPedidoSection } from "./components/GeneradorPedidoSection";
 import { EntregasSection } from "./components/EntregasSection";
 import { ControlMaquilaSection } from "./components/ControlMaquilaSection";
 import { Beaker } from "lucide-react";
+import { ImportadorMasivo } from "./components/ImportadorMasivo";
 
 export default function ComprasPage() {
     const {
@@ -67,61 +68,72 @@ export default function ComprasPage() {
                         </p>
                     </div>
 
-                    <div className="flex bg-gray-100/80 p-1.5 rounded-xl self-start md:self-auto">
-                        <button
-                            onClick={() => setActiveTab("ordenes")}
-                            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === "ordenes" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
-                        >
-                            Órdenes de Compra
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("terceros")}
-                            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === "terceros" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
-                        >
-                            Terceros y Proveedores
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("insumos")}
-                            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === "insumos" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
-                        >
-                            Base de Insumos
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("productos")}
-                            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === "productos" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
-                        >
-                            Productos Fabricados
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("generador")}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "generador"
-                                ? "bg-violet-600 text-white shadow-sm"
-                                : "text-gray-500 hover:text-violet-600 hover:bg-violet-50"
-                                }`}
-                        >
-                            <Wand2 className="w-3.5 h-3.5" />
-                            Generar por Pedido
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("entregas")}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "entregas"
-                                ? "bg-[#183C30] text-white shadow-sm"
-                                : "text-gray-500 hover:text-[#183C30] hover:bg-emerald-50"
-                                }`}
-                        >
-                            <Truck className="w-3.5 h-3.5" />
-                            Recepción de Entregas
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("maquila")}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "maquila"
-                                ? "bg-amber-500 text-white shadow-sm transform scale-100"
-                                : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
-                                }`}
-                        >
-                            <Beaker className="w-3.5 h-3.5" />
-                            Control Laboratorio
-                        </button>
+                    <div className="flex flex-wrap gap-3 items-center self-start md:self-auto">
+                        <ImportadorMasivo
+                            createInsumo={createInsumo}
+                            createTercero={createTercero}
+                            createProducto={createProducto}
+                            updateProducto={updateProducto}
+                            insumosExistentes={insumos}
+                            productosExistentes={productos}
+                            tercerosExistentes={terceros}
+                        />
+                        <div className="flex bg-gray-100/80 p-1.5 rounded-xl">
+                            <button
+                                onClick={() => setActiveTab("ordenes")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${activeTab === "ordenes" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
+                            >
+                                Órdenes
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("terceros")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${activeTab === "terceros" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
+                            >
+                                Proveedores
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("insumos")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${activeTab === "insumos" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
+                            >
+                                Insumos
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("productos")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${activeTab === "productos" ? "bg-white text-[#183C30] shadow-sm transform scale-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
+                            >
+                                Productos
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("generador")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "generador"
+                                    ? "bg-violet-600 text-white shadow-sm"
+                                    : "text-gray-500 hover:text-violet-600 hover:bg-violet-50"
+                                    }`}
+                            >
+                                <Wand2 className="w-3 h-3" />
+                                MRP
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("entregas")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "entregas"
+                                    ? "bg-[#183C30] text-white shadow-sm"
+                                    : "text-gray-500 hover:text-[#183C30] hover:bg-emerald-50"
+                                    }`}
+                            >
+                                <Truck className="w-3 h-3" />
+                                Entregas
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("maquila")}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${activeTab === "maquila"
+                                    ? "bg-amber-500 text-white shadow-sm transform scale-100"
+                                    : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                                    }`}
+                            >
+                                <Beaker className="w-3 h-3" />
+                                Laboratorio
+                            </button>
+                        </div>
                     </div>
                 </div>
 

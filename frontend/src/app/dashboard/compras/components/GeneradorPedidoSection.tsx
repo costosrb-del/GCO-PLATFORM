@@ -52,6 +52,17 @@ function redondearLote(qty: number, loteMinimo: number): number {
     return Math.ceil(qty / loteMinimo) * loteMinimo;
 }
 
+/** 
+ * Devuelve el precio correcto según la escala de cantidad.
+ */
+function calcularPrecioEscala(precioBase: number, escalas: { min: number, precio: number }[] | undefined, cantidad: number): number {
+    if (!escalas || escalas.length === 0) return precioBase;
+    // Ordenar por el mínimo de mayor a menor para encontrar la primera que se cumpla
+    const sorted = [...escalas].sort((a, b) => b.min - a.min);
+    const coincidencia = sorted.find(e => cantidad >= e.min);
+    return coincidencia ? coincidencia.precio : precioBase;
+}
+
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 interface LineaPedido { uuid: string; productoId: string; cantidad: number }
@@ -76,7 +87,7 @@ interface InsumoRequerido {
     subtotal: number;
     loteMinimo: number;
     origenProductos: { nombre: string; cantidad: number; cantUnitaria: number; totalUnidades: number }[];
-    proveedoresDisponibles: { terceroId: string; nombre: string; precio: number }[];
+    proveedoresDisponibles: { terceroId: string; nombre: string; precio: number; escalas?: { min: number; precio: number }[] }[];
     terceroIdAsignado: string;
     terceroNombreAsignado: string;
     // Para empaques alternativos del mismo grupo producto+clasificacion
@@ -197,11 +208,15 @@ export const GeneradorPedidoSection = ({
                         const provsDisponibles = terceros
                             .filter(t => (t.insumos || "").toLowerCase().includes(`[${ins.sku.toLowerCase()}]`) ||
                                 t.insumosPrecios?.some(ip => ip.insumoId === ia.insumoId))
-                            .map(t => ({
-                                terceroId: t.id,
-                                nombre: t.nombre,
-                                precio: t.insumosPrecios?.find(ip => ip.insumoId === ia.insumoId)?.precio ?? ins.precio ?? 0,
-                            }))
+                            .map(t => {
+                                const ip = t.insumosPrecios?.find(ip => ip.insumoId === ia.insumoId);
+                                return {
+                                    terceroId: t.id,
+                                    nombre: t.nombre,
+                                    precio: ip?.precio ?? ins.precio ?? 0,
+                                    escalas: ip?.escalas
+                                };
+                            })
                             .sort((a, b) => a.precio - b.precio);
 
                         const clasificacion = ins.clasificacion || "General";
@@ -313,7 +328,11 @@ export const GeneradorPedidoSection = ({
             req.terceroIdAsignado = provId;
             const provInfo = req.proveedoresDisponibles.find(p => p.terceroId === provId);
             req.terceroNombreAsignado = provInfo?.nombre ?? terceros.find(t => t.id === provId)?.nombre ?? "⚠️ Sin Proveedor";
-            req.precioUnitario = provInfo?.precio ?? req.precioUnitario;
+
+            // Lógica de escalas: Calcular precio según cantidadFinal
+            const precioBase = provInfo?.precio ?? req.precioUnitario;
+            req.precioUnitario = calcularPrecioEscala(precioBase, provInfo?.escalas, req.cantidadFinal);
+
             req.subtotal = req.cantidadFinal * req.precioUnitario;
         }
 
