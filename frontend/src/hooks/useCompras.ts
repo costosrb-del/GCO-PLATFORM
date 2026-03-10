@@ -104,6 +104,7 @@ export interface ProductoFabricado {
     sku?: string;
     descripcion?: string;
     categoria?: string;
+    tipo?: "Producto" | "Kit";
     insumosAsociados?: { insumoId: string; cantidadRequerida: number }[];
     productosAsociados?: { productoId: string; cantidadRequerida: number }[];
     created_at?: string;

@@ -42,7 +42,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
     const [searchProductos, setSearchProductos] = useState("");
     const [filterMode, setFilterMode] = useState<"todos" | "completos" | "incompletos">("todos");
     const [productoForm, setProductoForm] = useState<Partial<ProductoFabricado>>({
-        nombre: "", sku: "", descripcion: "", categoria: "", insumosAsociados: [], productosAsociados: []
+        nombre: "", sku: "", descripcion: "", categoria: "", tipo: "Producto", insumosAsociados: [], productosAsociados: []
     });
     const [searchInsumoText, setSearchInsumoText] = useState("");
     const [searchSubProductoText, setSearchSubProductoText] = useState("");
@@ -54,22 +54,27 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
         const countProductos = p.productosAsociados?.length ?? 0;
         const completo = countInsumos > 0 || countProductos > 0;
 
+        const mandatory = ["Envase", "Tapa", "Sello", "Etiqueta", "Materia Prima", "Termoencogible", "Caja"];
+        const foundCategories = new Set<string>();
+
         const calcularCostoRecursivo = (prod: ProductoFabricado): number => {
             let costo = 0;
-            // Costo de insumos directos
             if (prod.insumosAsociados) {
                 for (const ia of prod.insumosAsociados) {
                     const ins = insumos.find(i => i.id === ia.insumoId);
+                    if (ins?.clasificacion) foundCategories.add(ins.clasificacion);
+
                     const factor = parseRendimientoFactor(ins?.rendimiento);
                     const unitPrice = (ins?.precio ?? 0) / factor;
                     costo += unitPrice * ia.cantidadRequerida;
                 }
             }
-            // Costo de sub-productos
             if (prod.productosAsociados) {
                 for (const pa of prod.productosAsociados) {
                     const sp = productos.find(sub => sub.id === pa.productoId);
                     if (sp) {
+                        // Si el sub-producto es de una categoría mandatoria (difícil pero posible)
+                        // o si su contenido cuenta como Materia Prima
                         costo += calcularCostoRecursivo(sp) * pa.cantidadRequerida;
                     }
                 }
@@ -78,8 +83,10 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
         };
 
         const costo = calcularCostoRecursivo(p);
+        const missing = mandatory.filter(m => !foundCategories.has(m));
         const rotos = p.insumosAsociados?.filter(ia => !insumos.find(i => i.id === ia.insumoId)).length ?? 0;
-        return { count: countInsumos + countProductos, completo, costo, rotos };
+
+        return { count: countInsumos + countProductos, completo, costo, rotos, missing };
     };
 
     // ── Filtros ────────────────────────────────────────────────────────────────
@@ -140,6 +147,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
     const editProducto = (p: ProductoFabricado) => {
         setProductoForm({
             ...p,
+            tipo: p.tipo || "Producto",
             insumosAsociados: p.insumosAsociados || [],
             productosAsociados: p.productosAsociados || []
         });
@@ -182,7 +190,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                     <Dialog open={isProductoDialogOpen} onOpenChange={setIsProductoDialogOpen}>
                         <DialogTrigger asChild>
                             <Button className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl shadow-md shrink-0"
-                                onClick={() => setProductoForm({ id: undefined, sku: "", nombre: "", descripcion: "", categoria: "", insumosAsociados: [], productosAsociados: [] })}>
+                                onClick={() => setProductoForm({ id: undefined, sku: "", nombre: "", descripcion: "", categoria: "", tipo: "Producto", insumosAsociados: [], productosAsociados: [] })}>
                                 <Plus className="w-4 h-4 mr-2" /> Nuevo Producto / Kit
                             </Button>
                         </DialogTrigger>
@@ -193,6 +201,22 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                 </DialogTitle>
                             </DialogHeader>
                             <div className="grid gap-4 py-2">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">Tipo de Registro</label>
+                                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                                        <button
+                                            onClick={() => setProductoForm({ ...productoForm, tipo: "Producto", productosAsociados: [] })}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${productoForm.tipo === "Producto" ? "bg-white text-fuchsia-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                                            <Factory className="w-3.5 h-3.5" /> Ficha de Producto
+                                        </button>
+                                        <button
+                                            onClick={() => setProductoForm({ ...productoForm, tipo: "Kit" })}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${productoForm.tipo === "Kit" ? "bg-white text-violet-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                                            <Layers className="w-3.5 h-3.5" /> Kit / Combo
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">SKU (Opcional)</label>
@@ -201,10 +225,10 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                             placeholder="Autogenerado" />
                                     </div>
                                     <div className="space-y-1 col-span-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre del Producto *</label>
-                                        <Input value={productoForm.nombre} className="h-10"
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre del {productoForm.tipo} *</label>
+                                        <Input value={productoForm.nombre} className="h-10 border-fuchsia-100 focus:border-fuchsia-300"
                                             onChange={e => setProductoForm({ ...productoForm, nombre: e.target.value })}
-                                            placeholder="Ej. Kit Capilar 120ml" />
+                                            placeholder={productoForm.tipo === "Kit" ? "Ej. Kit Ritual Regalo" : "Ej. Shampoo de Keratina"} />
                                     </div>
                                 </div>
 
@@ -231,7 +255,7 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                 )}
 
                                 {/* Agregar insumos / productos al BOM */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className={`grid gap-4 ${productoForm.tipo === "Kit" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1">
                                             <Plus className="w-3 h-3" /> Agregar Insumos
@@ -276,49 +300,52 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                            <Layers className="w-3 h-3" /> Agregar Productos (Kits)
-                                        </label>
-                                        <div className="relative">
-                                            <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
-                                            <Input
-                                                placeholder="Buscar producto..."
-                                                value={searchSubProductoText}
-                                                onChange={(e) => setSearchSubProductoText(e.target.value)}
-                                                className="h-9 pl-8 text-xs border-fuchsia-100 placeholder:text-gray-400"
-                                            />
+                                    {productoForm.tipo === "Kit" && (
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                                <Layers className="w-3 h-3" /> Agregar Productos (Individuales)
+                                            </label>
+                                            <div className="relative">
+                                                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                                <Input
+                                                    placeholder="Buscar producto..."
+                                                    value={searchSubProductoText}
+                                                    onChange={(e) => setSearchSubProductoText(e.target.value)}
+                                                    className="h-9 pl-8 text-xs border-fuchsia-100 placeholder:text-gray-400"
+                                                />
+                                            </div>
+                                            <div className="border rounded-lg max-h-40 overflow-y-auto bg-gray-50/50">
+                                                {productos
+                                                    .filter(p => p.id !== productoForm.id) // Evitar autoreferencia
+                                                    .filter(p => p.tipo !== "Kit") // Un Kit usualmente es de productos individuales, no kits de kits (evitar loops)
+                                                    .filter(p =>
+                                                        p.nombre.toLowerCase().includes(searchSubProductoText.toLowerCase()) ||
+                                                        (p.sku ?? "").toLowerCase().includes(searchSubProductoText.toLowerCase())
+                                                    )
+                                                    .map(p => {
+                                                        const yaEsta = (productoForm.productosAsociados ?? []).some(pa => pa.productoId === p.id);
+                                                        return (
+                                                            <button key={p.id}
+                                                                onClick={() => {
+                                                                    if (!yaEsta) {
+                                                                        setProductoForm({
+                                                                            ...productoForm,
+                                                                            productosAsociados: [...(productoForm.productosAsociados ?? []), { productoId: p.id, cantidadRequerida: 1 }]
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-white flex justify-between items-center border-b last:border-0 ${yaEsta ? "opacity-50 cursor-not-allowed bg-violet-50" : ""}`}>
+                                                                <span className="truncate flex-1 text-gray-700">
+                                                                    <span className="font-mono text-[9px] text-gray-400 mr-2">{p.sku}</span>
+                                                                    {p.nombre}
+                                                                </span>
+                                                                {yaEsta ? <CheckCircle2 className="w-3 h-3 text-violet-500" /> : <Plus className="w-3 h-3 text-gray-300" />}
+                                                            </button>
+                                                        );
+                                                    })}
+                                            </div>
                                         </div>
-                                        <div className="border rounded-lg max-h-40 overflow-y-auto bg-gray-50/50">
-                                            {productos
-                                                .filter(p => p.id !== productoForm.id) // Evitar autoreferencia
-                                                .filter(p =>
-                                                    p.nombre.toLowerCase().includes(searchSubProductoText.toLowerCase()) ||
-                                                    (p.sku ?? "").toLowerCase().includes(searchSubProductoText.toLowerCase())
-                                                )
-                                                .map(p => {
-                                                    const yaEsta = (productoForm.productosAsociados ?? []).some(pa => pa.productoId === p.id);
-                                                    return (
-                                                        <button key={p.id}
-                                                            onClick={() => {
-                                                                if (!yaEsta) {
-                                                                    setProductoForm({
-                                                                        ...productoForm,
-                                                                        productosAsociados: [...(productoForm.productosAsociados ?? []), { productoId: p.id, cantidadRequerida: 1 }]
-                                                                    });
-                                                                }
-                                                            }}
-                                                            className={`w-full text-left px-3 py-2 text-xs hover:bg-white flex justify-between items-center border-b last:border-0 ${yaEsta ? "opacity-50 cursor-not-allowed bg-emerald-50" : ""}`}>
-                                                            <span className="truncate flex-1">
-                                                                <span className="font-mono text-[9px] text-gray-400 mr-2">{p.sku}</span>
-                                                                {p.nombre}
-                                                            </span>
-                                                            {yaEsta ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Plus className="w-3 h-3 text-gray-300" />}
-                                                        </button>
-                                                    );
-                                                })}
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 {/* Lista de items del BOM actual */}
@@ -445,12 +472,12 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
             {/* Grid de productos */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredProductos.map(p => {
-                    const { count, completo, costo, rotos } = getProductStats(p);
+                    const { count, completo, costo, rotos, missing } = getProductStats(p);
 
                     return (
-                        <Card key={p.id} className={`overflow-hidden border transition-shadow hover:shadow-md relative group ${rotos > 0 ? "border-red-200" : completo ? "border-gray-100" : "border-amber-200"}`}>
+                        <Card key={p.id} className={`overflow-hidden border transition-shadow hover:shadow-md relative group ${rotos > 0 ? "border-red-200" : (completo && missing.length === 0) ? "border-gray-100" : "border-amber-200"}`}>
                             {/* Indicador completitud */}
-                            <div className={`h-1 w-full ${rotos > 0 ? "bg-red-400" : completo ? "bg-emerald-400" : "bg-amber-300"}`} />
+                            <div className={`h-1 w-full ${rotos > 0 ? "bg-red-400" : (completo && missing.length === 0) ? "bg-emerald-400" : "bg-amber-300"}`} />
 
                             {/* Acciones hover */}
                             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
@@ -473,11 +500,29 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                     <h3 className="font-bold text-gray-800 pr-14 leading-tight">{p.nombre}</h3>
                                     <div className="flex gap-1.5 flex-wrap mt-1.5">
                                         <span className="bg-fuchsia-50 text-fuchsia-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-fuchsia-100">{p.sku}</span>
+                                        {p.tipo === "Kit" && <span className="bg-violet-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">KIT</span>}
                                         {p.categoria && <span className="bg-gray-50 text-gray-500 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-gray-100">{p.categoria}</span>}
                                         {!completo && <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-100">⚠ Sin ficha</span>}
                                         {rotos > 0 && <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-md border border-red-100">⚠ {rotos} insumo(s) eliminado(s)</span>}
                                     </div>
                                 </div>
+
+                                {/* ALERTA DE INTEGRIDAD BOM */}
+                                {completo && missing.length > 0 && (
+                                    <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 flex flex-col gap-1">
+                                        <div className="flex items-center gap-1.5 text-amber-700">
+                                            <AlertCircle className="w-3 h-3" />
+                                            <span className="text-[10px] font-black uppercase tracking-tight">Faltan esenciales en ficha:</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {missing.map(m => (
+                                                <span key={m} className="bg-white text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-100 shadow-sm lowercase">
+                                                    {m}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* BOM resumido */}
                                 <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-2">

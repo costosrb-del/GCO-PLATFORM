@@ -147,6 +147,7 @@ export const InsumosSection = ({ insumos, createInsumo, updateInsumo, deleteInsu
                                             <SelectItem value="Materia Prima">Materia Prima</SelectItem>
                                             <SelectItem value="Envase">Envase</SelectItem>
                                             <SelectItem value="Tapa">Tapa</SelectItem>
+                                            <SelectItem value="Sello">Sello (Curvo/Plano)</SelectItem>
                                             <SelectItem value="Lainer">Lainer</SelectItem>
                                             <SelectItem value="Termoencogible">Termoencogible</SelectItem>
                                             <SelectItem value="Caja">Caja</SelectItem>
