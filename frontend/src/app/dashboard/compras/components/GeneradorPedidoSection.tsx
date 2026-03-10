@@ -260,8 +260,9 @@ export const GeneradorPedidoSection = ({
                     const ins = insumos.find(i => i.id === ia.insumoId);
                     if (!ins) continue;
 
-                    const rendFactor = parseRendimientoFactor(ins.rendimiento);
-                    const esEmpq = esEmpaque(ins.rendimiento);
+                    const valorRendimiento = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins.rendimiento;
+                    const rendFactor = parseRendimientoFactor(valorRendimiento);
+                    const esEmpq = esEmpaque(valorRendimiento);
                     const unidadesPorEmpq = esEmpq ? rendFactor : 1;
 
                     let cantBruta: number;

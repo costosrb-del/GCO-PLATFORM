@@ -115,7 +115,7 @@ export interface ProductoFabricado {
     descripcion?: string;
     categoria?: string;
     tipo?: "Producto" | "Kit";
-    insumosAsociados?: { insumoId: string; cantidadRequerida: number }[];
+    insumosAsociados?: { insumoId: string; cantidadRequerida: number; rendimientoAjustado?: number | string }[];
     productosAsociados?: { productoId: string; cantidadRequerida: number }[];
     created_at?: string;
 }

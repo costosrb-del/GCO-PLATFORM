@@ -64,7 +64,8 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                     const ins = insumos.find(i => i.id === ia.insumoId);
                     if (ins?.clasificacion) foundCategories.add(ins.clasificacion);
 
-                    const factor = parseRendimientoFactor(ins?.rendimiento);
+                    const rendStr = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins?.rendimiento;
+                    const factor = parseRendimientoFactor(rendStr);
                     const unitPrice = (ins?.precio ?? 0) / factor;
                     costo += unitPrice * ia.cantidadRequerida;
                 }
@@ -359,25 +360,50 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                             {(productoForm.insumosAsociados ?? []).map((ia, index) => {
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
                                                 return (
-                                                    <div key={`ins-${index}`} className="flex items-center gap-2 px-3 py-2 bg-white">
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-semibold text-gray-800 truncate">{ins?.nombre ?? "Insumo eliminado"}</p>
-                                                            <p className="text-[9px] text-fuchsia-600 font-bold uppercase">Insumo · {ins?.unidad}</p>
+                                                    <div key={`ins-${index}`} className="flex flex-col px-3 py-2 bg-white border-b border-gray-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-semibold text-gray-800 truncate">{ins?.nombre ?? "Insumo eliminado"}</p>
+                                                                <p className="text-[9px] text-fuchsia-600 font-bold uppercase">Insumo · {ins?.unidad}</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mr-1">Cant.</span>
+                                                                <Input className="w-20 h-7 text-center text-xs font-bold" type="number" step="0.01" min={0}
+                                                                    value={ia.cantidadRequerida}
+                                                                    onChange={e => {
+                                                                        const newArr = [...(productoForm.insumosAsociados ?? [])];
+                                                                        newArr[index] = { ...newArr[index], cantidadRequerida: Number(e.target.value) };
+                                                                        setProductoForm({ ...productoForm, insumosAsociados: newArr });
+                                                                    }} />
+                                                            </div>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500 shrink-0"
+                                                                onClick={() => {
+                                                                    const newArr = (productoForm.insumosAsociados ?? []).filter((_, i) => i !== index);
+                                                                    setProductoForm({ ...productoForm, insumosAsociados: newArr });
+                                                                }}>
+                                                                <X className="w-3 h-3" />
+                                                            </Button>
                                                         </div>
-                                                        <Input className="w-20 h-7 text-center text-xs font-bold" type="number" step="0.01" min={0}
-                                                            value={ia.cantidadRequerida}
-                                                            onChange={e => {
-                                                                const newArr = [...(productoForm.insumosAsociados ?? [])];
-                                                                newArr[index] = { ...newArr[index], cantidadRequerida: Number(e.target.value) };
-                                                                setProductoForm({ ...productoForm, insumosAsociados: newArr });
-                                                            }} />
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500"
-                                                            onClick={() => {
-                                                                const newArr = (productoForm.insumosAsociados ?? []).filter((_, i) => i !== index);
-                                                                setProductoForm({ ...productoForm, insumosAsociados: newArr });
-                                                            }}>
-                                                            <X className="w-3 h-3" />
-                                                        </Button>
+                                                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-gray-100">
+                                                            <span className="text-[9px] text-gray-400">Rendimiento Insumo: <span className="font-mono">{ins?.rendimiento || "1"}</span></span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[9px] text-emerald-600 font-bold uppercase">Sobrescribir</span>
+                                                                <Input className="w-20 h-6 text-center text-[10px] font-bold border-emerald-100 text-emerald-700 bg-emerald-50/50 placeholder:text-emerald-300/60 transition-colors focus:bg-white"
+                                                                    type="text"
+                                                                    placeholder="Ej. 30"
+                                                                    value={ia.rendimientoAjustado ?? ""}
+                                                                    onChange={e => {
+                                                                        const newArr = [...(productoForm.insumosAsociados ?? [])];
+                                                                        const val = e.target.value;
+                                                                        if (val === "") {
+                                                                            delete newArr[index].rendimientoAjustado;
+                                                                        } else {
+                                                                            newArr[index] = { ...newArr[index], rendimientoAjustado: val };
+                                                                        }
+                                                                        setProductoForm({ ...productoForm, insumosAsociados: newArr });
+                                                                    }} />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
@@ -538,18 +564,24 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                         <div className="space-y-0.5">
                                             {p.insumosAsociados.map((ia, idx) => {
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
-                                                const factor = parseRendimientoFactor(ins?.rendimiento);
+                                                const rendStr = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins?.rendimiento;
+                                                const factor = parseRendimientoFactor(rendStr);
                                                 const unitPrice = (ins?.precio ?? 0) / factor;
                                                 const insSubtotal = unitPrice * ia.cantidadRequerida;
                                                 return (
-                                                    <div key={idx} className="flex justify-between items-center text-[10px] py-0.5 border-b border-gray-100/50 last:border-0">
-                                                        <span className={`truncate max-w-[50%] ${!ins ? "text-red-400 line-through" : "text-gray-600"}`}>
+                                                    <div key={idx} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100/50 last:border-0">
+                                                        <span className={`truncate max-w-[50%] ${!ins ? "text-red-400 line-through" : "text-gray-600"} font-medium`}>
                                                             {ins?.nombre ?? "Insumo eliminado"}
                                                         </span>
-                                                        <div className="flex gap-2 items-center shrink-0">
+                                                        <div className="flex gap-2 items-center flex-wrap justify-end shrink-0">
+                                                            {ia.rendimientoAjustado && (
+                                                                <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded-sm font-black tracking-tight" title={`Rendimiento Ajustado: ${ia.rendimientoAjustado}`}>
+                                                                    R:{ia.rendimientoAjustado}
+                                                                </span>
+                                                            )}
                                                             <span className="font-bold text-gray-400">× {ia.cantidadRequerida} {ins?.unidad ?? ""}</span>
                                                             {insSubtotal > 0 && (
-                                                                <span className="text-teal-600 font-bold bg-white px-1 rounded shadow-sm border border-teal-50">
+                                                                <span className="text-teal-600 font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-teal-50">
                                                                     ${insSubtotal.toLocaleString("es-CO")}
                                                                 </span>
                                                             )}
