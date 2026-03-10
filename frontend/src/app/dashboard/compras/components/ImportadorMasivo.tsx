@@ -51,28 +51,48 @@ export const ImportadorMasivo = ({
             insumosExistentes.forEach(i => createdInsumosMap.set(i.sku, i.id));
 
             let countInsumos = 0;
+            let skippedInsumos = 0;
             for (const row of importData.insumos) {
-                if (!row.SKU || !row.Nombre) continue;
-                if (createdInsumosMap.has(row.SKU)) continue; // SKIP si ya existe SKU
+                if (!row.Nombre) {
+                    skippedInsumos++;
+                    continue;
+                }
+
+                let targetSku = String(row.SKU || "").trim();
+                if (!targetSku || targetSku === "-" || targetSku === "0") {
+                    targetSku = `INS-${Math.floor(10000 + Math.random() * 90000)}`;
+                }
+
+                if (createdInsumosMap.has(targetSku)) {
+                    skippedInsumos++;
+                    continue; // SKIP si ya existe SKU
+                }
 
                 const res = await createInsumo({
-                    sku: String(row.SKU),
+                    sku: targetSku,
                     nombre: String(row.Nombre),
-                    rendimiento: String(row.Rendimiento || "1"),
-                    unidad: String(row.Unidad || "Unidad"),
-                    clasificacion: String(row.Clasificacion || "Materia Prima"),
-                    precio: Number(row.Precio || 0),
-                    loteMinimo: Number(row.LoteMinimo || 0)
+                    rendimiento: String(row.Rendimiento ?? "1"),
+                    unidad: String(row.Unidad ?? "Unidad"),
+                    clasificacion: String(row.Clasificacion ?? "Materia Prima"),
+                    precio: Number(row.Precio ?? 0),
+                    loteMinimo: Number(row.LoteMinimo ?? 0)
                 });
-                if (res?.data?.id) createdInsumosMap.set(row.SKU, res.data.id);
+                if (res?.data?.id) createdInsumosMap.set(targetSku, res.data.id);
                 countInsumos++;
             }
 
             // 2. IMPORTAR TERCEROS
             let countTerceros = 0;
+            let skippedTerceros = 0;
             for (const row of importData.terceros) {
-                if (!row.Nombre || !row.NIT) continue;
-                if (tercerosExistentes.some(t => t.nit === String(row.NIT))) continue; // SKIP si ya existe NIT
+                if (!row.Nombre || !row.NIT) {
+                    skippedTerceros++;
+                    continue;
+                }
+                if (tercerosExistentes.some(t => t.nit === String(row.NIT))) {
+                    skippedTerceros++;
+                    continue; // SKIP si ya existe NIT
+                }
 
                 await createTercero({
                     nombre: String(row.Nombre),
@@ -90,19 +110,31 @@ export const ImportadorMasivo = ({
             productosExistentes.forEach(p => p.sku && createdProductosMap.set(p.sku, p.id));
 
             let countProductos = 0;
+            let skippedProductos = 0;
             for (const row of importData.productos) {
-                if (!row.Nombre || !row.SKU) continue;
-                if (createdProductosMap.has(row.SKU)) continue;
+                if (!row.Nombre) {
+                    skippedProductos++;
+                    continue;
+                }
+                let targetSku = String(row.SKU || "").trim();
+                if (!targetSku || targetSku === "-") {
+                    targetSku = `PRD-${Math.floor(10000 + Math.random() * 90000)}`;
+                }
+
+                if (createdProductosMap.has(targetSku)) {
+                    skippedProductos++;
+                    continue;
+                }
 
                 const res = await createProducto({
-                    sku: String(row.SKU),
+                    sku: targetSku,
                     nombre: String(row.Nombre),
                     categoria: String(row.Categoria || ""),
                     tipo: (row.Tipo === "Kit" ? "Kit" : "Producto"),
                     insumosAsociados: [],
                     productosAsociados: []
                 });
-                if (res?.data?.id) createdProductosMap.set(row.SKU, res.data.id);
+                if (res?.data?.id) createdProductosMap.set(targetSku, res.data.id);
                 countProductos++;
             }
 
@@ -127,14 +159,14 @@ export const ImportadorMasivo = ({
 
                 const insAsociados = components.insumos
                     .map(c => ({
-                        insumoId: createdInsumosMap.get(String(c.SKU_Hijo)) || "",
+                        insumoId: createdInsumosMap.get(String(c.SKU_Hijo || c.SKU)) || "",
                         cantidadRequerida: Number(c.Cantidad || 0)
                     }))
                     .filter(c => c.insumoId !== "");
 
                 const prodAsociados = components.productos
                     .map(c => ({
-                        productoId: createdProductosMap.get(String(c.SKU_Hijo)) || "",
+                        productoId: createdProductosMap.get(String(c.SKU_Hijo || c.SKU)) || "",
                         cantidadRequerida: Number(c.Cantidad || 0)
                     }))
                     .filter(c => c.productoId !== "");
@@ -146,7 +178,17 @@ export const ImportadorMasivo = ({
                 countBOMs++;
             }
 
-            toast.success(`Importación finalizada: ${countInsumos} insumos, ${countTerceros} proveedores, ${countProductos} productos y ${countBOMs} BOMs.`);
+            let feedback = `Importación: ${countInsumos} insumos, ${countTerceros} proveedores, ${countProductos} productos, ${countBOMs} BOMs.`;
+            if (skippedInsumos + skippedTerceros + skippedProductos > 0) {
+                feedback += ` Se omitieron ${skippedInsumos + skippedTerceros + skippedProductos} duplicados o incompletos.`;
+            }
+
+            if (countInsumos + countTerceros + countProductos === 0) {
+                toast.warning("No se importó nada. Verifica que los nombres de las pestañas sean correctos o que los SKUs no estén repetidos.");
+            } else {
+                toast.success(feedback);
+            }
+
             setImportData(null);
             setFileName("");
             setIsOpen(false);

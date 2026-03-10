@@ -23,14 +23,34 @@ export async function parseExcelImport(file: File): Promise<ExcelImportData> {
                 };
 
                 // Mapeo flexible de nombres de pestañas
+                const sheetCount = workbook.SheetNames.length;
                 workbook.SheetNames.forEach(name => {
                     const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[name]);
-                    const cleanName = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (sheet.length === 0) return;
 
-                    if (cleanName.includes("insumo")) result.insumos = sheet;
-                    else if (cleanName.includes("tercero") || cleanName.includes("proveedor")) result.terceros = sheet;
-                    else if (cleanName.includes("producto")) result.productos = sheet;
-                    else if (cleanName.includes("bom") || cleanName.includes("ficha") || cleanName.includes("receta")) result.bom = sheet;
+                    const cleanName = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const firstRowKeys = Object.keys(sheet[0] || {}).map(k => k.toLowerCase());
+
+                    let type = "";
+                    if (cleanName.includes("insumo")) type = "insumos";
+                    else if (cleanName.includes("tercero") || cleanName.includes("proveedor")) type = "terceros";
+                    else if (cleanName.includes("producto")) type = "productos";
+                    else if (cleanName.includes("bom") || cleanName.includes("ficha") || cleanName.includes("receta")) type = "bom";
+
+                    // HEURISTICA: Si el nombre no ayuda, mirar las columnas
+                    if (!type) {
+                        if (firstRowKeys.includes("sku_padre")) type = "bom";
+                        else if (firstRowKeys.includes("nit")) type = "terceros";
+                        else if (firstRowKeys.includes("tipo") && firstRowKeys.includes("sku")) type = "productos";
+                        else if (firstRowKeys.includes("nombre") && (firstRowKeys.includes("rendimiento") || firstRowKeys.includes("clasificacion"))) type = "insumos";
+                        // Si solo hay una hoja y tiene SKU/Nombre, probablemente es insumos
+                        else if (sheetCount === 1 && firstRowKeys.includes("nombre") && firstRowKeys.includes("sku")) type = "insumos";
+                    }
+
+                    if (type === "insumos") result.insumos = sheet;
+                    else if (type === "terceros") result.terceros = sheet;
+                    else if (type === "productos") result.productos = sheet;
+                    else if (type === "bom") result.bom = sheet;
                 });
 
                 resolve(result);
