@@ -205,15 +205,40 @@ export default function CierreActasPage() {
         if (!printRef.current) return;
         toast.info("Generando PDF (esto puede tomar unos segundos)...", { id: "pdf_wait" });
         try {
-            // Se usa clone para ajustar la vista al renderizar sin romper el original
-            const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
+            const canvas = await html2canvas(printRef.current, { 
+                scale: 2, 
+                useCORS: true,
+                logging: false,
+                windowWidth: 1024 // Fijamos ancho para consistencia
+            });
             const imgData = canvas.toDataURL("image/png");
 
-            const pdf = new jsPDF("p", "mm", "a4");
-            const imgWidth = 210;
+            // Tamaño Carta: 215.9 x 279.4 mm
+            const pdf = new jsPDF("p", "mm", "letter");
+            const pageWidth = 215.9;
+            const pageHeight = 279.4;
+            
+            // Mantener márgenes de 10mm
+            const margin = 10;
+            const contentWidth = pageWidth - (margin * 2);
+            const imgWidth = contentWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            let heightLeft = imgHeight;
+            let position = margin;
 
-            pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+            // Primera página
+            pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            // Páginas adicionales si el contenido es largo
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight + margin;
+                pdf.addPage();
+                pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
             pdf.save(`Acta_Inventario_${company}_${fecha.replace(/-/g, "")}.pdf`);
             toast.success("PDF descargado", { id: "pdf_wait" });
         } catch (err) {
@@ -246,6 +271,8 @@ export default function CierreActasPage() {
     }, [items]);
 
     const itemsWithDifferences = processedItems.filter(i => i.diff !== 0);
+    // Para la tabla de comparación (Sección 2), si no hay diferencias, mostramos los primeros 10 para que la tabla no desaparezca
+    const displayComparisonItems = itemsWithDifferences.length > 0 ? itemsWithDifferences : processedItems.slice(0, 15);
     const itemsFaltantes = processedItems.filter(i => i.diff < 0); // Faltantes (Cobrar a logística / responsable)
     const itemsSobrantes = processedItems.filter(i => i.diff > 0); // Sobrantes (Enviar a bodega de custodia)
 
@@ -728,34 +755,37 @@ export default function CierreActasPage() {
                             </div>
                             <p className="mb-2">Según el informe de inventario de <strong>{periodo}</strong>, se identificaron las siguientes novedades (Diferencias entre físico y sistema):</p>
 
-                            {itemsWithDifferences.length === 0 ? (
-                                <p className="italic text-gray-500 py-2">No se encontraron diferencias en este período. El inventario es exacto al sistema.</p>
-                            ) : (
-                                <table className="w-full border-collapse border border-gray-300 text-center text-[10px] mb-4">
-                                    <thead className="bg-[#183C30] text-white">
-                                        <tr>
-                                            <th className="border border-gray-300 p-2 text-left">Referencia</th>
-                                            <th className="border border-gray-300 p-2">Sistema (Und)</th>
-                                            <th className="border border-gray-300 p-2">Físico (Und)</th>
-                                            <th className="border border-gray-300 p-2">Diferencia</th>
-                                            <th className="border border-gray-300 p-2">Estado</th>
+                            <table className="w-full border-collapse border border-gray-300 text-center text-[10px] mb-4">
+                                <thead className="bg-[#183C30] text-white">
+                                    <tr>
+                                        <th className="border border-gray-300 p-2 text-left">Referencia</th>
+                                        <th className="border border-gray-300 p-2">Sistema (Und)</th>
+                                        <th className="border border-gray-300 p-2">Físico (Und)</th>
+                                        <th className="border border-gray-300 p-2">Diferencia</th>
+                                        <th className="border border-gray-300 p-2">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {displayComparisonItems.map(item => (
+                                        <tr key={item.sku} className="hover:bg-gray-50">
+                                            <td className="border border-gray-300 p-2 text-left font-medium">{item.sku} - {item.name}</td>
+                                            <td className="border border-gray-300 p-2">{item.s}</td>
+                                            <td className="border border-gray-300 p-2">{item.p}</td>
+                                            <td className="border border-gray-300 p-2 font-bold">{item.diff > 0 ? `+${item.diff}` : item.diff}</td>
+                                            <td className={`border border-gray-300 p-2 font-bold ${item.diff < 0 ? 'text-red-600' : item.diff > 0 ? 'text-blue-600' : 'text-green-600'}`}>
+                                                {item.diff < 0 ? 'Faltante' : item.diff > 0 ? 'Sobrante' : 'OK'}
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {itemsWithDifferences.map(item => (
-                                            <tr key={item.sku} className="hover:bg-gray-50">
-                                                <td className="border border-gray-300 p-2 text-left font-medium">{item.sku} - {item.name}</td>
-                                                <td className="border border-gray-300 p-2">{item.s}</td>
-                                                <td className="border border-gray-300 p-2">{item.p}</td>
-                                                <td className="border border-gray-300 p-2 font-bold">{item.diff > 0 ? `+${item.diff}` : item.diff}</td>
-                                                <td className={`border border-gray-300 p-2 font-bold ${item.diff < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                                    {item.diff < 0 ? 'Faltante' : 'Sobrante'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
+                                    ))}
+                                    {itemsWithDifferences.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="border border-gray-300 p-2 italic text-gray-500 text-center">
+                                                No se encontraron diferencias en este periodo. La tabla muestra una muestra de referencias.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
 
                         {/* 3. Novedades Pendientes */}
