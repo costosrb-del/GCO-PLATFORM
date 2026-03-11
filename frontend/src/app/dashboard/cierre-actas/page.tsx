@@ -64,7 +64,19 @@ interface ActaItem {
     sku: string;
     name: string;
     physical: number | '';
-    system: number | '';
+    
+    // Bodegas Principales
+    bPrincipal: number | '';
+    bAverias: number | '';
+    bComercExt: number | '';
+    
+    // Bodegas de Justificación
+    bTransito: number | '';
+    bPerdida: number | '';
+    bDos: number | '';
+    justificacion: string;
+
+    system: number | ''; // Calculado
     unitPrice: number | '';
 }
 
@@ -91,6 +103,13 @@ export default function CierreActasPage() {
             sku,
             name: DEFAULT_PRODUCT_NAMES[sku] || `Producto ${sku}`,
             physical: '',
+            bPrincipal: '',
+            bAverias: '',
+            bComercExt: '',
+            bTransito: '',
+            bPerdida: '',
+            bDos: '',
+            justificacion: '',
             system: '',
             unitPrice: ''
         }))
@@ -207,13 +226,21 @@ export default function CierreActasPage() {
     const processedItems = useMemo(() => {
         return items.map(item => {
             const p = Number(item.physical) || 0;
-            const s = Number(item.system) || 0;
-            const diff = p - s;
+            const bPrin = Number(item.bPrincipal) || 0;
+            const bAv = Number(item.bAverias) || 0;
+            const bCom = Number(item.bComercExt) || 0;
+            const computedSystem = bPrin + bAv + bCom;
+
+            const diff = p - computedSystem;
             return {
                 ...item,
                 p,
-                s,
-                diff
+                s: computedSystem, // Sobrescribimos 's' para que use el calculado
+                diff,
+                bPrin, bAv, bCom,
+                bTr: Number(item.bTransito) || 0,
+                bPer: Number(item.bPerdida) || 0,
+                bD: Number(item.bDos) || 0
             };
         });
     }, [items]);
@@ -377,11 +404,14 @@ export default function CierreActasPage() {
                                 <thead className="text-xs text-gray-500 uppercase bg-gray-100 sticky top-0 z-10 shadow-sm">
                                     <tr>
                                         <th className="px-6 py-4 font-semibold">SKU</th>
-                                        <th className="px-6 py-4 font-semibold">Nombre del Producto</th>
-                                        <th className="px-6 py-4 font-semibold text-center w-32 border-x border-gray-200 bg-blue-50/50">Conteo Físico</th>
-                                        <th className="px-6 py-4 font-semibold text-center w-32 border-r border-gray-200 bg-orange-50/50">Saldo Sistema</th>
-                                        <th className="px-6 py-4 font-semibold text-center">Diferencia</th>
-                                        <th className="px-6 py-4 font-semibold text-center w-32">Precio Unit. (Faltantes)</th>
+                                        <th className="px-6 py-4 font-semibold min-w-[200px]">Nombre del Producto</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-28 border-x border-gray-200 bg-blue-50/50">Conteo Físico</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega Principal">B. Principal</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega de Averías">B. Averías</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega Comercio Exterior">B. C.Ext.</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-28 border-x border-gray-200 bg-orange-50/50" title="Suma de Principal, Averías y COMEX">Saldo Sistema</th>
+                                        <th className="px-3 py-4 font-semibold text-center">Diferencia</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-28">P. Unit. (Faltante)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -420,21 +450,50 @@ export default function CierreActasPage() {
                                                         className="w-full text-center bg-transparent border border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 font-bold transition-all"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 bg-orange-50/10 hover:bg-orange-50/30 transition-colors">
+                                                <td className="px-2 py-2 border-r border-gray-100 transition-colors">
                                                     <input
                                                         type="number"
                                                         placeholder="0"
-                                                        value={item.system}
+                                                        value={item.bPrincipal}
                                                         onChange={(e) => {
                                                             const newItems = [...items];
-                                                            newItems[idx].system = e.target.value === '' ? '' : Number(e.target.value);
+                                                            newItems[idx].bPrincipal = e.target.value === '' ? '' : Number(e.target.value);
                                                             setItems(newItems);
                                                         }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-orange-300 focus:border-orange-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 font-bold transition-all"
+                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
                                                     />
                                                 </td>
-                                                <td className="px-6 py-3 text-center">
-                                                    {item.physical === '' || item.system === '' ? (
+                                                <td className="px-2 py-2 border-r border-gray-100 transition-colors">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={item.bAverias}
+                                                        onChange={(e) => {
+                                                            const newItems = [...items];
+                                                            newItems[idx].bAverias = e.target.value === '' ? '' : Number(e.target.value);
+                                                            setItems(newItems);
+                                                        }}
+                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 border-r border-gray-100 transition-colors">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={item.bComercExt}
+                                                        onChange={(e) => {
+                                                            const newItems = [...items];
+                                                            newItems[idx].bComercExt = e.target.value === '' ? '' : Number(e.target.value);
+                                                            setItems(newItems);
+                                                        }}
+                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 border-r border-gray-100 bg-orange-50/10 text-center font-bold text-orange-900 transition-colors">
+                                                    {Number(item.bPrincipal || 0) + Number(item.bAverias || 0) + Number(item.bComercExt || 0)}
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    {item.physical === '' ? (
                                                         <span className="text-gray-300">-</span>
                                                     ) : (
                                                         <span className={`font-bold px-3 py-1 rounded-full text-xs ${hasDiff ? (diff < 0 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700') : 'bg-green-100 text-green-700'}`}>
@@ -460,6 +519,84 @@ export default function CierreActasPage() {
                                             </tr>
                                         );
                                     })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Tabla de Justificaciones de Otras Bodegas */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                Justificación de Saldos en Otras Bodegas
+                            </h3>
+                            <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
+                                Bodegas No Auditadas Físicamente
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto max-h-[400px]">
+                            <table className="w-full text-sm text-left relative">
+                                <thead className="text-xs text-gray-500 uppercase bg-gray-100 sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        <th className="px-6 py-4 font-semibold w-24">SKU</th>
+                                        <th className="px-6 py-4 font-semibold w-48 truncate">Nombre del Producto</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="En Tránsito">Tránsito</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega de Pérdida y Destrucción">Pérdida/Destrucción</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega 2">Bodega 2</th>
+                                        <th className="px-6 py-4 font-semibold flex-1">Justificación</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {items.map((item, idx) => (
+                                        <tr key={item.sku} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-2 font-mono text-gray-500 text-xs">{item.sku}</td>
+                                            <td className="px-6 py-2 font-medium text-gray-800 text-xs truncate max-w-[150px]" title={item.name}>{item.name}</td>
+                                            <td className="px-2 py-2 border-l border-gray-100 transition-colors">
+                                                <input
+                                                    type="number" placeholder="0" value={item.bTransito}
+                                                    onChange={(e) => {
+                                                        const newItems = [...items];
+                                                        newItems[idx].bTransito = e.target.value === '' ? '' : Number(e.target.value);
+                                                        setItems(newItems);
+                                                    }}
+                                                    className="w-16 text-center bg-transparent border border-gray-200 rounded p-1.5 text-xs outline-none focus:ring-1 focus:ring-violet-400 font-mono mx-auto block"
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 transition-colors">
+                                                <input
+                                                    type="number" placeholder="0" value={item.bPerdida}
+                                                    onChange={(e) => {
+                                                        const newItems = [...items];
+                                                        newItems[idx].bPerdida = e.target.value === '' ? '' : Number(e.target.value);
+                                                        setItems(newItems);
+                                                    }}
+                                                    className="w-16 text-center bg-transparent border border-gray-200 rounded p-1.5 text-xs outline-none focus:ring-1 focus:ring-violet-400 font-mono mx-auto block"
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 border-r border-gray-100 transition-colors">
+                                                <input
+                                                    type="number" placeholder="0" value={item.bDos}
+                                                    onChange={(e) => {
+                                                        const newItems = [...items];
+                                                        newItems[idx].bDos = e.target.value === '' ? '' : Number(e.target.value);
+                                                        setItems(newItems);
+                                                    }}
+                                                    className="w-16 text-center bg-transparent border border-gray-200 rounded p-1.5 text-xs outline-none focus:ring-1 focus:ring-violet-400 font-mono mx-auto block"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-2">
+                                                <input
+                                                    type="text" placeholder="Ej: Mercancía retenida en transportadora..." value={item.justificacion}
+                                                    onChange={(e) => {
+                                                        const newItems = [...items];
+                                                        newItems[idx].justificacion = e.target.value;
+                                                        setItems(newItems);
+                                                    }}
+                                                    className="w-full bg-transparent border-b border-gray-200 hover:border-gray-400 focus:border-violet-500 outline-none px-1 py-1 text-xs transition-all"
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -558,6 +695,9 @@ export default function CierreActasPage() {
                         {/* 2. Hallazgos */}
                         <div className="mb-6">
                             <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">2. Hallazgos del Inventario</h3>
+                            <div className="bg-blue-50 p-2 border border-blue-100 rounded text-[10px] text-blue-900 mb-3 text-justify">
+                                <strong>Nota Aclaratoria sobre Saldos del Sistema:</strong> El saldo reflejado en este documento bajo la columna "Sistema (Und)" corresponde <strong>exclusivamente a la suma consolidada de la Bodega Principal, Bodega de Averías y Bodega de Comercio Exterior</strong>. Dichas bodegas reflejan el inventario real en sitio y son las únicas que se comparan contra el Conteo Físico.
+                            </div>
                             <p className="mb-2">Según el informe de inventario de <strong>{periodo}</strong>, se identificaron las siguientes novedades (Diferencias entre físico y sistema):</p>
 
                             {itemsWithDifferences.length === 0 ? (
@@ -638,9 +778,43 @@ export default function CierreActasPage() {
                             ) : <p className="italic text-gray-500 mb-2 text-[11px]">No hay productos sobrantes para enviar a custodia.</p>}
                         </div>
 
-                        {/* 4. Acciones a Realizar */}
+                        {/* 4. Justificaciones */}
                         <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">4. Acciones a Realizar</h3>
+                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">4. Justificación de Saldos en Otras Bodegas</h3>
+                            <p className="text-justify mb-2">A continuación se detallan las cantidades registradas por referencia en otras bodegas de sistema (En Tránsito, Pérdida y Destrucción, y Bodega 2) que justifican saldos que no fueron parte del conteo físico:</p>
+                            <table className="w-full border-collapse border border-gray-300 text-[10px] text-center mb-2">
+                                <thead className="bg-gray-100 text-[#183C30]">
+                                    <tr>
+                                        <th className="border border-gray-300 p-1 text-left">SKU - Referencia</th>
+                                        <th className="border border-gray-300 p-1 w-16">En Tránsito</th>
+                                        <th className="border border-gray-300 p-1 w-16">Pérdida/Des.</th>
+                                        <th className="border border-gray-300 p-1 w-16">Bodega 2</th>
+                                        <th className="border border-gray-300 p-1 text-left w-1/2">Justificación Documentada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {processedItems.filter(i => i.bTr > 0 || i.bPer > 0 || i.bD > 0 || (i.justificacion && i.justificacion.trim() !== "")).length > 0 ? (
+                                        processedItems.filter(i => i.bTr > 0 || i.bPer > 0 || i.bD > 0 || (i.justificacion && i.justificacion.trim() !== "")).map(i => (
+                                            <tr key={i.sku}>
+                                                <td className="border border-gray-300 p-1 text-left"><strong>{i.sku}</strong> - {i.name}</td>
+                                                <td className="border border-gray-300 p-1">{i.bTr || 0}</td>
+                                                <td className="border border-gray-300 p-1">{i.bPer || 0}</td>
+                                                <td className="border border-gray-300 p-1">{i.bD || 0}</td>
+                                                <td className="border border-gray-300 p-1 text-left italic">{i.justificacion || "Sin justificación"}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="border border-gray-300 p-2 italic text-gray-500">No hay saldos registrados ni justificados en bodegas secundarias.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* 5. Acciones a Realizar */}
+                        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">5. Acciones a Realizar</h3>
                             <p className="text-justify mb-2">Se detallan las acciones correctivas que se llevarán a cabo para subsanar las diferencias encontradas en el inventario:</p>
                             <ul className="list-disc pl-6 space-y-2">
                                 <li>Cuando se deban hacer despachos desde Bogotá es importante tener en cuenta un documento físico que soporte ese despacho por medio de la remisión.</li>
@@ -652,9 +826,9 @@ export default function CierreActasPage() {
                             </ul>
                         </div>
 
-                        {/* 5. Saldos Finales en el Sistema */}
+                        {/* 6. Saldos Finales en el Sistema */}
                         <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">5. Saldos Finales en el Sistema</h3>
+                            <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">6. Saldos Finales en el Sistema</h3>
                             <p className="mb-2 italic text-[11px]">(Valores actualizados que deben quedar registrados en el sistema después de realizar los movimientos y ajustes necesarios - Igualan al Conteo Físico)</p>
 
                             <table className="w-full border-collapse border border-gray-300 text-[10px] mt-3">
@@ -694,10 +868,10 @@ export default function CierreActasPage() {
                         </div>
 
                         <div className="flex gap-8 mb-8" style={{ pageBreakInside: 'avoid' }}>
-                            {/* 6. Ajustes y 7. Indicadores */}
+                            {/* 7. Ajustes y 8. Indicadores */}
                             <div className="w-1/2">
-                                <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">6. Ajustes Manuales Requeridos</h3>
-                                <p className="text-justify mb-2">Según los hallazgos descritos, el equipo contable (GRUPO HUMAN PROJECT) procederá a realizar los ajustes en SIIGO (Entradas y Salidas por ajuste de inventario) para igualar el sistema a las cantidades físicas certificadas en el punto 5.</p>
+                                <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">7. Ajustes Manuales Requeridos</h3>
+                                <p className="text-justify mb-2">Según los hallazgos descritos, el equipo contable (GRUPO HUMAN PROJECT) procederá a realizar los ajustes en SIIGO (Entradas y Salidas por ajuste de inventario) para igualar el sistema a las cantidades físicas certificadas en el punto 6.</p>
                                 <ul className="list-disc pl-5 mb-2 space-y-1 text-justify">
                                     <li><strong>Si es Faltante:</strong> Cobrar a <em>Empaques y Soluciones</em> el valor de la mercancía.</li>
                                     <li><strong>Si es Sobrante:</strong> Llevar a bodega de custodia, o ingresar a la BODEGA PRINCIPAL RIONEGRO, según indicación de Gerencia.</li>
@@ -705,7 +879,7 @@ export default function CierreActasPage() {
                             </div>
 
                             <div className="w-1/2">
-                                <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">7. Indicadores de Confiabilidad</h3>
+                                <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">8. Indicadores de Confiabilidad</h3>
                                 <table className="w-full border-collapse border border-gray-300 text-[10px]">
                                     <tbody>
                                         <tr>
@@ -739,9 +913,9 @@ export default function CierreActasPage() {
 
 
                         {/* 8. Conclusiones y Firmas */}
-                        {/* 8. Conclusiones y Firmas */}
+                        {/* 9. Conclusiones y Firmas */}
                         <div style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">8. Conclusiones y Recomendaciones Contables</h3>
+                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">9. Conclusiones y Recomendaciones Contables</h3>
                             <p className="font-bold mt-2">1. Seguridad en el Almacenamiento y Custodia</p>
                             <p>Se exige al proveedor logístico garantizar un resguardo hermético de la mercancía. Todo cruce de información entre empresas debe estar soportado por remisiones físicas debidamente firmadas para evitar fugas no documentadas de inventario.</p>
                             <p className="font-bold mt-2">2. Política de Orden Documental</p>
