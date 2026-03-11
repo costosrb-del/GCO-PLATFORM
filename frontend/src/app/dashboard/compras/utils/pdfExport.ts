@@ -559,13 +559,16 @@ interface InsumoExplotado {
     sku: string;
     unidad: string;
     cantidadTotal: number;
-    ruta?: string; // Para mostrar de dónde viene (kit > subkit)
+    ruta?: string;
+    precioUnitarioBase?: number;
+    costoTotal?: number;
 }
 
 function explotarBOM(
     producto: ProductoFabricado,
     productos: ProductoFabricado[],
     insumos: Insumo[],
+    terceros: Tercero[] = [],
     cantidadPadre: number = 1,
     rutaPadre: string = "",
     ignorarEmpaque: boolean = false
@@ -612,13 +615,27 @@ function explotarBOM(
                      qTotal = (ia.cantidadRequerida * cantidadPadre) / (factor || 1);
                 }
 
+                let basePrice = Number(ins.precio) || 0;
+                if (basePrice <= 0 && terceros && terceros.length > 0) {
+                    let minPrice = Infinity;
+                    for (const t of terceros) {
+                        const p = t.insumosPrecios?.find(x => x.insumoId === ia.insumoId)?.precio;
+                        if (p && p > 0 && p < minPrice) minPrice = p;
+                    }
+                    if (minPrice < Infinity) basePrice = minPrice;
+                }
+                const unitPriceAjustado = basePrice / factor;
+                const subCosto = unitPriceAjustado * ia.cantidadRequerida * cantidadPadre;
+
                 result.push({
                     id: ins.id,
                     nombre: ins.nombre,
                     sku: ins.sku,
                     unidad: ins.unidad,
                     cantidadTotal: qTotal,
-                    ruta: rutaActual
+                    ruta: rutaActual,
+                    precioUnitarioBase: unitPriceAjustado,
+                    costoTotal: subCosto
                 });
             }
         }
@@ -630,6 +647,9 @@ function explotarBOM(
         for (const pa of producto.productosAsociados) {
             const subProd = productos.find(p => p.id === pa.productoId);
             if (subProd) {
+                const tempBOM = explotarBOM(subProd, productos, insumos, terceros, 1, "", esKit || ignorarEmpaque);
+                const subCostUnit = tempBOM.reduce((acc, cv) => acc + (cv.costoTotal || 0), 0);
+                
                 // ADDING A DUMMY INSUMO TO REPRESENT THE SUB-PRODUCT ITSELF IN LIST
                 result.push({
                      id: subProd.id,
@@ -637,9 +657,11 @@ function explotarBOM(
                      sku: subProd.sku || "N/A",
                      unidad: "Unidad",
                      cantidadTotal: pa.cantidadRequerida * cantidadPadre,
-                     ruta: rutaActual
+                     ruta: rutaActual,
+                     precioUnitarioBase: subCostUnit,
+                     costoTotal: subCostUnit * pa.cantidadRequerida * cantidadPadre
                 });
-                const subExplosion = explotarBOM(subProd, productos, insumos, pa.cantidadRequerida * cantidadPadre, rutaActual, esKit || ignorarEmpaque);
+                const subExplosion = explotarBOM(subProd, productos, insumos, terceros, pa.cantidadRequerida * cantidadPadre, rutaActual, esKit || ignorarEmpaque);
                 result = [...result, ...subExplosion];
             }
         }
@@ -657,6 +679,7 @@ function consolidarInsumos(lista: InsumoExplotado[]): InsumoExplotado[] {
         if (map.has(item.id)) {
             const ex = map.get(item.id)!;
             ex.cantidadTotal += item.cantidadTotal;
+            ex.costoTotal = (ex.costoTotal || 0) + (item.costoTotal || 0);
         } else {
             map.set(item.id, { ...item });
         }
@@ -667,7 +690,8 @@ function consolidarInsumos(lista: InsumoExplotado[]): InsumoExplotado[] {
 export const exportarBOMPDF = async (
     producto: ProductoFabricado,
     productos: ProductoFabricado[],
-    insumos: Insumo[]
+    insumos: Insumo[],
+    terceros: Tercero[] = []
 ) => {
     const doc = new jsPDF();
     const logoBase64 = await loadLogoBase64();
@@ -689,28 +713,37 @@ export const exportarBOMPDF = async (
     doc.setFont("helvetica", "bold");
     doc.text("Detalle de Insumos (Explosión Total)", 14, 60);
 
-    const explosion = explotarBOM(producto, productos, insumos);
+    const explosion = explotarBOM(producto, productos, insumos, terceros);
     const consolidado = consolidarInsumos(explosion);
+    const productTotalCost = consolidado.reduce((acc, curr) => acc + (curr.costoTotal || 0), 0);
+
+    doc.setFontSize(10);
+    doc.setTextColor(20, 100, 50);
+    doc.text(`Costo Total Estimado: $${productTotalCost.toLocaleString("es-CO", { minimumFractionDigits: 0 })}`, 14, 66);
 
     const tableBody = consolidado.map((ins, idx) => [
         (idx + 1).toString(),
         ins.nombre,
         ins.sku,
         ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
-        ins.unidad
+        ins.unidad,
+        `$${(ins.precioUnitarioBase||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+        `$${(ins.costoTotal||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
     ]);
 
     autoTable(doc, {
-        startY: 65,
-        head: [["No.", "Insumo", "SKU", "Cant. Requerida", "Unidad"]],
+        startY: 72,
+        head: [["No.", "Insumo", "SKU", "Cant.", "Unid.", "C. Unitario", "C. Total"]],
         body: tableBody,
         theme: "grid",
         headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: "bold" },
-        styles: { fontSize: 9 },
+        styles: { fontSize: 8 },
         columnStyles: {
-            0: { cellWidth: 10 },
+            0: { cellWidth: 8 },
             3: { halign: "right", fontStyle: "bold" },
-            4: { halign: "center" }
+            4: { halign: "center" },
+            5: { halign: "right" },
+            6: { halign: "right", fontStyle: "bold" }
         }
     });
 
@@ -786,3 +819,124 @@ export const descargarZIPBOMs = async (
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
+
+export const exportarConsolidadoBOMExcel = (
+    seleccionados: ProductoFabricado[],
+    productos: ProductoFabricado[],
+    insumos: Insumo[],
+    terceros: Tercero[]
+) => {
+    const rows: any[] = [];
+    for (const p of seleccionados) {
+         const explosion = explotarBOM(p, productos, insumos, terceros);
+         const cons = consolidarInsumos(explosion);
+         const totalProductCost = cons.reduce((acc, curr) => acc + (curr.costoTotal||0), 0);
+         
+         for (const ins of cons) {
+             rows.push({
+                 "SKU Producto": p.sku,
+                 "Producto": p.nombre,
+                 "SKU Componente": ins.sku,
+                 "Componente": ins.nombre,
+                 "Unidad": ins.unidad,
+                 "Cant. Requerida": ins.cantidadTotal,
+                 "Costo Unitario Aprox.": ins.precioUnitarioBase ?? 0,
+                 "Costo Total": ins.costoTotal ?? 0
+             });
+         }
+         rows.push({
+             "SKU Producto": p.sku,
+             "Producto": p.nombre,
+             "SKU Componente": "TOTAL",
+             "Componente": `TOTAL COSTO ${p.nombre}`,
+             "Unidad": "",
+             "Cant. Requerida": "",
+             "Costo Unitario Aprox.": "",
+             "Costo Total": totalProductCost
+         });
+         rows.push({});
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Fichas_Técnicas_Consolidado");
+    XLSX.writeFile(wb, `Consolidado_BOM_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
+}
+
+export const exportarConsolidadoBOMPDF = async (
+    seleccionados: ProductoFabricado[],
+    productos: ProductoFabricado[],
+    insumos: Insumo[],
+    terceros: Tercero[]
+) => {
+    const doc = new jsPDF();
+    const logoBase64 = await loadLogoBase64();
+
+    for (let i = 0; i < seleccionados.length; i++) {
+        if (i > 0) doc.addPage();
+        const producto = seleccionados[i];
+        
+        addLogoToDoc(doc, logoBase64);
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("FICHA TÉCNICA - BOM", 52, 22);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Producto: ${producto.nombre}`, 52, 32);
+        doc.text(`SKU: ${producto.sku ?? "N/A"}`, 52, 38);
+
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Detalle de Insumos (Explosión Total)", 14, 60);
+
+        const explosion = explotarBOM(producto, productos, insumos, terceros);
+        const consolidado = consolidarInsumos(explosion);
+        const productTotalCost = consolidado.reduce((acc, curr) => acc + (curr.costoTotal || 0), 0);
+
+        doc.setFontSize(10);
+        doc.setTextColor(20, 100, 50);
+        doc.text(`Costo Total Estimado: $${productTotalCost.toLocaleString("es-CO", { minimumFractionDigits: 0 })}`, 14, 66);
+
+        const tableBody = consolidado.map((ins, idx) => [
+            (idx + 1).toString(),
+            ins.nombre,
+            ins.sku,
+            ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+            ins.unidad,
+            `$${(ins.precioUnitarioBase||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+            `$${(ins.costoTotal||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+        ]);
+
+        autoTable(doc, {
+            startY: 72,
+            head: [["No.", "Insumo", "SKU", "Cant.", "Unid.", "C. Unitario", "C. Total"]],
+            body: tableBody,
+            theme: "grid",
+            headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: "bold" },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                0: { cellWidth: 8 },
+                3: { halign: "right", fontStyle: "bold" },
+                4: { halign: "center" },
+                5: { halign: "right" },
+                6: { halign: "right", fontStyle: "bold" }
+            }
+        });
+    }
+
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(24, 60, 48);
+        doc.rect(0, 285, 210, 15, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text(`FICHA TÉCNICA CONSOLIDADA - ${format(new Date(), "dd/MM/yyyy")}`, 14, 292);
+        doc.text(`Página ${i} de ${pageCount}`, 180, 292);
+    }
+
+    doc.save(`Consolidado_BOM_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
+}

@@ -9,7 +9,7 @@ import {
     DollarSign, Copy, Filter, Search, FileDown, Layers
 } from "lucide-react";
 import { ProductoFabricado, Insumo, Tercero } from "@/hooks/useCompras";
-import { exportarBOMPDF, descargarZIPBOMs } from "../utils/pdfExport";
+import { exportarBOMPDF, descargarZIPBOMs, exportarConsolidadoBOMExcel, exportarConsolidadoBOMPDF } from "../utils/pdfExport";
 import { toast } from "sonner";
 
 /**
@@ -200,15 +200,27 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                     <p className="text-xs text-gray-400 mt-0.5">{productos.length} productos · {globalStats.completos} con ficha técnica</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="h-9 border-teal-200 text-teal-700 hover:bg-teal-50"
+                        disabled={isDownloading || productos.length === 0}
+                        onClick={async () => {
+                            setIsDownloading(true);
+                            exportarConsolidadoBOMExcel(productos, productos, insumos, terceros);
+                            setIsDownloading(false);
+                            toast.success("Excel Consolidado generado");
+                        }}>
+                        <FileDown className="w-4 h-4 mr-2" />
+                        Consolidado Excel
+                    </Button>
                     <Button variant="outline" size="sm" className="h-9 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50"
                         disabled={isDownloading || productos.length === 0}
                         onClick={async () => {
                             setIsDownloading(true);
-                            await descargarZIPBOMs(productos, productos, insumos);
+                            await exportarConsolidadoBOMPDF(productos, productos, insumos, terceros);
                             setIsDownloading(false);
+                            toast.success("PDF Consolidado generado");
                         }}>
                         <FileDown className="w-4 h-4 mr-2" />
-                        {isDownloading ? "Generando..." : "Bajar Todos (ZIP)"}
+                        Consolidado PDF
                     </Button>
                     <Dialog open={isProductoDialogOpen} onOpenChange={setIsProductoDialogOpen}>
                         <DialogTrigger asChild>
