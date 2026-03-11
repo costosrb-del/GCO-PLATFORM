@@ -11,8 +11,26 @@ import html2canvas from "html2canvas";
 import axios from "axios";
 import { API_URL } from "@/lib/config";
 
-// Mapa de nombres comunes (Fallback)
-const DEFAULT_PRODUCT_NAMES: Record<string, string> = {};
+const DEFAULT_PRODUCT_NAMES: Record<string, string> = {
+    "3001": "COMBO ROSADO RITUAL DE SEDUCCIÓN",
+    "3005": "DUO PERFUME TERMOPROTECTOR",
+    "3012": "DÚO PERFUMES MINI",
+    "7007": "SHAMPOO DE CEBOLLA SOS",
+    "7008": "SHAMPOO DE ROMERO CONTROL GRASA",
+    "7009": "SHAMPOO DE AJI CONTROL CASPA",
+    "7101": "MANTEQUILLA PERFUMADA",
+    "7210": "TRATAMIENTO INTENSIVO PLEX",
+    "7299": "MASCARILLA BOMBA BOTANICA SOS",
+    "7416": "BRONCEADOR RITUAL DE SOL",
+    "EVO-7701": "KIT EVOLUCION DE LA KERATINA 1000ML",
+    "EVO-7702": "KIT EVOLUCIÓN DE LA KERATINA 250 ML",
+    "EVO-7703": "KIT EVOLUCIÓN DE LA KERATINA 120 ML",
+    "7901": "PERFUME TERMOPROTECTOR ROSADO",
+    "7957": "PERFUME TERMOPROTECTOR AZUL",
+    "3033": "COMBO ULTRA REPARADOR CEBOLLA",
+    "3045": "COMBO CONTROL GRASA",
+    "3055": "COMBO CONTROL CASPA"
+};
 
 const COMPANIES = [
     "ARMONIA COSMETICA S.A.S.",
@@ -103,7 +121,7 @@ export default function CierreActasPage() {
 
             setItems(prev => prev.map(item => ({
                 ...item,
-                name: realNamesMap[item.sku] || item.name
+                name: DEFAULT_PRODUCT_NAMES[item.sku] || realNamesMap[item.sku] || item.name
             })));
         }
     }, [inventoryData]);
