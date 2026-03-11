@@ -278,6 +278,19 @@ export default function CierreActasPage() {
                 }
             `}} />
 
+            {/* Loading Overlay */}
+            {isSaving && (
+                <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
+                        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                        <div className="text-center">
+                            <h3 className="font-bold text-gray-800 text-lg">Guardando Documento...</h3>
+                            <p className="text-sm text-gray-500">Por favor, no cierres esta ventana.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {viewMode === "form" ? (
                 <div className="max-w-7xl mx-auto space-y-6">
                     <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
