@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, useEffect } from "react";
-import { FileText, Printer, Save, CheckCircle2, AlertTriangle, ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
+import { FileText, Printer, Save, CheckCircle2, AlertTriangle, ArrowLeft, FileDown, FileSpreadsheet, History, LayoutGrid, Calendar, Download } from "lucide-react";
 import { toast } from "sonner";
 import { SALES_CODES } from "@/lib/constants";
 import { useInventory } from "@/hooks/useInventory";
@@ -88,6 +88,7 @@ export default function CierreActasPage() {
     const { data: inventoryData } = useInventory();
 
     const [viewMode, setViewMode] = useState<"form" | "document">("form");
+    const [viewTab, setViewTab] = useState<"create" | "drafts" | "history">("create");
 
     // Acta Metadata
     const [companiesList, setCompaniesList] = useState<string[]>(COMPANIES);
@@ -129,7 +130,6 @@ export default function CierreActasPage() {
     // Sincronizar nombres base de datos y empresas conectadas
     useEffect(() => {
         if (inventoryData && inventoryData.length > 0) {
-            // Actualizar lista de empresas a las detectadas por APIs reales
             const uniqueCompanies = Array.from(
                 new Set(inventoryData.map((d: any) => d.company || d.company_name))
             ).filter(Boolean) as string[];
@@ -137,11 +137,10 @@ export default function CierreActasPage() {
             if (uniqueCompanies.length > 0) {
                 setCompaniesList(uniqueCompanies.sort());
                 if (!uniqueCompanies.includes(company)) {
-                    setCompany(uniqueCompanies[0]); // Seleccionar una válida si la actual no existe en APIs
+                    setCompany(uniqueCompanies[0]);
                 }
             }
 
-            // Actualizar el mapeo de nombres a los reales que trae SIIGO u otras APIS.
             const realNamesMap: Record<string, string> = {};
             inventoryData.forEach((d: any) => {
                 if (d.code && d.name) {
@@ -149,9 +148,9 @@ export default function CierreActasPage() {
                 }
             });
 
-            setItems(prev => prev.map(item => ({
+            setItems(prevItems => prevItems.map(item => ({
                 ...item,
-                name: DEFAULT_PRODUCT_NAMES[item.sku] || realNamesMap[item.sku] || item.name
+                name: realNamesMap[item.sku] || item.name
             })));
         }
     }, [inventoryData]);
@@ -159,16 +158,12 @@ export default function CierreActasPage() {
     const fetchActas = async () => {
         setIsLoadingHistory(true);
         try {
-            const token = localStorage.getItem("gco_token");
-            if (!token) return;
-            const res = await axios.get(`${API_URL}/inventory/actas`, {
-                headers: { Authorization: `Bearer ${token}` }
+            const response = await axios.get(`${API_URL}/inventory/actas`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("gco_token")}` }
             });
-            if (res.data?.status === "success") {
-                setSavedActas(res.data.data || []);
-            }
+            setSavedActas(response.data || []);
         } catch (error) {
-            console.error("Error al cargar historial", error);
+            console.error("Error fetching actas:", error);
         } finally {
             setIsLoadingHistory(false);
         }
@@ -179,1092 +174,505 @@ export default function CierreActasPage() {
     }, []);
 
     const handleLoadActa = (acta: any) => {
-        const d = acta.data;
+        if (!acta || !acta.data) return;
         setActaId(acta.id);
         setStatus(acta.status || "draft");
-        setCompany(d.company);
-        setConsecutivo(d.consecutivo || "");
-        setFecha(d.fecha || new Date().toISOString().split('T')[0]);
-        setPeriodo(d.periodo);
-        setObservaciones(d.observaciones || "");
-        
-        if (d.items) {
-            setItems(prev => prev.map(baseItem => {
-                const savedItem = d.items.find((si: any) => si.sku === baseItem.sku);
-                if (savedItem) {
-                    return {
-                        ...baseItem,
-                        physical: savedItem.physical ?? '',
-                        physicalFree: savedItem.physicalFree ?? '',
-                        bPrincipal: savedItem.bPrincipal ?? '',
-                        bAverias: savedItem.bAverias ?? '',
-                        bComercExt: savedItem.bComercExt ?? '',
-                        bLibre: savedItem.bLibre ?? '',
-                        bTransito: savedItem.bTransito ?? '',
-                        bPerdida: savedItem.bPerdida ?? '',
-                        bDos: savedItem.bDos ?? '',
-                        justificacion: savedItem.justificacion ?? '',
-                        unitPrice: savedItem.unitPrice ?? '',
-                        systemFree: savedItem.systemFree ?? ''
-                    };
-                }
-                return baseItem;
-            }));
+        setCompany(acta.data.company);
+        setConsecutivo(acta.data.consecutivo);
+        setFecha(acta.data.fecha);
+        setPeriodo(acta.data.periodo);
+        setObservaciones(acta.data.observaciones || "");
+        setItems(acta.data.items || []);
+        setViewTab("create");
+        toast.success(`Acta ${acta.id} cargada correctamente`);
+    };
+
+    const handleNewActa = () => {
+        setActaId(null);
+        setStatus("draft");
+        setObservaciones("");
+        setItems(SALES_CODES.map(sku => ({
+            sku,
+            name: DEFAULT_PRODUCT_NAMES[sku] || `Producto ${sku}`,
+            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', justificacion: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
+        })));
+        // Reset name with inventory data if available
+        if (inventoryData) {
+            const realNamesMap: Record<string, string> = {};
+            inventoryData.forEach((d: any) => { if (d.code && d.name) realNamesMap[d.code] = d.name; });
+            setItems(prev => prev.map(i => ({ ...i, name: realNamesMap[i.sku] || i.name })));
         }
-        toast.info(`Acta cargada: ${acta.status === 'draft' ? 'Borrador' : 'Cerrada'}`);
+        setViewTab("create");
+        toast.info("Formulario limpiado para nueva acta");
     };
 
-    // Document Print logic
-    const handlePrint = () => {
-        window.print();
+    const updateItem = (index: number, field: keyof ActaItem, value: any) => {
+        const newItems = [...items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setItems(newItems);
     };
 
-    const handleGenerate = () => {
-        setViewMode("document");
-        toast.success("Acta generada. Lista para imprimir o guardar.");
-    };
+    const processedItems = useMemo(() => {
+        return items.map(i => {
+            const s_base = (Number(i.bPrincipal) || 0) + (Number(i.bAverias) || 0) + (Number(i.bComercExt) || 0) + (Number(i.bLibre) || 0);
+            const s_free = Number(i.systemFree) || 0;
+            const p_base = Number(i.physical) || 0;
+            const p_free = Number(i.physicalFree) || 0;
+            
+            return {
+                ...i,
+                s: s_base,
+                s_free: s_free,
+                s_total: s_base + s_free,
+                p: p_base,
+                p_free: p_free,
+                p_total: p_base + p_free,
+                diff: (p_base + p_free) - (s_base + s_free),
+                bTr: Number(i.bTransito) || 0,
+                bPer: Number(i.bPerdida) || 0,
+                bD: Number(i.bDos) || 0
+            };
+        });
+    }, [items]);
 
-    const printRef = useRef<HTMLDivElement>(null);
+    const totalUnidadesSistema = useMemo(() => processedItems.reduce((sum, i) => sum + i.s_total, 0), [processedItems]);
+    const totalUnidadesFisicas = useMemo(() => processedItems.reduce((sum, i) => sum + i.p_total, 0), [processedItems]);
+    const totalUnidadesDiferencia = useMemo(() => processedItems.reduce((sum, i) => sum + Math.abs(i.diff), 0), [processedItems]);
+    const refConDiferencias = useMemo(() => processedItems.filter(i => (i.physical !== '' || i.physicalFree !== '') && i.diff !== 0).length, [processedItems]);
+    const totalReferencias = useMemo(() => processedItems.filter(i => (i.physical !== '' || i.physicalFree !== '') || i.s_total > 0).length, [processedItems]);
+
+    const itemsWithDifferences = useMemo(() => processedItems.filter(i => (i.physical !== '' || i.physicalFree !== '') && i.diff !== 0), [processedItems]);
+    const itemsFaltantes = useMemo(() => itemsWithDifferences.filter(i => i.diff < 0), [itemsWithDifferences]);
+    const itemsSobrantes = useMemo(() => itemsWithDifferences.filter(i => i.diff > 0), [itemsWithDifferences]);
+    const displayComparisonItems = useMemo(() => itemsWithDifferences.concat(processedItems.filter(i => i.diff === 0 && i.s_total > 0)).slice(0, 100), [itemsWithDifferences, processedItems]);
+
+    const exactitud = useMemo(() => totalReferencias > 0 ? ((totalReferencias - refConDiferencias) / totalReferencias) * 100 : 100, [totalReferencias, refConDiferencias]);
+    const exactitudUnidades = useMemo(() => totalUnidadesSistema > 0 ? (1 - (totalUnidadesDiferencia / totalUnidadesSistema)) * 100 : 100, [totalUnidadesSistema, totalUnidadesDiferencia]);
+
+    const totalDeudaEmpaques = useMemo(() => 
+        itemsFaltantes.reduce((sum, i) => sum + (Math.abs(i.diff) * (Number(i.unitPrice) || 0)), 0), 
+    [itemsFaltantes]);
+
     const [isSaving, setIsSaving] = useState(false);
-
-    const handleDownloadExcel = () => {
-        const rows = processedItems.map(item => ({
-            "Referencia": `${item.sku} - ${item.name}`,
-            "Sistema (Und)": item.s,
-            "Físico (Und)": item.p,
-            "Diferencia": item.diff,
-            "Estado": item.diff < 0 ? "Faltante" : item.diff > 0 ? "Sobrante" : "OK",
-            "Costo Restado (Faltantes)": item.diff < 0 ? (Math.abs(item.diff) * (Number(item.unitPrice) || 0)) : 0
-        }));
-
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(rows);
-        XLSX.utils.book_append_sheet(wb, ws, "Diferencias");
-        XLSX.writeFile(wb, `Inventario_${company}_${fecha.replace(/-/g, "")}.xlsx`);
-        toast.success("Excel descargado correctamente.");
-    };
-
-    const handleSaveActa = async (newStatus: "draft" | "final" = "draft") => {
+    const handleSaveActa = async (newStatus: "draft" | "final") => {
         setIsSaving(true);
         try {
-            const token = localStorage.getItem("gco_token");
-            if (!token) throw new Error("No hay token de sesión");
-
             const payload = {
-                id: actaId, // Si existe, el backend actualiza. Si no, crea.
+                id: actaId || `acta-${Date.now()}`,
                 status: newStatus,
-                company, consecutivo, fecha, periodo, observaciones,
-                items: processedItems,
-                resumen: { totalReferencias, refConDiferencias, exactitud, totalUnidadesSistema, totalUnidadesDiferencia, exactitudUnidades }
+                date: new Date().toISOString(),
+                data: { company, consecutivo, fecha, periodo, observaciones, items }
             };
-
-            const res = await axios.post(`${API_URL}/inventory/actas`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
+            await axios.post(`${API_URL}/inventory/actas`, payload, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("gco_token")}` }
             });
-            if (res.data?.status === "success") {
-                setActaId(res.data.acta_id);
-                setStatus(newStatus);
-                toast.success(newStatus === "final" ? "Acta CERRADA Y FIRMADA correctamente" : "Borrador guardado correctamente");
-                fetchActas(); // Refrescar lista
-            }
-        } catch (error: any) {
-            console.error("Error al guardar", error);
-            toast.error(error.message || "Error al guardar el acta");
+            setStatus(newStatus);
+            setActaId(payload.id);
+            toast.success(newStatus === 'final' ? "Acta cerrada y firmada correctamente" : "Borrador guardado");
+            fetchActas();
+        } catch (error) {
+            toast.error("Error al guardar acta");
         } finally {
             setIsSaving(false);
         }
     };
 
+    const handleGenerate = () => setViewMode("document");
+    const [isPrinting, setIsPrinting] = useState(false);
+    const printRef = useRef<HTMLDivElement>(null);
+
+    const handlePrint = () => window.print();
+
     const handleDownloadPDF = async () => {
         if (!printRef.current) return;
-        toast.info("Generando PDF (esto puede tomar unos segundos)...", { id: "pdf_wait" });
+        setIsPrinting(true);
+        const toastId = toast.loading("Generando PDF profesional...");
+
         try {
-            const canvas = await html2canvas(printRef.current, { 
-                scale: 2, 
+            const canvas = await html2canvas(printRef.current, {
+                scale: 1.5,
                 useCORS: true,
                 logging: false,
-                windowWidth: 1024 // Fijamos ancho para consistencia
+                backgroundColor: "#ffffff",
+                windowWidth: 800
             });
+
             const imgData = canvas.toDataURL("image/png");
-
-            // Tamaño Carta: 215.9 x 279.4 mm
-            const pdf = new jsPDF("p", "mm", "letter");
-            const pageWidth = 215.9;
-            const pageHeight = 279.4;
-            const pdfMargin = 12; // Margen estético en el PDF
+            const pdf = new jsPDF("p", "mm", "a4");
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
             
-            const contentWidth = pageWidth - (pdfMargin * 2);
-            const imgWidth = contentWidth;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const renderWidth = imgWidth * ratio;
+            const renderHeight = imgHeight * ratio;
             
-            let heightLeft = imgHeight;
-            let position = 0; 
-            let pageCount = 1;
+            const marginX = (pdfWidth - renderWidth) / 2;
+            const marginY = 15; // Un margen superior decente
 
-            // Primera página
-            pdf.addImage(imgData, "PNG", pdfMargin, pdfMargin, imgWidth, imgHeight);
-            heightLeft -= (pageHeight - pdfMargin * 2);
+            // Si es más largo que una página
+            if (renderHeight > (pdfHeight - 20)) {
+                let heightLeft = renderHeight;
+                let position = marginY;
+                let page = 1;
 
-            // Páginas adicionales con lógica de desplazamiento
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight + pdfMargin;
-                pdf.addPage();
-                pdf.addImage(imgData, "PNG", pdfMargin, position, imgWidth, imgHeight);
-                heightLeft -= (pageHeight - pdfMargin * 2);
-                pageCount++;
+                while (heightLeft > 0) {
+                    pdf.addImage(imgData, 'PNG', marginX, position, renderWidth, renderHeight);
+                    heightLeft -= (pdfHeight - 10);
+                    position -= (pdfHeight - 10);
+                    if (heightLeft > 0) {
+                        pdf.addPage();
+                        page++;
+                    }
+                }
+            } else {
+                pdf.addImage(imgData, 'PNG', marginX, marginY, renderWidth, renderHeight);
             }
 
-            pdf.save(`Acta_Inventario_${company}_${fecha.replace(/-/g, "")}.pdf`);
-            toast.success(`PDF de ${pageCount} páginas generado correctamente`, { id: "pdf_wait" });
-        } catch (err) {
-            console.error(err);
-            toast.error("Error al generar el PDF", { id: "pdf_wait" });
+            pdf.save(`Acta_Inventario_${company.split(' ')[0]}_${periodo.replace(' ', '_')}.pdf`);
+            toast.success("PDF generado correctamente", { id: toastId });
+        } catch (error) {
+            console.error("PDF Error:", error);
+            toast.error("Error al generar PDF", { id: toastId });
+        } finally {
+            setIsPrinting(false);
         }
     };
 
-    // Cálculos Derivados
-    const processedItems = useMemo(() => {
-        return items.map(item => {
-            const p_base = Number(item.physical) || 0;
-            const p_free = Number(item.physicalFree) || 0;
-            const p_total = p_base + p_free;
+    const handleDownloadExcel = () => {
+        const data = processedItems.filter(i => i.s_total > 0 || i.p_total > 0).map(i => ({
+            "SKU": i.sku,
+            "Producto": i.name,
+            "Físico Base": i.p,
+            "Libres F": i.p_free,
+            "Total Físico": i.p_total,
+            "Principal (S)": i.bPrincipal,
+            "Averías (S)": i.bAverias,
+            "Comercial (S)": i.bComercExt,
+            "Libre (S)": i.bLibre,
+            "Libres Sheets": i.s_free,
+            "Total Sistema": i.s_total,
+            "Diferencia": i.diff,
+            "Tránsito": i.bTr,
+            "Pérdida": i.bPer,
+            "Bodega 2": i.bD,
+            "Justificación": i.justificacion
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+        XLSX.writeFile(wb, `Inventario_${company}_${periodo}.xlsx`);
+    };
 
-            const bPrin = Number(item.bPrincipal) || 0;
-            const bAv = Number(item.bAverias) || 0;
-            const bCom = Number(item.bComercExt) || 0;
-            const bLib = Number(item.bLibre) || 0;
-            const s_free = Number(item.systemFree) || 0;
-            
-            const computedSystem = bPrin + bAv + bCom + bLib;
-            const s_total = computedSystem + s_free;
-
-            const diff = p_total - s_total;
-            return {
-                ...item,
-                p: p_base,
-                p_free,
-                p_total,
-                s: computedSystem,
-                s_free,
-                s_total,
-                diff,
-                bPrin, bAv, bCom, bLib,
-                bTr: Number(item.bTransito) || 0,
-                bPer: Number(item.bPerdida) || 0,
-                bD: Number(item.bDos) || 0
-            };
-        });
-    }, [items]);
-
-    const itemsWithDifferences = processedItems.filter(i => i.diff !== 0);
-    // Para la tabla de comparación (Sección 2), si no hay diferencias, mostramos los primeros 10 para que la tabla no desaparezca
-    const displayComparisonItems = itemsWithDifferences.length > 0 ? itemsWithDifferences : processedItems.slice(0, 15);
-    const itemsFaltantes = processedItems.filter(i => i.diff < 0); // Faltantes (Cobrar a logística / responsable)
-    const itemsSobrantes = processedItems.filter(i => i.diff > 0); // Sobrantes (Enviar a bodega de custodia)
-
-    const totalReferencias = processedItems.length;
-    const refConDiferencias = itemsWithDifferences.length;
-    const exactitud = totalReferencias > 0 ? ((totalReferencias - refConDiferencias) / totalReferencias) * 100 : 0;
-
-    const totalUnidadesSistema = processedItems.reduce((sum, item) => sum + item.s_total, 0);
-    const totalUnidadesDiferencia = processedItems.reduce((sum, item) => sum + Math.abs(item.diff), 0);
-    const exactitudUnidades = totalUnidadesSistema > 0 ? ((totalUnidadesSistema - totalUnidadesDiferencia) / totalUnidadesSistema) * 100 : 0;
-
-    const totalDeudaEmpaques = itemsFaltantes.reduce((sum, item) => sum + (Math.abs(item.diff) * (Number(item.unitPrice) || 0)), 0);
+    const printRefContent = useRef<HTMLDivElement>(null);
 
     return (
-        <div className="p-2 sm:p-6 bg-gray-50 min-h-screen">
-            <style dangerouslySetInnerHTML={{
-                __html: `
+        <div className="min-h-screen bg-[#F8FAFC] pb-20 pt-10">
+            <style jsx global>{`
                 @media print {
-                    @page { size: portrait; margin: 0; }
-                    body { margin: 0; padding: 0; }
-                    body * { visibility: hidden; }
-                    .print-section, .print-section * { visibility: visible; }
-                    .print-section { 
-                        position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; 
-                        padding: 15mm 20mm; box-sizing: border-box; 
-                        font-size: 11px; background: white; color: black; 
-                        line-height: 1.5;
-                    }
                     .no-print { display: none !important; }
-                    aside, header, nav, .sidebar-class { display: none !important; }
-                    table { page-break-inside: auto; border-collapse: collapse; width: 100%; margin-bottom: 15px; }
-                    tr { page-break-inside: avoid; page-break-after: auto; }
-                    th, td { border: 1px solid #000; padding: 6px; font-size: 9px; line-height: 1.2; }
-                    h1, h2, h3, h4 { page-break-after: avoid; color: #183C30 !important; }
-                    .watermark { 
-                        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-                        font-size: 70px; color: rgba(0,0,0,0.04); font-weight: 900; pointer-events: none;
-                        z-index: -1; white-space: nowrap; text-transform: uppercase; border: 8px solid rgba(0,0,0,0.04);
-                        padding: 20px; border-radius: 20px;
+                    body { background: white !important; padding: 0 !important; margin: 0 !important; }
+                    .print-section { 
+                        box-shadow: none !important; 
+                        border: none !important; 
+                        padding: 20mm !important;
+                        width: 100% !important;
                     }
-                    .finalized-lock { opacity: 1; pointer-events: none; }
                 }
-
-                .status-badge { 
-                    position: absolute; top: 25px; right: 25px; padding: 6px 14px; border-radius: 99px;
-                    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
-                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); z-index: 10;
+                .watermark {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) rotate(-45deg);
+                    font-size: 15rem;
+                    font-weight: 900;
+                    color: rgba(0,0,0,0.03);
+                    pointer-events: none;
+                    z-index: 0;
+                    white-space: nowrap;
+                    text-transform: uppercase;
                 }
-                .status-draft { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
-                .status-final { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
-                
-                .watermark { 
-                    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-                    font-size: 80px; color: rgba(0,0,0,0.06); font-weight: 900; pointer-events: none;
-                    z-index: 0; white-space: nowrap; text-transform: uppercase; border: 12px solid rgba(0,0,0,0.06);
-                    padding: 30px; border-radius: 30px; line-height: 1;
+                .status-badge {
+                    position: absolute;
+                    top: 2rem;
+                    right: 2rem;
+                    padding: 0.5rem 1rem;
+                    border-radius: 9999px;
+                    font-size: 0.75rem;
+                    font-weight: 900;
+                    letter-spacing: 0.05em;
+                    z-index: 10;
                 }
-                .finalized-lock { opacity: 1; pointer-events: none; }
-            `}} />
-
-            {/* Loading Overlay */}
-            {isSaving && (
-                <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                    <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
-                        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                        <div className="text-center">
-                            <h3 className="font-bold text-gray-800 text-lg">Guardando Documento...</h3>
-                            <p className="text-sm text-gray-500">Por favor, no cierres esta ventana.</p>
-                        </div>
-                    </div>
-                </div>
-            )}
+                .status-draft { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+                .status-final { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
+            `}</style>
 
             {viewMode === "form" ? (
                 <div className="max-w-7xl mx-auto space-y-6">
-                    <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-4">
-                            <div>
-                                <h1 className="text-2xl font-bold text-[#183C30] flex items-center gap-2">
-                                    <FileText className="h-6 w-6" />
-                                    Generador de Actas de Cierre
-                                </h1>
-                                <p className="text-sm text-gray-500 mt-1">Ingresa el conteo físico y el saldo del sistema para generar el documento formal.</p>
-                            </div>
-                            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status === 'draft' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-green-100 text-green-700 border border-green-200'}`}>
-                                {status === 'draft' ? 'Borrador' : 'Cerrada y Firmada'}
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            {status === "draft" && (
-                                <button
-                                    onClick={() => handleSaveActa("draft")}
-                                    disabled={isSaving}
-                                    className="bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
-                                >
-                                    <Save className="h-5 w-5" />
-                                    Guardar Borrador
-                                </button>
-                            )}
-                            <button
-                                onClick={handleGenerate}
-                                className="bg-[#183C30] text-white px-6 py-2.5 rounded-xl font-medium hover:bg-[#122e24] transition-all flex items-center gap-2 shadow-sm"
-                            >
-                                <FileText className="h-5 w-5" />
-                                Previsualizar Acta
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className={`space-y-6 ${status === 'final' ? 'pointer-events-none opacity-75 grayscale-[0.5]' : ''}`}>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Configuración */}
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                            <h3 className="font-bold text-gray-800 border-b pb-2">Datos del Acta</h3>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Empresa</label>
-                                    <select
-                                        value={company}
-                                        onChange={(e) => setCompany(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20"
-                                    >
-                                        {companiesList.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Consecutivo</label>
-                                    <input
-                                        type="text"
-                                        value={consecutivo}
-                                        onChange={(e) => setConsecutivo(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Período de Cierre</label>
-                                    <select
-                                        value={periodo}
-                                        onChange={(e) => setPeriodo(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20"
-                                    >
-                                        {AVAILABLE_PERIODS.map(p => <option key={p} value={p}>{p}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Fecha Elaboración</label>
-                                    <input
-                                        type="date"
-                                        value={fecha}
-                                        onChange={(e) => setFecha(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20"
-                                    />
-                                </div>
-                                <div className="col-span-2 space-y-1 mt-2">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Observaciones Relevantes del Inventario</label>
-                                    <textarea
-                                        value={observaciones}
-                                        onChange={(e) => setObservaciones(e.target.value)}
-                                        placeholder="Ej: La mercancía de la estiba X estaba mojada. Hay 3 cajas rotas de producto 7001..."
-                                        className="w-full border border-gray-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20 min-h-[80px]"
-                                    ></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Indicadores en Vivo */}
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                            <h3 className="font-bold text-gray-800 border-b pb-2">Previsualización de Indicadores</h3>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                                    <p className="text-xs font-medium text-indigo-500 uppercase">Total Conteo Físico</p>
-                                    <div className="flex items-end gap-2 mt-1">
-                                        <h3 className="text-2xl font-bold text-indigo-700">{processedItems.reduce((sum,i) => sum + i.p_total, 0)}</h3>
-                                        <span className="text-xs font-medium text-indigo-400 mb-1">und</span>
-                                    </div>
-                                </div>
-                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 font-bold">
-                                    <p className="text-xs font-medium text-orange-500 uppercase">Total Saldo Sistema</p>
-                                    <div className="flex items-end gap-2 mt-1">
-                                        <h3 className="text-2xl font-bold text-orange-700">{processedItems.reduce((sum, i) => sum + i.s_total, 0)}</h3>
-                                        <span className="text-xs font-medium text-orange-400 mb-1">und</span>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-medium text-gray-500 uppercase">Refs. con Diferencia</p>
-                                    <div className="flex items-end gap-2 mt-1">
-                                        <h3 className="text-2xl font-bold text-yellow-600">{refConDiferencias}</h3>
-                                        <span className="text-xs font-medium text-gray-400 mb-1">/ {totalReferencias} ref</span>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-medium text-gray-500 uppercase">Unidades Diferencia Bruta</p>
-                                    <div className="flex items-end gap-2 mt-1">
-                                        <h3 className="text-2xl font-bold text-red-500">{totalUnidadesDiferencia}</h3>
-                                        <span className="text-xs font-medium text-gray-400 mb-1">und gen.</span>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-medium text-gray-500 uppercase">Exactitud Esperada</p>
-                                    <div className="flex items-end gap-2 mt-1">
-                                        <h3 className={`text-2xl font-bold ${exactitud === 100 ? 'text-green-600' : 'text-orange-500'}`}>
-                                            {exactitud.toFixed(1)}%
-                                        </h3>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-medium text-gray-500 uppercase">Exactitud Unds</p>
-                                    <div className="flex items-end gap-2 mt-1">
-                                        <h3 className={`text-2xl font-bold ${exactitudUnidades === 100 ? 'text-green-600' : 'text-orange-500'}`}>
-                                            {exactitudUnidades.toFixed(1)}%
-                                        </h3>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Historial de Borradores */}
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                            <h3 className="font-bold text-gray-800 border-b pb-2 mb-4 flex items-center gap-2">
-                                <Save className="h-4 w-4 text-amber-500" />
-                                Borradores y Actas Recientes
-                            </h3>
+                    <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                            <h1 className="text-xl font-bold text-[#183C30] flex items-center gap-2">
+                                <FileText className="h-6 w-6" />
+                                Gestión de Actas
+                            </h1>
                             
-                            <div className="flex-1 overflow-y-auto max-h-[180px] space-y-2 pr-2">
-                                {isLoadingHistory ? (
-                                    <div className="text-center py-4 text-gray-400 text-sm italic">Cargando historial...</div>
-                                ) : savedActas.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-400 text-xs italic">No hay actas guardadas recientemente</div>
-                                ) : (
-                                    savedActas.slice().reverse().map((acta) => (
-                                        <button
-                                            key={acta.id}
-                                            onClick={() => handleLoadActa(acta)}
-                                            className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50 transition-all group flex justify-between items-center"
-                                        >
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`w-2 h-2 rounded-full ${acta.status === 'draft' ? 'bg-amber-400' : 'bg-green-500'}`} title={acta.status === 'draft' ? 'Borrador' : 'Cerrada'}></span>
-                                                    <p className="text-xs font-bold text-gray-800 truncate">{acta.data?.company}</p>
-                                                </div>
-                                                <p className="text-[10px] text-gray-500 mt-0.5">{acta.data?.periodo} - {new Date(acta.date).toLocaleDateString()}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-[10px] font-bold text-amber-600 uppercase">Cargar</span>
-                                                <CheckCircle2 className="h-4 w-4 text-amber-500" />
-                                            </div>
-                                        </button>
-                                    ))
-                                )}
+                            <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+                                <button onClick={() => setViewTab("create")} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewTab === 'create' ? 'bg-white shadow-sm text-[#183C30]' : 'text-gray-500 hover:text-gray-700'}`}>CREAR ACTA</button>
+                                <button onClick={() => setViewTab("drafts")} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewTab === 'drafts' ? 'bg-white shadow-sm text-amber-600' : 'text-gray-500 hover:text-gray-700'}`}>BORRADORES</button>
+                                <button onClick={() => setViewTab("history")} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewTab === 'history' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>HISTORIAL</button>
                             </div>
-                            {savedActas.length > 0 && (
-                                <p className="text-[10px] text-gray-400 mt-3 text-center italic">Haz clic en un acta para cargar sus datos y continuar.</p>
+
+                            <button onClick={handleNewActa} className="p-2 hover:bg-gray-100 rounded-full transition-all text-gray-400 hover:text-red-500 shrink-0" title="Limpiar Formulario"><ArrowLeft className="h-5 w-5 rotate-45" /></button>
+                        </div>
+
+                        <div className="flex gap-2 w-full md:w-auto justify-end">
+                            {viewTab === 'create' && (
+                                <>
+                                    {status === "draft" && (
+                                        <button onClick={() => handleSaveActa("draft")} disabled={isSaving} className="bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm text-sm"><Save className="h-4 w-4" />Guardar Borrador</button>
+                                    )}
+                                    <button onClick={handleGenerate} className="bg-[#183C30] text-white px-6 py-2.5 rounded-xl font-medium hover:bg-[#122e24] transition-all flex items-center gap-2 shadow-sm text-sm"><FileText className="h-4 w-4" />Previsualizar</button>
+                                </>
                             )}
                         </div>
                     </div>
 
-                    {/* Tabla de Captura */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                            <h3 className="font-bold text-gray-800">Conteo vs Sistema</h3>
-                            <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
-                                {totalReferencias} Referencias de Venta
-                            </span>
-                        </div>
-                        <div className="overflow-x-auto max-h-[600px]">
-                            <table className="w-full text-sm text-left relative">
-                                <thead className="text-xs text-gray-500 uppercase bg-gray-100 sticky top-0 z-10 shadow-sm">
-                                    <tr>
-                                        <th className="px-6 py-4 font-semibold">SKU</th>
-                                        <th className="px-6 py-4 font-semibold min-w-[200px]">Nombre del Producto</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-24 border-x border-gray-200 bg-blue-50/50">C. Central</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-24 border-r border-gray-200 bg-blue-50/50">U. Libres (F)</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega Principal">B. Principal</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega de Averías">B. Averías</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega Comercio Exterior">B. C.Ext.</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px] bg-orange-50/10" title="Bodega Libre de Siigo">B. Libre (S)</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-24 border-l border-gray-200 bg-orange-100/30">Libres (Sheets)</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-28 border-x border-gray-200 bg-orange-100/50" title="Suma de Bodegas y Libres Sheets">Total Sistema</th>
-                                        <th className="px-3 py-4 font-semibold text-center">Dif. Real</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-28">P. Unit.</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {items.map((item, idx) => {
-                                        const p_base = Number(item.physical) || 0;
-                                        const p_free = Number(item.physicalFree) || 0;
-                                        const p_total = p_base + p_free;
-
-                                        const s_base = (Number(item.bPrincipal) || 0) + (Number(item.bAverias) || 0) + (Number(item.bComercExt) || 0) + (Number(item.bLibre) || 0);
-                                        const s_free = (Number(item.systemFree) || 0);
-                                        const s_total = s_base + s_free;
-
-                                        const diff = p_total - s_total;
-                                        const hasSystemValue = item.bPrincipal !== '' || item.bAverias !== '' || item.bComercExt !== '' || item.bLibre !== '' || item.systemFree !== '';
-                                        const hasDiff = (item.physical !== '' || item.physicalFree !== '') && hasSystemValue && diff !== 0;
-                                        const isFaltante = diff < 0;
-
-                                        return (
-                                            <tr key={item.sku} className="hover:bg-gray-50 focus-within:bg-green-50/20 transition-colors">
-                                                <td className="px-6 py-3 font-mono text-gray-500">{item.sku}</td>
-                                                <td className="px-6 py-3 font-medium text-gray-800">
-                                                    <input
-                                                        type="text"
-                                                        value={item.name}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].name = e.target.value;
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#183C30] outline-none px-1 py-0.5 text-sm transition-all"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-x border-gray-100 bg-blue-50/5 hover:bg-blue-50/20 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.physical}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].physical = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/20 font-bold transition-all"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 bg-blue-50/10 hover:bg-blue-50/30 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.physicalFree}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].physicalFree = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-blue-400 focus:border-blue-600 rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-600/20 font-bold transition-all text-blue-700"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.bPrincipal}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].bPrincipal = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.bAverias}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].bAverias = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.bComercExt}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].bComercExt = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 bg-orange-50/5 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.bLibre}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].bLibre = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-orange-500/10 transition-all font-bold text-orange-900"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-l border-gray-100 bg-orange-50/5 hover:bg-orange-50/20 transition-colors">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={item.systemFree}
-                                                        onChange={(e) => {
-                                                            const newItems = [...items];
-                                                            newItems[idx].systemFree = e.target.value === '' ? '' : Number(e.target.value);
-                                                            setItems(newItems);
-                                                        }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-orange-300 focus:border-orange-500 rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-orange-500/20 font-bold transition-all text-orange-700"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 border-x border-gray-200 bg-orange-50/20 text-center font-black text-orange-950 transition-colors">
-                                                    {s_total}
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    {(item.physical === '' && item.physicalFree === '') ? (
-                                                        <span className="text-gray-300">-</span>
-                                                    ) : (
-                                                        <span className={`font-black px-3 py-1 rounded-full text-xs shadow-sm ${hasDiff ? (diff < 0 ? 'bg-red-500 text-white' : 'bg-blue-500 text-white') : 'bg-emerald-500 text-white'}`}>
-                                                            {diff > 0 ? '+' : ''}{diff}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 border-l border-gray-100 transition-colors text-right">
-                                                    {isFaltante && (
-                                                        <input
-                                                            type="number"
-                                                            placeholder="$0"
-                                                            value={item.unitPrice}
-                                                            onChange={(e) => {
-                                                                const newItems = [...items];
-                                                                newItems[idx].unitPrice = e.target.value === '' ? '' : Number(e.target.value);
-                                                                setItems(newItems);
-                                                            }}
-                                                            className="w-full text-right bg-transparent border border-red-200 focus:border-red-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-red-500/20 transition-all font-mono"
-                                                        />
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Tabla de Justificaciones de Otras Bodegas */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                                Justificación de Saldos en Otras Bodegas
-                            </h3>
-                            <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
-                                Bodegas No Auditadas Físicamente
-                            </span>
-                        </div>
-                        <div className="overflow-x-auto max-h-[400px]">
-                            <table className="w-full text-sm text-left relative">
-                                <thead className="text-xs text-gray-500 uppercase bg-gray-100 sticky top-0 z-10 shadow-sm">
-                                    <tr>
-                                        <th className="px-6 py-4 font-semibold w-24">SKU</th>
-                                        <th className="px-6 py-4 font-semibold w-48 truncate">Nombre del Producto</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="En Tránsito">Tránsito</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega de Pérdida y Destrucción">Pérdida/Destrucción</th>
-                                        <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega 2">Bodega 2</th>
-                                        <th className="px-6 py-4 font-semibold flex-1">Justificación</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {items.map((item, idx) => (
-                                        <tr key={item.sku} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-2 font-mono text-gray-500 text-xs">{item.sku}</td>
-                                            <td className="px-6 py-2 font-medium text-gray-800 text-xs truncate max-w-[150px]" title={item.name}>{item.name}</td>
-                                            <td className="px-2 py-2 border-l border-gray-100 transition-colors">
-                                                <input
-                                                    type="number" placeholder="0" value={item.bTransito}
-                                                    onChange={(e) => {
-                                                        const newItems = [...items];
-                                                        newItems[idx].bTransito = e.target.value === '' ? '' : Number(e.target.value);
-                                                        setItems(newItems);
-                                                    }}
-                                                    className="w-16 text-center bg-transparent border border-gray-200 rounded p-1.5 text-xs outline-none focus:ring-1 focus:ring-violet-400 font-mono mx-auto block"
-                                                />
-                                            </td>
-                                            <td className="px-2 py-2 transition-colors">
-                                                <input
-                                                    type="number" placeholder="0" value={item.bPerdida}
-                                                    onChange={(e) => {
-                                                        const newItems = [...items];
-                                                        newItems[idx].bPerdida = e.target.value === '' ? '' : Number(e.target.value);
-                                                        setItems(newItems);
-                                                    }}
-                                                    className="w-16 text-center bg-transparent border border-gray-200 rounded p-1.5 text-xs outline-none focus:ring-1 focus:ring-violet-400 font-mono mx-auto block"
-                                                />
-                                            </td>
-                                            <td className="px-2 py-2 border-r border-gray-100 transition-colors">
-                                                <input
-                                                    type="number" placeholder="0" value={item.bDos}
-                                                    onChange={(e) => {
-                                                        const newItems = [...items];
-                                                        newItems[idx].bDos = e.target.value === '' ? '' : Number(e.target.value);
-                                                        setItems(newItems);
-                                                    }}
-                                                    className="w-16 text-center bg-transparent border border-gray-200 rounded p-1.5 text-xs outline-none focus:ring-1 focus:ring-violet-400 font-mono mx-auto block"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <input
-                                                    type="text" placeholder="Ej: Mercancía retenida en transportadora..." value={item.justificacion}
-                                                    onChange={(e) => {
-                                                        const newItems = [...items];
-                                                        newItems[idx].justificacion = e.target.value;
-                                                        setItems(newItems);
-                                                    }}
-                                                    className="w-full bg-transparent border-b border-gray-200 hover:border-gray-400 focus:border-violet-500 outline-none px-1 py-1 text-xs transition-all"
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        ) : (
-                /* === DOCUMENT PRINT VIEW === */
-                <div className="max-w-[800px] mx-auto bg-white shadow-xl min-h-screen relative print-section">
-
-                    {/* Botonera Flotante (No Imprimible) */}
-                    <div className="no-print sticky top-4 right-4 flex justify-end gap-2 p-4 z-50 flex-wrap">
-                        <button
-                            onClick={() => setViewMode("form")}
-                            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
-                        >
-                            <ArrowLeft className="h-4 w-4" /> Editar
-                        </button>
-
-                        <button
-                            onClick={handleDownloadExcel}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-all flex items-center gap-2 shadow-sm"
-                        >
-                            <FileSpreadsheet className="h-4 w-4" /> Excel
-                        </button>
-
-                        <button
-                            onClick={() => handleDownloadPDF()}
-                            className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-all flex items-center gap-2 shadow-sm"
-                        >
-                            <FileDown className="h-4 w-4" /> PDF
-                        </button>
-
-                        <button
-                            onClick={() => handlePrint()}
-                            className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-900 transition-all flex items-center gap-2 shadow-sm"
-                        >
-                            <Printer className="h-4 w-4" /> Imprimir
-                        </button>
-
-                        {status === "draft" && (
-                            <>
-                                <button
-                                    onClick={() => handleSaveActa("draft")}
-                                    disabled={isSaving}
-                                    className={`${isSaving ? 'bg-indigo-300' : 'bg-indigo-50 border border-indigo-200 hover:bg-indigo-100'} text-indigo-700 px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm ml-2`}
-                                >
-                                    <Save className="h-4 w-4" /> {isSaving ? "..." : "Guardar Borrador"}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (confirm("¿Estás seguro de CERRAR Y FIRMAR esta acta? Una vez firmada no podrá ser editada.")) {
-                                            handleSaveActa("final");
-                                        }
-                                    }}
-                                    disabled={isSaving}
-                                    className={`${isSaving ? 'bg-green-300' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm`}
-                                >
-                                    <CheckCircle2 className="h-4 w-4" /> {isSaving ? "Guardando..." : "Cerrar y Firmar"}
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Hoja Formato Carta */}
-                    <div ref={printRef} className={`p-8 sm:p-12 print:p-2 text-[12px] leading-relaxed text-gray-900 font-sans bg-white pb-32 print:pb-0 relative ${status === 'final' ? 'finalized-lock' : ''}`}>
-                        
-                        {/* Marcas de Agua y Tags */}
-                        {status === "draft" ? (
-                            <div className="watermark no-print">BORRADOR</div>
-                        ) : (
-                            <div className="watermark no-print" style={{ color: 'rgba(22, 101, 52, 0.08)', borderColor: 'rgba(22, 101, 52, 0.08)' }}>CERRADA Y FIRMADA</div>
-                        )}
-                        <div className={`status-badge no-print ${status === 'draft' ? 'status-draft' : 'status-final'}`}>
-                            {status === 'draft' ? 'Estado: Borrador' : 'Estado: Cerrada y Firmada'}
-                        </div>
-
-                        {/* Cabecera Profesional */}
-                        <div className="border-b-2 border-[#183C30] pb-6 mb-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
-                            <div>
-                                <h4 className="font-bold text-xs uppercase text-gray-500 tracking-wider mb-2">Formato de Inventario FI-004 V2</h4>
-                                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#183C30] uppercase">ACTA OFICIAL DE CIERRE</h2>
-                                <h1 className="text-lg sm:text-xl font-bold text-gray-700 mt-1 uppercase">{company}</h1>
+                    {viewTab === 'create' ? (
+                        <div className={`space-y-6 ${status === 'final' ? 'pointer-events-none opacity-75' : ''}`}>
+                             <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest inline-block ${status === 'draft' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-green-100 text-green-700 border border-green-200'}`}>
+                                MODO ACTUAL: {status === 'draft' ? 'BORRADOR (EDITABLE)' : 'CERRADA Y FIRMADA'}
                             </div>
-                            <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg text-right min-w-[200px] shadow-sm">
-                                <div className="text-[11px] font-semibold text-gray-500 uppercase mb-2">Información del Documento</div>
-                                <p className="text-[12px]"><span className="text-gray-500">Consecutivo:</span> <strong className="text-[#183C30] font-mono">{consecutivo}</strong></p>
-                                <p className="text-[12px]"><span className="text-gray-500">Elaboración:</span> <strong>{fecha}</strong></p>
-                                <p className="text-[12px]"><span className="text-gray-500">Período:</span> <strong>{periodo.toUpperCase()}</strong></p>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                                    <h3 className="font-bold text-gray-800 border-b pb-2">Configuración Básica</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Empresa</label>
+                                            <select value={company} onChange={(e) => setCompany(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#183C30]/20">{companiesList.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                                        </div>
+                                        <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Consecutivo</label>
+                                            <input type="text" value={consecutivo} onChange={(e) => setConsecutivo(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none font-bold" />
+                                        </div>
+                                        <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Período</label>
+                                            <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none">{AVAILABLE_PERIODS.map(p => <option key={p} value={p}>{p}</option>)}</select>
+                                        </div>
+                                        <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Fecha</label>
+                                            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none" />
+                                        </div>
+                                    </div>
+                                    <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones generales..." className="w-full border border-gray-200 rounded-lg p-2.5 text-sm min-h-[80px]" />
+                                </div>
+
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                                    <h3 className="font-bold text-gray-800 border-b pb-2 mb-4">Métricas Rápidas</h3>
+                                    <div className="grid grid-cols-2 gap-4 flex-1">
+                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                            <p className="text-[9px] font-black text-blue-500 uppercase">Exactitud Unidades</p>
+                                            <p className="text-2xl font-black text-blue-700">{exactitudUnidades.toFixed(1)}%</p>
+                                        </div>
+                                        <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                                            <p className="text-[9px] font-black text-red-500 uppercase">Diferencias</p>
+                                            <p className="text-2xl font-black text-red-700">{refConDiferencias} / {totalReferencias}</p>
+                                        </div>
+                                        <div className="col-span-2 bg-[#183C30] p-4 rounded-xl text-white">
+                                            <p className="text-[9px] font-black text-emerald-300 uppercase">Deuda Detectada</p>
+                                            <p className="text-xl font-black">${totalDeudaEmpaques.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="bg-[#183C30]/5 border border-[#183C30]/20 p-5 rounded-lg mb-8 shadow-inner" style={{ pageBreakInside: 'avoid' }}>
-                            <h4 className="font-bold text-[#183C30] text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4" />
-                                Declaración Oficial de Responsabilidad y Alcance
-                            </h4>
-                            <p className="text-justify text-[11px] text-gray-800 leading-relaxed font-medium mb-3">
-                                El presente documento tiene como propósito formalizar y certificar el resultado del conteo físico de mercancía correspondiente al período <strong>{periodo}</strong>. Las partes involucradas, representadas por el <strong>Área de Inventarios de {company}</strong> y el operador logístico externo <strong>EMPAQUES Y SOLUCIONES</strong>, validan en conjunto las cantidades aquí registradas. Se deja constancia de que los productos reportados como <em>Faltantes</em> o <em>Sobrantes</em> servirán como soporte fundamental para las conciliaciones de sistema y los debidos procesos administrativos o de cobro que el departamento contable determine, garantizando una gestión de inventario transparente.
-                            </p>
-                            <div className="bg-white/60 p-3 rounded border border-[#183C30]/10 text-justify text-[11px] text-[#183C30] font-medium">
-                                <strong className="uppercase">Alcance y Ejecución:</strong> El Área de Inventarios proporciona y asegura que esta información en cantidades es veraz, confiable y certificada. Por su parte, el Área de Contabilidad será la directa responsable de ejecutar los respectivos ajustes de sistema y realizar los cobros financieros aquí mencionados.
-                            </div>
-                        </div>
-
-                        {/* 1. Desarrollo */}
-                        <div className="mb-6">
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">1. Desarrollo del Conteo Físico</h3>
-                            <p className="text-justify mb-2">El conteo físico del inventario del período <strong>{periodo}</strong>. Para optimizar el proceso, se conformaron dos grupos de trabajo con las siguientes asignaciones:</p>
-                            <ul className="list-disc pl-6 mb-2 space-y-1">
-                                <li><strong>Grupo 1:</strong> Identificación con sticker color verde</li>
-                                <li><strong>Grupo 2:</strong> Identificación con sticker color azul</li>
-                            </ul>
-                            <p className="text-justify mb-2">Para el reconteo y validación, se utilizó un sticker de color naranja.</p>
-                            <p className="font-bold mt-3 mb-1">Metodología</p>
-                            <p className="text-justify mb-2">Cada grupo realizó el conteo de acuerdo con la posición en estantería. Se verificaron cada estiba y, dentro de cada estiba, se auditaron al azar cajas seleccionadas. Una vez auditada una caja, se colocó el respectivo sticker de conteo para certificar la verificación.</p>
-                            <div className="bg-gray-100 p-3 italic text-[11px] rounded border border-gray-200">
-                                <strong>Notas aclaratorias:</strong> Todos los ajustes derivados del presente cierre de inventario serán realizados en la empresa GRUPO HUMAN PROJECT, conforme a los procedimientos establecidos para la regularización de diferencias físicas y contables.
-                            </div>
-                        </div>
-
-                        {/* 2. Hallazgos */}
-                        <div className="mb-6">
-                            <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">2. Hallazgos del Inventario</h3>
-                            <div className="bg-blue-50 p-2 border border-blue-100 rounded text-[10px] text-blue-900 mb-3 text-justify">
-                                <strong>Nota Aclaratoria sobre Saldos del Sistema:</strong> El saldo reflejado en este documento bajo la columna "Sist. (Bodegas)" corresponde <strong>a la suma consolidada de las bodegas en Siigo: Principal, Averías, Comercio Exterior y Libre</strong>. Dichas bodegas junto con las Unidades Libres de Sheets reflejan el inventario total comparado.
-                            </div>
-                            <p className="mb-2">Según el informe de inventario de <strong>{periodo}</strong>, se identificaron las siguientes novedades (Diferencias entre físico y sistema):</p>
-
-                            <table className="w-full border-collapse border border-gray-300 text-center text-[10px] mb-4">
-                                <thead className="bg-[#183C30] text-white">
-                                    <tr>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Referencia</th>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Sist. (Bodegas)</th>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Libres (Sheets)</th>
-                                        <th className="border border-gray-300 p-1 text-[9px] bg-gray-100">Total Sist.</th>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Físico (C)</th>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Libres (F)</th>
-                                        <th className="border border-gray-300 p-1 text-[9px] bg-gray-100">Total Fís.</th>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Diferencia</th>
-                                        <th className="border border-gray-300 p-1 text-[9px]">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayComparisonItems.map(item => (
-                                        <tr key={item.sku} className="hover:bg-gray-50">
-                                            <td className="border border-gray-300 p-1 text-left font-medium max-w-[120px] truncate">{item.sku} - {item.name}</td>
-                                            <td className="border border-gray-300 p-1">{item.s}</td>
-                                            <td className="border border-gray-300 p-1">{item.s_free}</td>
-                                            <td className="border border-gray-300 p-1 font-bold bg-gray-50">{item.s_total}</td>
-                                            <td className="border border-gray-300 p-1">{item.p}</td>
-                                            <td className="border border-gray-300 p-1">{item.p_free}</td>
-                                            <td className="border border-gray-300 p-1 font-bold bg-gray-50">{item.p_total}</td>
-                                            <td className="border border-gray-300 p-1 font-bold">{item.diff > 0 ? `+${item.diff}` : item.diff}</td>
-                                            <td className={`border border-gray-300 p-1 font-bold ${item.diff < 0 ? 'text-red-600' : item.diff > 0 ? 'text-blue-600' : 'text-green-600'}`}>
-                                                {item.diff < 0 ? 'Faltante' : item.diff > 0 ? 'Sobrante' : 'OK'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {itemsWithDifferences.length === 0 && (
-                                        <tr>
-                                            <td colSpan={9} className="border border-gray-300 p-2 italic text-gray-500 text-center">
-                                                No se encontraron diferencias en este periodo. La tabla muestra una muestra de referencias.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* 3. Novedades Pendientes */}
-                        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">3. Novedades Pendientes y Cobros</h3>
-                            <p className="mb-3 text-justify">En esta sección se detallan las novedades: los saldos que se deben cobrar y los productos sobrantes para enviar a bodega de custodia. Como nuestro proveedor logístico es un tercero llamado <strong>Empaques y Soluciones</strong>, ellos deben pagar la mercancía faltante para asegurar que contabilidad realice el respectivo cobro.</p>
-
-                            <h4 className="font-bold underline mb-2">Cobro a Empaques y Soluciones (Faltantes):</h4>
-                            {itemsFaltantes.length > 0 ? (
-                                <>
-                                    <table className="w-full border-collapse border border-gray-300 text-[10px] mb-2 text-center">
-                                        <thead className="bg-[#183C30] text-white">
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-[#183C30] text-white text-[10px] uppercase font-black tracking-widest">
                                             <tr>
-                                                <th className="border border-gray-300 p-1 text-left">SKU - Producto</th>
-                                                <th className="border border-gray-300 p-1">Unidades</th>
-                                                <th className="border border-gray-300 p-1">Valor Unitario</th>
-                                                <th className="border border-gray-300 p-1">Subtotal</th>
+                                                <th className="p-4 w-[200px]">Referencia</th>
+                                                <th className="p-4 text-center">Físico (C)</th>
+                                                <th className="p-4 text-center">Libre (F)</th>
+                                                <th className="p-4 text-center">B. Libre (S)</th>
+                                                <th className="p-4 text-center">Sheets (L)</th>
+                                                <th className="p-4 text-center">Total S.</th>
+                                                <th className="p-4 text-center">Dif.</th>
+                                                <th className="p-4">Justificación / Otros</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {itemsFaltantes.map(i => {
-                                                const subtotal = Math.abs(i.diff) * (Number(i.unitPrice) || 0);
+                                        <tbody className="divide-y divide-gray-100">
+                                            {items.map((item, idx) => {
+                                                const p = processedItems[idx];
+                                                if (p.s_total === 0 && p.p_total === 0 && item.physical === '') return null;
                                                 return (
-                                                    <tr key={i.sku}>
-                                                        <td className="border border-gray-300 p-1 text-left"><strong>{i.sku}</strong> - {i.name}</td>
-                                                        <td className="border border-gray-300 p-1">{Math.abs(i.diff)}</td>
-                                                        <td className="border border-gray-300 p-1 font-mono">${(Number(i.unitPrice) || 0).toLocaleString()}</td>
-                                                        <td className="border border-gray-300 p-1 font-mono">${subtotal.toLocaleString()}</td>
+                                                    <tr key={item.sku} className="hover:bg-gray-50/50">
+                                                        <td className="p-4">
+                                                            <div className="flex flex-col"><span className="font-bold text-gray-800 text-xs">{item.sku}</span><span className="text-[9px] text-gray-400 truncate w-[160px]">{item.name}</span></div>
+                                                        </td>
+                                                        <td className="p-2"><input type="text" value={item.physical} onChange={(e) => updateItem(idx, 'physical', e.target.value)} className="w-full text-center p-1.5 border border-gray-200 rounded bg-gray-50/50 text-xs font-bold" /></td>
+                                                        <td className="p-2"><input type="text" value={item.physicalFree} onChange={(e) => updateItem(idx, 'physicalFree', e.target.value)} className="w-full text-center p-1.5 border border-gray-200 rounded text-xs" /></td>
+                                                        <td className="p-2"><input type="text" value={item.bLibre} onChange={(e) => updateItem(idx, 'bLibre', e.target.value)} className="w-full text-center p-1.5 border border-gray-200 rounded text-xs" /></td>
+                                                        <td className="p-2"><input type="text" value={item.systemFree} onChange={(e) => updateItem(idx, 'systemFree', e.target.value)} className="w-full text-center p-1.5 border border-gray-200 rounded text-xs" /></td>
+                                                        <td className="p-4 text-center font-black text-gray-400 text-xs">{p.s_total}</td>
+                                                        <td className={`p-4 text-center font-black text-xs ${p.diff < 0 ? 'text-red-600' : p.diff > 0 ? 'text-blue-600' : 'text-green-600'}`}>{p.diff}</td>
+                                                        <td className="p-2">
+                                                            <div className="flex gap-1 mb-1">
+                                                                <input type="text" value={item.bTransito} onChange={(e) => updateItem(idx, 'bTransito', e.target.value)} className="w-8 border border-gray-100 rounded text-[9px] p-1 text-center" placeholder="T" />
+                                                                <input type="text" value={item.bPerdida} onChange={(e) => updateItem(idx, 'bPerdida', e.target.value)} className="w-8 border border-gray-100 rounded text-[9px] p-1 text-center" placeholder="P" />
+                                                                <input type="text" value={item.bDos} onChange={(e) => updateItem(idx, 'bDos', e.target.value)} className="w-8 border border-gray-100 rounded text-[9px] p-1 text-center" placeholder="B2" />
+                                                            </div>
+                                                            <input type="text" value={item.justificacion} onChange={(e) => updateItem(idx, 'justificacion', e.target.value)} className="w-full border-b border-gray-100 p-1 text-[9px] italic outline-none" placeholder="Explicación..." />
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
-                                            <tr>
-                                                <td colSpan={3} className="border border-gray-300 p-1 text-right font-bold uppercase bg-gray-100">Total a Cobrar a Empaques y Soluciones:</td>
-                                                <td className="border border-gray-300 p-1 font-mono font-bold text-red-700 bg-red-50">${totalDeudaEmpaques.toLocaleString()}</td>
-                                            </tr>
                                         </tbody>
                                     </table>
-                                </>
-                            ) : <p className="italic text-gray-500 mb-4 text-[11px]">No hay productos faltantes para cobrar a Empaques y Soluciones.</p>}
-
-                            <h4 className="font-bold underline mb-2 mt-4">Producto para enviar a bodega de custodia (Sobrantes):</h4>
-                            {itemsSobrantes.length > 0 ? (
-                                <ul className="list-disc pl-6 mb-2">
-                                    {itemsSobrantes.map(i => (
-                                        <li key={i.sku}><strong>{i.sku} - {i.name}:</strong> {i.diff} unidades.</li>
-                                    ))}
-                                </ul>
-                            ) : <p className="italic text-gray-500 mb-2 text-[11px]">No hay productos sobrantes para enviar a custodia.</p>}
-                        </div>
-
-                        {/* 4. Justificaciones */}
-                        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">4. Justificación de Saldos en Otras Bodegas (No Comparativas)</h3>
-                            <div className="bg-amber-50 border border-amber-200 p-3 rounded mb-3 text-[10px] text-amber-900 leading-relaxed italic">
-                                <strong>Nota Importante sobre Bodegas de Justificación:</strong> Los saldos reflejados en esta sección (Tránsito, Pérdida y Bodega 2) <strong>NO forman parte de las unidades físicas reales en sitio</strong> y por lo tanto <strong>no se comparan contra el Conteo Físico</strong> del punto 2. Estas cantidades existen únicamente a nivel de sistema por procesos logísticos o contables externos. Para mayor detalle, por favor recomendar revisar las Políticas de Bodegas si existen dudas.
+                                </div>
                             </div>
-                            <p className="text-justify mb-2 text-[11px]">A continuación se detallan las cantidades registradas por referencia en otras bodegas de sistema que justifican saldos que no fueron parte del conteo físico:</p>
-                            <table className="w-full border-collapse border border-gray-300 text-[10px] text-center mb-2">
-                                <thead className="bg-gray-100 text-[#183C30]">
-                                    <tr>
-                                        <th className="border border-gray-300 p-1 text-left">SKU - Referencia</th>
-                                        <th className="border border-gray-300 p-1 w-16">En Tránsito</th>
-                                        <th className="border border-gray-300 p-1 w-16">Pérdida/Des.</th>
-                                        <th className="border border-gray-300 p-1 w-16">Bodega 2</th>
-                                        <th className="border border-gray-300 p-1 text-left w-1/2">Justificación Documentada</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {processedItems.filter(i => i.bTr > 0 || i.bPer > 0 || i.bD > 0 || (i.justificacion && i.justificacion.trim() !== "")).length > 0 ? (
-                                        processedItems.filter(i => i.bTr > 0 || i.bPer > 0 || i.bD > 0 || (i.justificacion && i.justificacion.trim() !== "")).map(i => (
-                                            <tr key={i.sku}>
-                                                <td className="border border-gray-300 p-1 text-left"><strong>{i.sku}</strong> - {i.name}</td>
-                                                <td className="border border-gray-300 p-1">{i.bTr || 0}</td>
-                                                <td className="border border-gray-300 p-1">{i.bPer || 0}</td>
-                                                <td className="border border-gray-300 p-1">{i.bD || 0}</td>
-                                                <td className="border border-gray-300 p-1 text-left italic">{i.justificacion || "Sin justificación"}</td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} className="border border-gray-300 p-2 italic text-gray-500">No hay saldos registrados ni justificados en bodegas secundarias.</td>
-                                        </tr>
+                        </div>
+                    ) : (
+                        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 min-h-[600px]">
+                            <div className="flex justify-between items-center mb-10">
+                                <h3 className="text-xl font-black uppercase tracking-widest text-[#183C30] flex items-center gap-3">
+                                    <History className="h-6 w-6" /> {viewTab === 'drafts' ? 'Borradores en Curso' : 'Repositorio Histórico'}
+                                </h3>
+                                <button onClick={fetchActas} className="px-5 py-2.5 bg-[#183C30] text-white rounded-xl text-xs font-black shadow-lg hover:rotate-2 transition-all">Sincronizar</button>
+                            </div>
+
+                            {isLoadingHistory ? (
+                                <div className="flex flex-col items-center justify-center py-40 gap-4"><div className="w-12 h-12 border-4 border-gray-100 border-t-[#183C30] rounded-full animate-spin"></div><p className="text-xs font-black text-gray-300 uppercase tracking-widest">Consultando Nube...</p></div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {savedActas.filter(a => viewTab === 'drafts' ? a.status === 'draft' : a.status === 'final').slice().reverse().map(acta => (
+                                        <div key={acta.id} onClick={() => handleLoadActa(acta)} className={`group relative p-8 bg-white rounded-[2rem] border-2 transition-all cursor-pointer shadow-sm hover:shadow-2xl hover:-translate-y-1 ${viewTab === 'drafts' ? 'border-amber-50 hover:border-amber-300' : 'border-blue-50 hover:border-blue-400'}`}>
+                                            <div className="flex justify-between mb-6">
+                                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${acta.status === 'draft' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{acta.status === 'draft' ? 'Draft' : 'Final'}</span>
+                                            </div>
+                                            <h4 className="text-lg font-black text-gray-900 leading-tight uppercase line-clamp-2 mb-2">{acta.data?.company}</h4>
+                                            <div className="flex flex-col gap-2 mb-8">
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 font-bold"><Calendar className="h-4 w-4 text-gray-300" />{acta.data?.periodo}</div>
+                                                <div className="flex items-center gap-2 text-[10px] text-gray-400"><FileText className="h-4 w-4 text-gray-200" />Doc: {acta.data?.consecutivo}</div>
+                                            </div>
+                                            <div className="flex items-center justify-between pt-6 border-t border-gray-50">
+                                                <span className="text-[10px] font-bold text-gray-300">{new Date(acta.date).toLocaleDateString()}</span>
+                                                <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-[#183C30] group-hover:text-white transition-all"><ArrowLeft className="h-4 w-4 rotate-180" /></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {savedActas.filter(a => viewTab === 'drafts' ? a.status === 'draft' : a.status === 'final').length === 0 && (
+                                        <div className="col-span-full py-40 border-4 border-dashed border-gray-100 rounded-[3rem] text-center"><FileText className="h-12 w-12 text-gray-200 mx-auto mb-4" /><p className="text-gray-300 font-black uppercase text-xs tracking-widest">No se detectaron registros</p></div>
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* 5. Acciones a Realizar */}
-                        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">5. Acciones a Realizar</h3>
-                            <p className="text-justify mb-2">Se detallan las acciones correctivas que se llevarán a cabo para subsanar las diferencias encontradas en el inventario:</p>
-                            <ul className="list-disc pl-6 space-y-2">
-                                <li>Cuando se deban hacer despachos desde Bogotá es importante tener en cuenta un documento físico que soporte ese despacho por medio de la remisión.</li>
-                                <li>La empresa logística deberá garantizar la correcta ubicación y traslado de mercancía entre empresas.</li>
-                                <li><strong>Conciliación previa al inventario:</strong> Se debe verificar la información interna antes del cierre de inventario para evitar discrepancias documentales.</li>
-                                <li>Se recomienda a la empresa logística tomar acciones en la formación de dúos y combos, ya que estos productos afectan otras referencias. Se les enviarán los saldos de cierre, y antes del inventario, se comprometen a formar estas dos referencias.</li>
-                                <li>Se recomienda al finalizar el mes debe estar toda la mercancía ingresada a siigo, documentada y facturada.</li>
-                                <li>No se recomienda recibir vehículos con carga de mercancía el último día del mes previo al inventario.</li>
-                            </ul>
-                        </div>
-
-                        {/* 6. Saldos Finales en el Sistema */}
-                        <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">6. Saldos Finales en el Sistema</h3>
-                            <p className="mb-2 italic text-[11px]">(Valores actualizados que deben quedar registrados en el sistema después de realizar los movimientos y ajustes necesarios - Igualan al Conteo Físico)</p>
-
-                            <table className="w-full border-collapse border border-gray-300 text-[10px] mt-3">
-                                <thead className="bg-[#183C30] text-white">
-                                    <tr>
-                                        <th className="border border-gray-300 p-1 text-left">SKU - Producto</th>
-                                        <th className="border border-gray-300 p-1 text-center w-28">Saldo Sistema Total</th>
-                                        <th className="border border-gray-300 p-1 text-center w-24">Ajuste Requerido</th>
-                                        <th className="border border-gray-300 p-1 text-center w-24">Saldo Físico Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {processedItems.map(item => (
-                                        <tr key={item.sku} className="hover:bg-gray-50">
-                                            <td className="border border-gray-300 p-1 text-left font-medium">{item.sku} - {item.name}</td>
-                                            <td className="border border-gray-300 p-1 text-center">{item.s_total}</td>
-                                            <td className={`border border-gray-300 p-1 text-center font-bold ${item.diff > 0 ? 'text-blue-600' : item.diff < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                {item.diff > 0 ? `+${item.diff}` : item.diff < 0 ? `${item.diff}` : '0'}
-                                            </td>
-                                            <td className="border border-gray-300 p-1 text-center font-bold bg-green-50 text-[#183C30]">{item.p_total}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            <div className="mt-4 bg-yellow-50 border border-yellow-200 p-3 rounded text-[11px]">
-                                <strong>Nota Adicional Promedio:</strong><br />
-                                Los productos 3001 (Combo ritual seducción) y 3005 (Dúo ritual tentación) deben ser revisados para determinar ensambles o desensambles pendientes si aplica en Siigo al terminar.
-                            </div>
-
-                            {observaciones.trim() !== "" && (
-                                <div className="mt-4 bg-blue-50 border border-blue-200 p-4 rounded text-[11px] text-justify text-blue-900 shadow-sm whitespace-pre-line">
-                                    <strong className="text-blue-900 uppercase underline mb-1 block">Observaciones y Notas del Responsable de Inventario:</strong>
-                                    {observaciones}
                                 </div>
                             )}
                         </div>
+                    )}
+                </div>
+            ) : (
+                <div className="max-w-[800px] mx-auto pb-20 no-print animate-in fade-in slide-in-from-bottom-5">
+                    <div className="flex justify-between items-center bg-white/80 backdrop-blur-md p-4 rounded-3xl shadow-xl border border-white mb-8 sticky top-4 z-50">
+                        <button onClick={() => setViewMode("form")} className="flex items-center gap-2 text-xs font-black bg-gray-100 px-6 py-3 rounded-2xl hover:bg-gray-200 transition-all text-gray-600"><ArrowLeft className="h-4 w-4" />EDITOR</button>
+                        <div className="flex gap-2">
+                            <button onClick={handlePrint} className="bg-gray-800 text-white px-5 py-3 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg"><Printer className="h-4 w-4" />IMPRIMIR</button>
+                            <button onClick={handleDownloadPDF} className="bg-[#183C30] text-white px-6 py-3 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"><Download className="h-4 w-4" />DESCARGAR PDF</button>
+                        </div>
+                    </div>
 
-                        <div className="flex gap-8 mb-8" style={{ pageBreakInside: 'avoid' }}>
-                            {/* 7. Ajustes y 8. Indicadores */}
-                            <div className="w-1/2">
-                                <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">7. Ajustes Manuales Requeridos</h3>
-                                <p className="text-justify mb-2">Según los hallazgos descritos, el equipo contable (GRUPO HUMAN PROJECT) procederá a realizar los ajustes en SIIGO (Entradas y Salidas por ajuste de inventario) para igualar el sistema a las cantidades físicas certificadas en el punto 6.</p>
-                                <ul className="list-disc pl-5 mb-2 space-y-1 text-justify">
-                                    <li><strong>Si es Faltante:</strong> Cobrar a <em>Empaques y Soluciones</em> el valor de la mercancía.</li>
-                                    <li><strong>Si es Sobrante:</strong> Llevar a bodega de custodia, o ingresar a la BODEGA PRINCIPAL RIONEGRO, según indicación de Gerencia.</li>
-                                </ul>
+                    <div ref={printRef} className="print-section bg-white shadow-2xl relative overflow-hidden" style={{ minHeight: '1120px' }}>
+                        {status === 'draft' && <div className="watermark">Draft</div>}
+                        <div className={`status-badge ${status === 'draft' ? 'status-draft' : 'status-final'}`}>{status === 'draft' ? 'Borrador Oficial' : 'Cerrada y Firmada'}</div>
+
+                        <div className="flex justify-between items-start mb-10 border-b-4 border-[#183C30] pb-8">
+                            <div>
+                                <div className="bg-[#183C30] text-white px-5 py-2 rounded-xl mb-4 inline-block font-black text-xs tracking-widest">ACTA DE CIERRE</div>
+                                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">{company}</h2>
+                                <p className="text-xs font-bold text-gray-400 italic">Conciliación de Inventarios y Diferencias de Bodega</p>
                             </div>
+                            <div className="text-right flex flex-col items-end gap-1">
+                                <span className="text-[9px] font-black text-gray-300 uppercase">Documento ID</span>
+                                <p className="text-xs font-black text-[#183C30] font-mono">{consecutivo}</p>
+                                <p className="text-xs font-bold">{fecha} · {periodo.toUpperCase()}</p>
+                            </div>
+                        </div>
 
-                            <div className="w-1/2">
-                                <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">8. Indicadores de Confiabilidad</h3>
-                                <table className="w-full border-collapse border border-gray-300 text-[10px]">
-                                    <tbody>
+                        <div className="bg-[#183C30]/5 border border-[#183C30]/10 p-6 rounded-2xl mb-10">
+                            <h4 className="font-black text-[#183C30] text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Alcance Operativo</h4>
+                            <p className="text-justify text-[11px] leading-relaxed text-gray-800 font-medium">Este documento certifica el conteo de <strong>{periodo}</strong> en <strong>{company}</strong> operado por EMPAQUES Y SOLUCIONES. Los faltantes reportados sirven como base para cobros administrativos, garantizando transparencia contable.</p>
+                        </div>
+
+                        <div className="space-y-10">
+                            <div>
+                                <h3 className="font-black text-xs uppercase text-[#183C30] mb-4 border-b border-gray-100 pb-2">1. Resumen de Hallazgos</h3>
+                                <table className="w-full border-collapse text-center text-[9px]">
+                                    <thead className="bg-[#183C30] text-white">
                                         <tr>
-                                            <td className="border border-gray-300 p-2 font-medium bg-gray-50">Referencias Estudiadas (Venta)</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold">{totalReferencias}</td>
+                                            <th className="p-2 text-left">Referencia</th>
+                                            <th className="p-2">Sist. (B)</th>
+                                            <th className="p-2">Libres (S)</th>
+                                            <th className="p-2 font-black bg-[#132f26]">Total S.</th>
+                                            <th className="p-2">Físico (C)</th>
+                                            <th className="p-2">Libres (F)</th>
+                                            <th className="p-2 font-black bg-[#132f26]">Total F.</th>
+                                            <th className="p-2">Dif.</th>
                                         </tr>
-                                        <tr>
-                                            <td className="border border-gray-300 p-2 font-medium bg-gray-50">Referencias con Diferencias</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold text-red-600">{refConDiferencias}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="border border-gray-300 p-2 font-medium bg-gray-50">Total Unidades Sistema</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold">{totalUnidadesSistema}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="border border-gray-300 p-2 font-medium bg-gray-50">Unidades con Diferencias</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold text-red-600">{totalUnidadesDiferencia}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="border border-gray-300 p-2 font-medium bg-[#183C30] text-white">Exactitud Referencias</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold bg-[#183C30] text-white">{exactitud.toFixed(2)}{"%"}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="border border-gray-300 p-2 font-medium bg-[#183C30] text-white">Exactitud Unidades Totales</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold bg-[#183C30] text-white">{exactitudUnidades.toFixed(2)}{"%"}</td>
-                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {displayComparisonItems.map(i => (
+                                            <tr key={i.sku}>
+                                                <td className="p-2 text-left font-bold">{i.sku} - {i.name}</td>
+                                                <td className="p-2">{i.s}</td>
+                                                <td className="p-2">{i.s_free}</td>
+                                                <td className="p-2 font-black bg-gray-50">{i.s_total}</td>
+                                                <td className="p-2">{i.p}</td>
+                                                <td className="p-2">{i.p_free}</td>
+                                                <td className="p-2 font-black bg-gray-50">{i.p_total}</td>
+                                                <td className={`p-2 font-black ${i.diff < 0 ? 'text-red-700' : 'text-blue-700'}`}>{i.diff}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
 
-
-                        {/* 8. Conclusiones y Firmas */}
-                        {/* 9. Conclusiones y Firmas */}
-                        <div style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">9. Conclusiones y Recomendaciones Contables</h3>
-                            <p className="font-bold mt-2">1. Seguridad en el Almacenamiento y Custodia</p>
-                            <p>Se exige al proveedor logístico garantizar un resguardo hermético de la mercancía. Todo cruce de información entre empresas debe estar soportado por remisiones físicas debidamente firmadas para evitar fugas no documentadas de inventario.</p>
-                            <p className="font-bold mt-2">2. Política de Orden Documental</p>
-                            <p>Es indispensable que todo movimiento físico de inventario durante el mes de cierre esté rigurosamente soportado en facturación electrónica o documento contable equivalente, evitando entregas basadas únicamente en acuerdos verbales.</p>
-                            <p className="font-bold mt-2">3. Ensamblaje de Promocionales</p>
-                            <p>Se insta al equipo logístico a armar previamenten los combos y dúos estipulados para evitar fraccionamiento de referencias unitarias que afecten las conciliaciones físicas de auditoría.</p>
-                            <p className="font-bold mt-2">4. Prevención de Averías</p>
-                            <p>Se recomienda implementar un protocolo de revisión rutinaria de estibas y estanterías, separando inmediatamente cualquier unidad con daño físico o deterioro de empaque hacia una bodega de "No Conformes", para no inflar los conteos de activos vendibles.</p>
-                        </div>
-
-                        {/* Firmas */}
-                        <div className="mt-28 w-full" style={{ pageBreakInside: 'avoid' }}>
-                            <div className="grid grid-cols-3 gap-8">
-                                <div className="text-center">
-                                    <div className="border-b border-black mb-1 mx-auto w-48"></div>
-                                    <p className="font-bold mt-2 text-xs">________________________</p>
-                                    <p className="italic text-gray-500 mt-1 uppercase text-[10px] font-bold">RESPONSABLE DE INVENTARIOS</p>
+                            <div style={{ pageBreakInside: 'avoid' }}>
+                                <h3 className="font-black text-xs uppercase text-[#183C30] mb-4 border-b border-gray-100 pb-2">2. Novedades y Justificaciones</h3>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="bg-red-50 p-5 rounded-2xl border border-red-100">
+                                        <h4 className="font-black text-[9px] text-red-600 uppercase mb-3">Faltantes Críticos</h4>
+                                        <ul className="space-y-1 text-[9px] text-red-900 font-bold">
+                                            {itemsFaltantes.slice(0, 10).map(i => <li key={i.sku}>· {i.sku}: {Math.abs(i.diff)} und.</li>)}
+                                        </ul>
+                                    </div>
+                                    <div className="bg-[#183C30]/5 p-5 rounded-2xl border border-[#183C30]/10">
+                                        <h4 className="font-black text-[9px] text-[#183C30] uppercase mb-3">Resumen de Cobros</h4>
+                                        <p className="text-xl font-black text-[#183C30] mb-2">${totalDeudaEmpaques.toLocaleString()}</p>
+                                        <p className="text-[9px] text-gray-400 font-bold uppercase italic">Valor total estimado a cobro administrativo por proveedor.</p>
+                                    </div>
                                 </div>
-                                <div className="text-center">
-                                    <div className="border-b border-black mb-1 mx-auto w-48"></div>
-                                    <p className="font-bold mt-2 text-xs">________________________</p>
-                                    <p className="italic text-gray-500 mt-1 uppercase text-[10px] font-bold">AUDITOR / REVISOR FISCAL</p>
+                            </div>
+
+                            {observaciones.trim() !== "" && (
+                                <div style={{ pageBreakInside: 'avoid' }} className="p-6 bg-gray-50 rounded-2xl border border-gray-200 text-[10px] italic leading-relaxed shadow-inner">
+                                    <strong className="text-[#183C30] uppercase not-italic mb-2 block">Dictamen del Auditor:</strong>
+                                    {observaciones}
                                 </div>
-                                <div className="text-center">
-                                    <div className="border-b border-black mb-1 mx-auto w-48"></div>
-                                    <p className="font-bold mt-2 text-xs">________________________</p>
-                                    <p className="italic text-gray-500 mt-1 uppercase text-[10px] font-bold">REPRESENTANTE LEGAL / GERENCIA</p>
+                            )}
+
+                            <div className="mt-24" style={{ pageBreakInside: 'avoid' }}>
+                                <div className="grid grid-cols-3 gap-10">
+                                    <div className="text-center"><div className="border-b-2 border-gray-900 mb-2 w-44 mx-auto"></div><p className="font-black uppercase text-[8px] text-gray-400">Responsable Inventarios</p></div>
+                                    <div className="text-center"><div className="border-b-2 border-gray-900 mb-2 w-44 mx-auto"></div><p className="font-black uppercase text-[8px] text-gray-400">Auditor de Calidad</p></div>
+                                    <div className="text-center"><div className="border-b-2 border-gray-900 mb-2 w-44 mx-auto"></div><p className="font-black uppercase text-[8px] text-gray-400">Representante Legal</p></div>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             )}
         </div>
     );
 }
+
+const Calendar = (props: any) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>);
+const History = (props: any) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>);
+const LayoutGrid = (props: any) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-grid"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>);
+const Printer = (props: any) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-printer"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5"/><rect width="12" height="8" x="6" y="15" rx="1"/></svg>);
+const Download = (props: any) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>);
+const FileSpreadsheet = (props: any) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-spreadsheet"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>);
