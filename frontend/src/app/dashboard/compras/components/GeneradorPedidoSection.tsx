@@ -31,19 +31,27 @@ function parseRendimientoFactor(raw: string | undefined): number {
     if (!raw || raw.trim() === "" || raw === "N/A") return 1;
     const s = raw.trim();
     if (s.includes("%")) {
-        const n = parseFloat(s.replace("%", ""));
-        if (!isNaN(n) && n > 0) return n / 100;
+        const match = s.match(/([0-9.,]+)/);
+        if (match) {
+            const n = parseFloat(match[1].replace(',', '.'));
+            if (!isNaN(n) && n > 0) return n / 100;
+        }
+        return 1;
     }
-    const n = parseFloat(s);
-    if (!isNaN(n) && n > 0) return n;   // <1 = eficiencia | >1 = unidades/empaque
+    const match = s.match(/([0-9.,]+)/);
+    if (match) {
+        const n = parseFloat(match[1].replace(',', '.'));
+        if (!isNaN(n) && n > 0) return n;
+    }
     return 1;
 }
 
-/** Devuelve true si el campo rendimiento indica "unidades por empaque" (n > 1) */
 function esEmpaque(raw: string | undefined): boolean {
     if (!raw) return false;
     if (raw.includes("%")) return false;
-    const n = parseFloat(raw.trim());
+    const match = raw.trim().match(/([0-9.,]+)/);
+    if (!match) return false;
+    const n = parseFloat(match[1].replace(',', '.'));
     return !isNaN(n) && n > 1;
 }
 
@@ -250,7 +258,7 @@ export const GeneradorPedidoSection = ({
         // grupoEmpaque: por productoId : clasificación → [insumoId, ...]
         const gruposEmpaque = new Map<string, string[]>();
 
-        const procesarProductoBOM = (productoId: string, cantidadTotal: number, nombreRuta: string) => {
+        const procesarProductoBOM = (productoId: string, cantidadTotal: number, nombreRuta: string, ignorarEmpaque: boolean = false) => {
             const prod = productos.find(p => p.id === productoId);
             if (!prod) return;
 
@@ -259,6 +267,13 @@ export const GeneradorPedidoSection = ({
                 for (const ia of prod.insumosAsociados) {
                     const ins = insumos.find(i => i.id === ia.insumoId);
                     if (!ins) continue;
+
+                    if (ignorarEmpaque && ins.clasificacion) {
+                        const clasif = ins.clasificacion.toUpperCase();
+                        if (clasif.includes("CAJA") || clasif.includes("TERMO") || clasif.includes("TERMOENCOGIBLE")) {
+                            continue;
+                        }
+                    }
 
                     const valorRendimiento = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins.rendimiento;
                     const rendFactor = parseRendimientoFactor(valorRendimiento);
@@ -346,9 +361,10 @@ export const GeneradorPedidoSection = ({
 
             // 2. Procesar Sub-Productos (RECURSIÓN PARA KITS)
             if (prod.productosAsociados) {
+                const esKit = prod.tipo === "Kit";
                 for (const pa of prod.productosAsociados) {
                     const subCantidad = pa.cantidadRequerida * cantidadTotal;
-                    procesarProductoBOM(pa.productoId, subCantidad, `${nombreRuta} > ${prod.nombre}`);
+                    procesarProductoBOM(pa.productoId, subCantidad, `${nombreRuta} > ${prod.nombre}`, esKit || ignorarEmpaque);
                 }
             }
         };

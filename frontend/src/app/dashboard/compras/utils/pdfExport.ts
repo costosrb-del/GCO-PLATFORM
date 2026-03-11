@@ -251,6 +251,70 @@ export const exportarOrdenPDF = async (orden: OrdenCompra, tercero: Tercero, ins
     doc.save(`Orden_Compra_${tercero.nombre.replace(/ /g, "_")}_${format(new Date(), "ddMMyyyy")}.pdf`);
 };
 
+export const exportarCatalogoProveedorPDF = async (
+    tercero: Tercero,
+    insumos: Insumo[]
+) => {
+    const doc = new jsPDF();
+    const logoBase64 = await loadLogoBase64();
+    addLogoToDoc(doc, logoBase64);
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("CATÁLOGO - PROVEEDOR", 52, 22);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Razón Social: ${tercero.nombre}`, 52, 32);
+    doc.text(`NIT: ${tercero.nit ?? "N/A"}`, 52, 38);
+
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Listado de Insumos Suministrados", 14, 60);
+
+    const insumosProveedor = insumos.filter(i => 
+        (tercero.insumos || "").toLowerCase().includes(`[${i.sku.toLowerCase()}]`) ||
+        tercero.insumosPrecios?.some(ip => ip.insumoId === i.id)
+    );
+
+    const tableBody = insumosProveedor.map((ins, idx) => {
+        const p = tercero.insumosPrecios?.find(ip => ip.insumoId === ins.id)?.precio;
+        return [
+            (idx + 1).toString(),
+            ins.nombre,
+            ins.sku,
+            ins.unidad,
+            p && p > 0 ? `$${p.toLocaleString("es-CO")}` : "N/A"
+        ];
+    });
+
+    autoTable(doc, {
+        startY: 65,
+        head: [["No.", "Insumo", "SKU", "Unidad", "Precio Pactado (COP)"]],
+        body: tableBody,
+        theme: "grid",
+        headStyles: { fillColor: [24, 60, 48], textColor: [255, 255, 255], fontStyle: "bold" },
+        styles: { fontSize: 9 },
+        columnStyles: {
+            0: { cellWidth: 10 },
+            4: { halign: "right", fontStyle: "bold" }
+        }
+    });
+
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(24, 60, 48);
+        doc.rect(0, 285, 210, 15, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text(`CATÁLOGO - ${tercero.nombre} - ${format(new Date(), "dd/MM/yyyy")}`, 14, 292);
+        doc.text(`Página ${i} de ${pageCount}`, 180, 292);
+    }
+
+    doc.save(`Catálogo_${tercero.nombre.replace(/ /g, "_")}.pdf`);
+};
 
 // ── Excel Export (NUEVA) ────────────────────────────────────────────────────────
 
@@ -503,7 +567,8 @@ function explotarBOM(
     productos: ProductoFabricado[],
     insumos: Insumo[],
     cantidadPadre: number = 1,
-    rutaPadre: string = ""
+    rutaPadre: string = "",
+    ignorarEmpaque: boolean = false
 ): InsumoExplotado[] {
     let result: InsumoExplotado[] = [];
     const rutaActual = rutaPadre ? `${rutaPadre} > ${producto.nombre}` : producto.nombre;
@@ -513,12 +578,46 @@ function explotarBOM(
         for (const ia of producto.insumosAsociados) {
             const ins = insumos.find(i => i.id === ia.insumoId);
             if (ins) {
+                if (ignorarEmpaque && ins.clasificacion) {
+                    const clasif = ins.clasificacion.toUpperCase();
+                    if (clasif.includes("CAJA") || clasif.includes("TERMO") || clasif.includes("TERMOENCOGIBLE") || clasif.includes("EMPAQUE")) {
+                        continue;
+                    }
+                }
+                
+                const factorValue = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins.rendimiento;
+                let factor = 1;
+                
+                if (factorValue) {
+                    const s = factorValue.trim();
+                    if (s.includes("%")) {
+                        const match = s.match(/([0-9.,]+)/);
+                        if (match) {
+                            const n = parseFloat(match[1].replace(',', '.'));
+                            if (!isNaN(n) && n > 0) factor = n / 100;
+                        }
+                    } else {
+                        const match = s.match(/([0-9.,]+)/);
+                        if (match) {
+                            const n = parseFloat(match[1].replace(',', '.'));
+                            if (!isNaN(n) && n > 0) factor = n;
+                        }
+                    }
+                }
+                
+                let qTotal = 0;
+                if (factor > 1) { // Empaque
+                     qTotal = cantidadPadre;
+                } else {
+                     qTotal = (ia.cantidadRequerida * cantidadPadre) / (factor || 1);
+                }
+
                 result.push({
                     id: ins.id,
                     nombre: ins.nombre,
                     sku: ins.sku,
                     unidad: ins.unidad,
-                    cantidadTotal: ia.cantidadRequerida * cantidadPadre,
+                    cantidadTotal: qTotal,
                     ruta: rutaActual
                 });
             }
@@ -527,10 +626,20 @@ function explotarBOM(
 
     // 2. Sub-productos (Kits)
     if (producto.productosAsociados) {
+        const esKit = producto.tipo === "Kit";
         for (const pa of producto.productosAsociados) {
             const subProd = productos.find(p => p.id === pa.productoId);
             if (subProd) {
-                const subExplosion = explotarBOM(subProd, productos, insumos, pa.cantidadRequerida * cantidadPadre, rutaActual);
+                // ADDING A DUMMY INSUMO TO REPRESENT THE SUB-PRODUCT ITSELF IN LIST
+                result.push({
+                     id: subProd.id,
+                     nombre: `[SUB-PRODUCTO] ${subProd.nombre}`,
+                     sku: subProd.sku || "N/A",
+                     unidad: "Unidad",
+                     cantidadTotal: pa.cantidadRequerida * cantidadPadre,
+                     ruta: rutaActual
+                });
+                const subExplosion = explotarBOM(subProd, productos, insumos, pa.cantidadRequerida * cantidadPadre, rutaActual, esKit || ignorarEmpaque);
                 result = [...result, ...subExplosion];
             }
         }

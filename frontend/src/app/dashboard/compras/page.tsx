@@ -209,6 +209,7 @@ export default function ComprasPage() {
                     <ProductosSection
                         productos={productos}
                         insumos={insumos}
+                        terceros={terceros}
                         createProducto={createProducto}
                         updateProducto={updateProducto}
                         deleteProducto={deleteProducto}

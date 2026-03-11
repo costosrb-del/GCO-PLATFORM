@@ -100,37 +100,37 @@ export const EntregasSection = ({ terceros, insumos, ordenes }: EntregasSectionP
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-4">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#0f172a] to-[#183C30] rounded-3xl p-8 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/5 rounded-full -mr-32 -mt-32 pointer-events-none" />
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="bg-white/10 p-3 rounded-2xl border border-white/20">
-                        <Truck className="w-8 h-8 text-emerald-400" />
+            <div className="bg-gradient-to-r from-[#0f172a] to-[#183C30] rounded-2xl p-4 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-400/5 rounded-full -mr-24 -mt-24 pointer-events-none" />
+                <div className="flex items-center gap-3 relative z-10">
+                    <div className="bg-white/10 p-2 rounded-xl border border-white/20">
+                        <Truck className="w-6 h-6 text-emerald-400" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black tracking-tight">Registro de Entregas</h2>
-                        <p className="text-slate-300 text-sm font-medium mt-0.5">
+                        <h2 className="text-xl font-black tracking-tight">Registro de Entregas</h2>
+                        <p className="text-slate-300 text-xs font-medium mt-0.5">
                             Una factura o RM puede cubrir múltiples OCs abiertas — el sistema distribuye automáticamente
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Formulario */}
-                <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-100 p-8 space-y-6">
-                    <h3 className="font-black text-[#183C30] uppercase text-xs tracking-[0.3em] border-b-2 border-emerald-100 pb-3">
+                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+                    <h3 className="font-black text-[#183C30] uppercase text-[10px] tracking-[0.2em] border-b border-emerald-100 pb-2">
                         Datos de la Entrega
                     </h3>
 
                     {/* Proveedor */}
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Proveedor</label>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Proveedor</label>
                         <select
                             value={terceroId}
                             onChange={e => { setTerceroId(e.target.value); setResultado(null); }}
-                            className="h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            className="h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                         >
                             <option value="">— Selecciona un proveedor —</option>
                             {terceros.map(t => (
@@ -172,58 +172,58 @@ export const EntregasSection = ({ terceros, insumos, ordenes }: EntregasSectionP
                     )}
 
                     {terceroId && ocsAbiertas.length === 0 && (
-                        <div className="bg-amber-50 rounded-2xl border border-amber-100 p-4 flex items-center gap-3">
-                            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
-                            <p className="text-amber-700 text-sm font-bold">Este proveedor no tiene OCs abiertas (Aprobada / Parcial / Pendiente)</p>
+                        <div className="bg-amber-50 rounded-xl border border-amber-100 p-3 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                            <p className="text-amber-700 text-xs font-bold">Este proveedor no tiene OCs abiertas (Aprobada / Parcial / Pendiente)</p>
                         </div>
                     )}
 
                     {/* Documento, Fecha, Recibido por */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Factura / RM</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Factura / RM</label>
                             <Input
                                 placeholder="FAC-1234 o RM-567"
                                 value={documentoRef}
                                 onChange={e => setDocumentoRef(e.target.value)}
-                                className="h-12 font-bold bg-slate-50 border-slate-200 rounded-xl"
+                                className="h-9 text-xs font-bold bg-slate-50 border-slate-200 rounded-lg"
                             />
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de Entrega</label>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha de Entrega</label>
                             <Input
                                 type="date"
                                 value={fecha}
                                 onChange={e => setFecha(e.target.value)}
-                                className="h-12 font-bold bg-slate-50 border-slate-200 rounded-xl"
+                                className="h-9 text-xs font-bold bg-slate-50 border-slate-200 rounded-lg"
                             />
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quien Recibe</label>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Quien Recibe</label>
                             <Input
                                 placeholder="Nombre completo"
                                 value={recibidoPor}
                                 onChange={e => setRecibidoPor(e.target.value)}
-                                className="h-12 font-bold bg-slate-50 border-slate-200 rounded-xl"
+                                className="h-9 text-xs font-bold bg-slate-50 border-slate-200 rounded-lg"
                             />
                         </div>
                     </div>
 
                     {/* Items */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ítems Recibidos</label>
-                            <Button onClick={addItem} size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-black text-xs gap-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ítems Recibidos</label>
+                            <Button onClick={addItem} size="sm" variant="outline" className="border-emerald-200 h-7 text-emerald-700 hover:bg-emerald-50 font-black text-[10px] gap-1 px-2">
                                 <Plus className="w-3 h-3" /> Agregar Ítem
                             </Button>
                         </div>
 
                         {items.map((it, idx) => (
-                            <div key={idx} className="flex gap-3 items-center bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-lg p-2 border border-slate-100">
                                 <select
                                     value={it.insumoId}
                                     onChange={e => updateItem(idx, "insumoId", e.target.value)}
-                                    className="flex-1 h-10 px-3 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                    className="flex-1 h-8 px-2 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-700 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                                 >
                                     <option value="">— Insumo —</option>
                                     {insumos.map(ins => (
@@ -233,44 +233,46 @@ export const EntregasSection = ({ terceros, insumos, ordenes }: EntregasSectionP
                                 <Input
                                     type="number"
                                     min="0"
-                                    placeholder="Cantidad"
+                                    placeholder="Cant."
                                     value={it.cantidadRecibida || ""}
                                     onChange={e => updateItem(idx, "cantidadRecibida", Number(e.target.value))}
-                                    className="w-32 h-10 text-center font-black bg-white border-slate-200 rounded-xl"
+                                    className="w-20 h-8 text-[11px] text-center font-black bg-white border-slate-200 rounded"
                                 />
-                                {items.length > 1 && (
-                                    <button onClick={() => removeItem(idx)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                        <Trash2 className="w-4 h-4" />
+                                {items.length > 1 ? (
+                                    <button onClick={() => removeItem(idx)} className="p-1 px-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0">
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     </button>
+                                ) : (
+                                    <div className="w-6 shrink-0" />
                                 )}
                             </div>
                         ))}
                     </div>
 
                     {/* Notas */}
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observaciones (opcional)</label>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Observaciones (opcional)</label>
                         <Input
-                            placeholder="Ej: Llegó en buen estado, empaque ligeramente dañado..."
+                            placeholder="Ej: Llegó en buen estado..."
                             value={notas}
                             onChange={e => setNotas(e.target.value)}
-                            className="h-12 font-bold bg-slate-50 border-slate-200 rounded-xl"
+                            className="h-9 text-xs font-bold bg-slate-50 border-slate-200 rounded-lg"
                         />
                     </div>
 
                     <Button
                         onClick={handleSubmit}
                         disabled={isSaving || !terceroId || ocsAbiertas.length === 0}
-                        className="w-full h-14 bg-[#183C30] hover:bg-emerald-900 text-white rounded-2xl font-black uppercase tracking-widest text-base shadow-lg disabled:opacity-50"
+                        className="w-full h-10 bg-[#183C30] hover:bg-emerald-900 text-white rounded-lg font-black uppercase tracking-widest text-[11px] shadow-sm disabled:opacity-50"
                     >
                         {isSaving ? (
-                            <div className="flex items-center gap-3">
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 Distribuyendo entre OCs...
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <Truck className="w-5 h-5" />
+                            <div className="flex items-center gap-2">
+                                <Truck className="w-4 h-4" />
                                 Registrar Entrega y Distribuir
                             </div>
                         )}
@@ -278,33 +280,33 @@ export const EntregasSection = ({ terceros, insumos, ordenes }: EntregasSectionP
                 </div>
 
                 {/* Panel lateral: Resultado de distribución */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                     {resultado && resultado.length > 0 ? (
-                        <div className="bg-white rounded-3xl shadow-sm border border-emerald-100 p-6 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                                <h3 className="font-black text-[#183C30] uppercase text-xs tracking-[0.2em]">
+                        <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                <h3 className="font-black text-[#183C30] uppercase text-[10px] tracking-[0.1em]">
                                     Distribución Aplicada
                                 </h3>
                             </div>
-                            <p className="text-xs text-slate-400 font-bold">
+                            <p className="text-[11px] text-slate-400 font-bold leading-snug">
                                 La entrega fue distribuida en {resultado.length} OC(s) siguiendo el orden FIFO (más antigua primero)
                             </p>
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 {resultado.map((r, idx) => (
-                                    <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="font-black text-slate-800 text-sm">Pedido {r.numeroPedido}</span>
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${r.nuevo_estado === "Recibido" ? "bg-emerald-100 text-emerald-700" :
+                                    <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <span className="font-black text-slate-800 text-[11px]">Pedido {r.numeroPedido}</span>
+                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${r.nuevo_estado === "Recibido" ? "bg-emerald-100 text-emerald-700" :
                                                     r.nuevo_estado === "Parcial" ? "bg-blue-100 text-blue-700" :
                                                         "bg-amber-100 text-amber-700"
                                                 }`}>{r.nuevo_estado}</span>
                                         </div>
-                                        <div className="flex flex-wrap gap-1">
+                                        <div className="flex flex-wrap gap-1 mt-1">
                                             {Object.entries(r.asignado).map(([iid, cant]) => {
                                                 const ins = insumos.find(x => x.id === iid);
                                                 return (
-                                                    <span key={iid} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                                                    <span key={iid} className="bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px] font-bold">
                                                         {ins?.nombre || iid}: <span className="text-emerald-600">{cant.toLocaleString()}</span>
                                                     </span>
                                                 );
@@ -315,18 +317,18 @@ export const EntregasSection = ({ terceros, insumos, ordenes }: EntregasSectionP
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-8 text-center">
-                            <Truck className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">
+                        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+                            <Truck className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                            <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">
                                 El resultado de la distribución aparecerá aquí
                             </p>
                         </div>
                     )}
 
                     {/* Instrucciones */}
-                    <div className="bg-slate-50 rounded-3xl border border-slate-100 p-6 space-y-3">
-                        <h4 className="font-black text-slate-600 uppercase text-[10px] tracking-[0.2em]">¿Cómo funciona?</h4>
-                        <ol className="space-y-2 text-xs text-slate-500 font-medium list-decimal list-inside">
+                    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4 space-y-2">
+                        <h4 className="font-black text-slate-600 uppercase text-[9px] tracking-[0.2em]">¿Cómo funciona?</h4>
+                        <ol className="space-y-1.5 text-[10px] text-slate-500 font-medium list-decimal list-inside">
                             <li>Selecciona el proveedor que entregó la mercancía</li>
                             <li>Ingresa el número de Factura o Remisión</li>
                             <li>Agrega los ítems que llegaron con sus cantidades</li>

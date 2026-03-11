@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
     Plus, Building2, Edit2, Trash2, Phone, Mail,
-    Package, DollarSign, AlertCircle, Search, X, ChevronDown, ChevronUp, CheckCircle2
+    Package, DollarSign, AlertCircle, Search, X, ChevronDown, ChevronUp, CheckCircle2, FileDown
 } from "lucide-react";
 import { Tercero, Insumo, OrdenCompra, PrecioEscala } from "@/hooks/useCompras";
+import { exportarCatalogoProveedorPDF } from "../utils/pdfExport";
 import { toast } from "sonner";
 
 
@@ -376,11 +377,15 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
                                     </div>
 
                                     {/* Acciones */}
-                                    <div className="w-20 flex justify-center gap-1" onClick={e => e.stopPropagation()}>
+                                    <div className="w-24 flex justify-center gap-0.5" onClick={e => e.stopPropagation()}>
                                         {isExpanded ?
                                             <ChevronUp className="w-4 h-4 text-gray-300" /> :
                                             <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                                         }
+                                        <Button variant="ghost" size="icon" onClick={() => exportarCatalogoProveedorPDF(t, insumos)}
+                                            className="text-teal-400 hover:bg-teal-50 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" title="Descargar Ficha Técnica">
+                                            <FileDown className="w-3.5 h-3.5" />
+                                        </Button>
                                         <Button variant="ghost" size="icon" onClick={() => editTercero(t)}
                                             className="text-blue-400 hover:bg-blue-50 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Edit2 className="w-3.5 h-3.5" />
@@ -408,8 +413,27 @@ export const TercerosSection = ({ terceros, insumos, createTercero, updateTercer
                                                 {insumosT.map(i => {
                                                     const precio = getPrecioPorInsumo(t, i.id);
                                                     return (
-                                                        <div key={i.id} className="bg-white rounded-xl border border-indigo-100 p-2.5 flex flex-col gap-1">
-                                                            <p className="text-xs font-bold text-gray-800 truncate">{i.nombre}</p>
+                                                        <div key={i.id} className="relative bg-white rounded-xl border border-indigo-100 p-2.5 flex flex-col gap-1 group">
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="absolute top-1 right-1 h-6 w-6 text-red-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const tag = `[${i.sku}] ${i.nombre}, `;
+                                                                    const newInsumosStr = (t.insumos || "").replace(tag, "");
+                                                                    const newPrecios = (t.insumosPrecios || []).filter(ip => ip.insumoId !== i.id);
+                                                                    updateTercero(t.id, {
+                                                                        insumos: newInsumosStr,
+                                                                        insumosPrecios: newPrecios
+                                                                    });
+                                                                    toast.success(`Insumo desasociado de ${t.nombre}`);
+                                                                }}
+                                                                title="Desasociar insumo"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </Button>
+                                                            <p className="text-xs font-bold text-gray-800 pr-5 truncate">{i.nombre}</p>
                                                             <p className="text-[10px] text-gray-400 font-mono">{i.sku} · {i.unidad}</p>
                                                             {precio > 0 ? (
                                                                 <p className="text-xs font-black text-emerald-600">${precio.toLocaleString("es-CO")}/u</p>

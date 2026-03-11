@@ -8,7 +8,7 @@ import {
     Plus, Factory, Edit2, Trash2, X, AlertCircle, CheckCircle2,
     DollarSign, Copy, Filter, Search, FileDown, Layers
 } from "lucide-react";
-import { ProductoFabricado, Insumo } from "@/hooks/useCompras";
+import { ProductoFabricado, Insumo, Tercero } from "@/hooks/useCompras";
 import { exportarBOMPDF, descargarZIPBOMs } from "../utils/pdfExport";
 import { toast } from "sonner";
 
@@ -21,23 +21,31 @@ function parseRendimientoFactor(raw: string | undefined): number {
     if (!raw || raw.trim() === "" || raw === "N/A") return 1;
     const s = raw.trim();
     if (s.includes("%")) {
-        const n = parseFloat(s.replace("%", ""));
-        if (!isNaN(n) && n > 0) return n / 100;
+        const match = s.match(/([0-9.,]+)/);
+        if (match) {
+            const n = parseFloat(match[1].replace(',', '.'));
+            if (!isNaN(n) && n > 0) return n / 100;
+        }
+        return 1;
     }
-    const n = parseFloat(s);
-    if (!isNaN(n) && n > 0) return n;
+    const match = s.match(/([0-9.,]+)/);
+    if (match) {
+        const n = parseFloat(match[1].replace(',', '.'));
+        if (!isNaN(n) && n > 0) return n;
+    }
     return 1;
 }
 
 interface ProductosSectionProps {
     productos: ProductoFabricado[];
     insumos: Insumo[];
+    terceros: Tercero[];
     createProducto: (p: Partial<ProductoFabricado>) => Promise<boolean>;
     updateProducto: (id: string, p: Partial<ProductoFabricado>) => Promise<boolean>;
     deleteProducto: (id: string) => Promise<boolean>;
 }
 
-export const ProductosSection = ({ productos, insumos, createProducto, updateProducto, deleteProducto }: ProductosSectionProps) => {
+export const ProductosSection = ({ productos, insumos, terceros, createProducto, updateProducto, deleteProducto }: ProductosSectionProps) => {
     const [isProductoDialogOpen, setIsProductoDialogOpen] = useState(false);
     const [searchProductos, setSearchProductos] = useState("");
     const [filterMode, setFilterMode] = useState<"todos" | "completos" | "incompletos">("todos");
@@ -54,7 +62,9 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
         const countProductos = p.productosAsociados?.length ?? 0;
         const completo = countInsumos > 0 || countProductos > 0;
 
-        const mandatory = ["ENVASE", "TAPA", "SELLO", "ETIQUETA", "MATERIA PRIMA", "TERMOENCOGIBLE", "CAJA"];
+        const mandatory = p.tipo === "Kit" 
+            ? ["TERMOENCOGIBLE", "CAJA"]
+            : ["ENVASE", "TAPA", "SELLO", "ETIQUETA", "MATERIA PRIMA", "CAJA"];
         const foundCategories = new Set<string>();
 
         const calcularCostoRecursivo = (prod: ProductoFabricado): number => {
@@ -66,7 +76,18 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
 
                     const rendStr = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins?.rendimiento;
                     const factor = parseRendimientoFactor(rendStr);
-                    const unitPrice = (ins?.precio ?? 0) / factor;
+                    
+                    let basePrice = Number(ins?.precio) || 0;
+                    if (basePrice <= 0) {
+                        let minPrice = Infinity;
+                        for (const t of terceros) {
+                            const p = t.insumosPrecios?.find(x => x.insumoId === ia.insumoId)?.precio;
+                            if (p && p > 0 && p < minPrice) minPrice = p;
+                        }
+                        if (minPrice < Infinity) basePrice = minPrice;
+                    }
+                    
+                    const unitPrice = basePrice / factor;
                     costo += unitPrice * ia.cantidadRequerida;
                 }
             }
@@ -76,7 +97,8 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                     if (sp) {
                         // Si el sub-producto es de una categoría mandatoria (difícil pero posible)
                         // o si su contenido cuenta como Materia Prima
-                        costo += calcularCostoRecursivo(sp) * pa.cantidadRequerida;
+                        const spCostAndFound = calcularCostoRecursivo(sp);
+                        costo += spCostAndFound * pa.cantidadRequerida;
                     }
                 }
             }
@@ -566,7 +588,18 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                                 const ins = insumos.find(i => i.id === ia.insumoId);
                                                 const rendStr = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins?.rendimiento;
                                                 const factor = parseRendimientoFactor(rendStr);
-                                                const unitPrice = (ins?.precio ?? 0) / factor;
+                                                
+                                                let basePrice = Number(ins?.precio) || 0;
+                                                if (basePrice <= 0) {
+                                                    let minPrice = Infinity;
+                                                    for (const t of terceros) {
+                                                        const p = t.insumosPrecios?.find(x => x.insumoId === ia.insumoId)?.precio;
+                                                        if (p && p > 0 && p < minPrice) minPrice = p;
+                                                    }
+                                                    if (minPrice < Infinity) basePrice = minPrice;
+                                                }
+                                                
+                                                const unitPrice = basePrice / factor;
                                                 const insSubtotal = unitPrice * ia.cantidadRequerida;
                                                 return (
                                                     <div key={idx} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100/50 last:border-0">
@@ -591,14 +624,23 @@ export const ProductosSection = ({ productos, insumos, createProducto, updatePro
                                             })}
                                             {p.productosAsociados?.map((pa, idx) => {
                                                 const subP = productos.find(sub => sub.id === pa.productoId);
+                                                const subPStats = subP ? getProductStats(subP) : null;
+                                                const subCostoUnitario = subPStats ? subPStats.costo : 0;
+                                                const subCostoTotal = subCostoUnitario * pa.cantidadRequerida;
+                                                
                                                 return (
                                                     <div key={`sub-${idx}`} className="flex justify-between items-center text-[10px] py-0.5 border-b border-gray-100/50 last:border-0 italic">
                                                         <span className="truncate max-w-[50%] text-violet-600 font-semibold">
                                                             {subP?.nombre ?? "Producto eliminado"}
                                                         </span>
-                                                        <div className="flex gap-2 items-center shrink-0">
+                                                        <div className="flex gap-2 items-center justify-end shrink-0">
                                                             <span className="font-bold text-gray-400">× {pa.cantidadRequerida} kit</span>
                                                             <Layers className="w-2.5 h-2.5 text-violet-400" />
+                                                            {subCostoTotal > 0 && (
+                                                                <span className="text-teal-600 font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-teal-50 ml-1 not-italic">
+                                                                    ${subCostoTotal.toLocaleString("es-CO")}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
