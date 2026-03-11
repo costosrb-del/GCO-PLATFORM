@@ -370,18 +370,32 @@ export default function CierreActasPage() {
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                             <h3 className="font-bold text-gray-800 border-b pb-2">Previsualización de Indicadores</h3>
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <p className="text-xs font-medium text-indigo-500 uppercase">Total Conteo Físico</p>
+                                    <div className="flex items-end gap-2 mt-1">
+                                        <h3 className="text-2xl font-bold text-indigo-700">{processedItems.reduce((sum,i) => sum + i.p, 0)}</h3>
+                                        <span className="text-xs font-medium text-indigo-400 mb-1">und</span>
+                                    </div>
+                                </div>
+                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 font-bold">
+                                    <p className="text-xs font-medium text-orange-500 uppercase">Total Saldo Sistema</p>
+                                    <div className="flex items-end gap-2 mt-1">
+                                        <h3 className="text-2xl font-bold text-orange-700">{totalUnidadesSistema}</h3>
+                                        <span className="text-xs font-medium text-orange-400 mb-1">und</span>
+                                    </div>
+                                </div>
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-medium text-gray-500 uppercase">Refs. con Diferencias</p>
+                                    <p className="text-xs font-medium text-gray-500 uppercase">Refs. con Diferencia</p>
                                     <div className="flex items-end gap-2 mt-1">
                                         <h3 className="text-2xl font-bold text-yellow-600">{refConDiferencias}</h3>
                                         <span className="text-xs font-medium text-gray-400 mb-1">/ {totalReferencias} ref</span>
                                     </div>
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-medium text-gray-500 uppercase">Unidades con Dif.</p>
+                                    <p className="text-xs font-medium text-gray-500 uppercase">Unidades Diferencia Bruta</p>
                                     <div className="flex items-end gap-2 mt-1">
                                         <h3 className="text-2xl font-bold text-red-500">{totalUnidadesDiferencia}</h3>
-                                        <span className="text-xs font-medium text-gray-400 mb-1">/ {totalUnidadesSistema} und</span>
+                                        <span className="text-xs font-medium text-gray-400 mb-1">und gen.</span>
                                     </div>
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -849,7 +863,7 @@ export default function CierreActasPage() {
                                 <thead className="bg-[#183C30] text-white">
                                     <tr>
                                         <th className="border border-gray-300 p-1 text-left">SKU - Producto</th>
-                                        <th className="border border-gray-300 p-1 text-center w-24">Saldo Inicial</th>
+                                        <th className="border border-gray-300 p-1 text-center w-28">Saldo Sistema (3 Bodegas)</th>
                                         <th className="border border-gray-300 p-1 text-center w-24">Ajuste</th>
                                         <th className="border border-gray-300 p-1 text-center w-24">Saldo Físico Real</th>
                                     </tr>
