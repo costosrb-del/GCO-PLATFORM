@@ -48,7 +48,7 @@ interface ProductosSectionProps {
 export const ProductosSection = ({ productos, insumos, terceros, createProducto, updateProducto, deleteProducto }: ProductosSectionProps) => {
     const [isProductoDialogOpen, setIsProductoDialogOpen] = useState(false);
     const [searchProductos, setSearchProductos] = useState("");
-    const [filterMode, setFilterMode] = useState<"todos" | "completos" | "incompletos">("todos");
+    const [filterMode, setFilterMode] = useState<"todos" | "completos" | "incompletos" | "kits" | "sueltos">("todos");
     const [productoForm, setProductoForm] = useState<Partial<ProductoFabricado>>({
         nombre: "", sku: "", descripcion: "", categoria: "", tipo: "Producto", insumosAsociados: [], productosAsociados: []
     });
@@ -119,9 +119,15 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                 (p.sku ?? "").toLowerCase().includes(searchProductos.toLowerCase()) ||
                 (p.categoria ?? "").toLowerCase().includes(searchProductos.toLowerCase());
             if (!matchesSearch) return false;
+            
+            if (filterMode === "todos") return true;
+            if (filterMode === "kits") return p.tipo === "Kit";
+            if (filterMode === "sueltos") return p.tipo !== "Kit";
+            
             const { completo } = getProductStats(p);
             if (filterMode === "completos") return completo;
             if (filterMode === "incompletos") return !completo;
+            
             return true;
         });
     }, [productos, searchProductos, filterMode, insumos]);
@@ -519,11 +525,11 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                     <Input className="pl-9 border-gray-100 text-sm" placeholder="Buscar por nombre, SKU, categoría..."
                         value={searchProductos} onChange={e => setSearchProductos(e.target.value)} />
                 </div>
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg shrink-0">
-                    {(["todos", "completos", "incompletos"] as const).map(mode => (
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg shrink-0 overflow-x-auto max-w-full">
+                    {(["todos", "completos", "incompletos", "kits", "sueltos"] as const).map(mode => (
                         <button key={mode} onClick={() => setFilterMode(mode)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${filterMode === mode ? "bg-white text-fuchsia-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
-                            {mode === "todos" ? "Todos" : mode === "completos" ? "✓ Con ficha" : "⚠ Sin ficha"}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${filterMode === mode ? "bg-white text-fuchsia-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                            {mode === "todos" ? "Todos" : mode === "completos" ? "✓ Con ficha" : mode === "incompletos" ? "⚠ Sin ficha" : mode === "kits" ? "📦 Kits" : "🧴 Sueltos"}
                         </button>
                     ))}
                 </div>
@@ -602,11 +608,17 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                                                 const factor = parseRendimientoFactor(rendStr);
                                                 
                                                 let basePrice = Number(ins?.precio) || 0;
+                                                let isSupplierPrice = false;
+                                                let supplierName = "";
                                                 if (basePrice <= 0) {
                                                     let minPrice = Infinity;
                                                     for (const t of terceros) {
-                                                        const p = t.insumosPrecios?.find(x => x.insumoId === ia.insumoId)?.precio;
-                                                        if (p && p > 0 && p < minPrice) minPrice = p;
+                                                        const pPrice = t.insumosPrecios?.find(x => x.insumoId === ia.insumoId)?.precio;
+                                                        if (pPrice && pPrice > 0 && pPrice < minPrice) {
+                                                            minPrice = pPrice;
+                                                            supplierName = t.nombre;
+                                                            isSupplierPrice = true;
+                                                        }
                                                     }
                                                     if (minPrice < Infinity) basePrice = minPrice;
                                                 }
@@ -614,11 +626,18 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                                                 const unitPrice = basePrice / factor;
                                                 const insSubtotal = unitPrice * ia.cantidadRequerida;
                                                 return (
-                                                    <div key={idx} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100/50 last:border-0">
-                                                        <span className={`truncate max-w-[50%] ${!ins ? "text-red-400 line-through" : "text-gray-600"} font-medium`}>
-                                                            {ins?.nombre ?? "Insumo eliminado"}
-                                                        </span>
-                                                        <div className="flex gap-2 items-center flex-wrap justify-end shrink-0">
+                                                    <div key={idx} className="flex justify-between items-start text-[10px] py-1 border-b border-gray-100/50 last:border-0">
+                                                        <div className="flex flex-col max-w-[50%]">
+                                                            <span className={`truncate ${!ins ? "text-red-400 line-through" : "text-gray-600"} font-medium`} title={ins?.nombre ?? "Insumo eliminado"}>
+                                                                {ins?.nombre ?? "Insumo eliminado"}
+                                                            </span>
+                                                            {isSupplierPrice && (
+                                                                <span className="text-[8px] text-fuchsia-600/80 font-medium truncate mt-0.5">
+                                                                    Costo desde: {supplierName}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2 items-center flex-wrap justify-end shrink-0 pl-2">
                                                             {ia.rendimientoAjustado && (
                                                                 <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded-sm font-black tracking-tight" title={`Rendimiento Ajustado: ${ia.rendimientoAjustado}`}>
                                                                     R:{ia.rendimientoAjustado}
@@ -626,7 +645,7 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                                                             )}
                                                             <span className="font-bold text-gray-400">× {ia.cantidadRequerida} {ins?.unidad ?? ""}</span>
                                                             {insSubtotal > 0 && (
-                                                                <span className="text-teal-600 font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-teal-50">
+                                                                <span className="text-teal-600 font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-teal-50" title={isSupplierPrice ? "Precio tomado de cotización del proveedor" : "Precio base"}>
                                                                     ${insSubtotal.toLocaleString("es-CO")}
                                                                 </span>
                                                             )}
