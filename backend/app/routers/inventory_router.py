@@ -384,25 +384,50 @@ def get_inventory_history(
 
 @router.post("/actas")
 async def save_acta(data: dict, user: dict = Depends(verify_token)):
-    """Guardado histórico de actas de inventario"""
-    import uuid
+    """Guardado histórico de actas de inventario (Borradores y Definitivas)"""
     import datetime
     
-    acta_id = str(uuid.uuid4())
+    acta_id = data.get("id")
+    is_new = False
+    if not acta_id:
+        import uuid
+        acta_id = str(uuid.uuid4())
+        is_new = True
+        
     acta = {
         "id": acta_id,
         "date": datetime.datetime.now().isoformat(),
         "user": user.get("username", "Unknown"),
+        "status": data.get("status", "draft"), # 'draft' or 'final'
         "data": data
     }
     
     # Save to cache history
     try:
         history = cache.load("actas_history.json") or []
-        history.append(acta)
+        
+        if not is_new:
+            # Update existing if found
+            found = False
+            for idx, item in enumerate(history):
+                if item.get("id") == acta_id:
+                    history[idx] = acta
+                    found = True
+                    break
+            if not found:
+                history.append(acta)
+        else:
+            history.append(acta)
+            
         cache.save("actas_history.json", history)
-        return {"status": "success", "acta_id": acta_id, "message": "Acta guardada correctamente"}
+        return {
+            "status": "success", 
+            "acta_id": acta_id, 
+            "message": "Acta guardada correctamente", 
+            "acta_status": acta["status"]
+        }
     except Exception as e:
+        print(f"Error saving acta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/actas")

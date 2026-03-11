@@ -503,7 +503,14 @@ export const GeneradorPedidoSection = ({
                 }
             }
         }
-        return map;
+        // Filtrar solo grupos que tengan al menos 2 opciones de empaque (ej: Producto 7703 tiene caja x100 y caja x150)
+        const filteredMap = new Map<string, InsumoRequerido[]>();
+        for (const [key, items] of map.entries()) {
+            if (items.length >= 2) {
+                filteredMap.set(key, items);
+            }
+        }
+        return filteredMap;
     }, [requisicion]);
 
 

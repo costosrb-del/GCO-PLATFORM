@@ -39,8 +39,7 @@ const COMPANIES = [
     "RITUAL BOTANICO S.A.S.",
     "ALMAVERDE BEAUTY S.A.S.",
     "GRUPO HUMAN PROJECT S.A.S.",
-    "ORIGEN BOTANICO S.A.S.",
-    "APEGO COSMÉTICOS S.A.S."
+    "ORIGEN BOTANICO S.A.S."
 ];
 
 const getAvailablePeriods = () => {
@@ -69,12 +68,17 @@ interface ActaItem {
     bPrincipal: number | '';
     bAverias: number | '';
     bComercExt: number | '';
+    bLibre: number | '';
     
     // Bodegas de Justificación
     bTransito: number | '';
     bPerdida: number | '';
     bDos: number | '';
     justificacion: string;
+
+    // Unidades Libres (NUEVO)
+    physicalFree: number | '';
+    systemFree: number | '';
 
     system: number | ''; // Calculado
     unitPrice: number | '';
@@ -96,6 +100,8 @@ export default function CierreActasPage() {
         return `${months[d.getMonth()]} ${d.getFullYear()}`;
     });
     const [observaciones, setObservaciones] = useState("");
+    const [actaId, setActaId] = useState<string | null>(null);
+    const [status, setStatus] = useState<"draft" | "final">("draft");
 
     // Items
     const [items, setItems] = useState<ActaItem[]>(
@@ -106,12 +112,15 @@ export default function CierreActasPage() {
             bPrincipal: '',
             bAverias: '',
             bComercExt: '',
+            bLibre: '',
             bTransito: '',
             bPerdida: '',
             bDos: '',
             justificacion: '',
             system: '',
-            unitPrice: ''
+            unitPrice: '',
+            physicalFree: '',
+            systemFree: ''
         }))
     );
 
@@ -175,13 +184,15 @@ export default function CierreActasPage() {
         toast.success("Excel descargado correctamente.");
     };
 
-    const handleSaveActa = async () => {
+    const handleSaveActa = async (newStatus: "draft" | "final" = "draft") => {
         setIsSaving(true);
         try {
             const token = localStorage.getItem("gco_token");
             if (!token) throw new Error("No hay token de sesión");
 
             const payload = {
+                id: actaId, // Si existe, el backend actualiza. Si no, crea.
+                status: newStatus,
                 company, consecutivo, fecha, periodo, observaciones,
                 items: processedItems,
                 resumen: { totalReferencias, refConDiferencias, exactitud, totalUnidadesSistema, totalUnidadesDiferencia, exactitudUnidades }
@@ -191,7 +202,9 @@ export default function CierreActasPage() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data?.status === "success") {
-                toast.success("Acta guardada correctamente en el Historial");
+                setActaId(res.data.acta_id);
+                setStatus(newStatus);
+                toast.success(newStatus === "final" ? "Acta CERRADA Y FIRMADA correctamente" : "Borrador guardado correctamente");
             }
         } catch (error: any) {
             console.error("Error al guardar", error);
@@ -250,19 +263,30 @@ export default function CierreActasPage() {
     // Cálculos Derivados
     const processedItems = useMemo(() => {
         return items.map(item => {
-            const p = Number(item.physical) || 0;
+            const p_base = Number(item.physical) || 0;
+            const p_free = Number(item.physicalFree) || 0;
+            const p_total = p_base + p_free;
+
             const bPrin = Number(item.bPrincipal) || 0;
             const bAv = Number(item.bAverias) || 0;
             const bCom = Number(item.bComercExt) || 0;
-            const computedSystem = bPrin + bAv + bCom;
+            const bLib = Number(item.bLibre) || 0;
+            const s_free = Number(item.systemFree) || 0;
+            
+            const computedSystem = bPrin + bAv + bCom + bLib;
+            const s_total = computedSystem + s_free;
 
-            const diff = p - computedSystem;
+            const diff = p_total - s_total;
             return {
                 ...item,
-                p,
-                s: computedSystem, // Sobrescribimos 's' para que use el calculado
+                p: p_base,
+                p_free,
+                p_total,
+                s: computedSystem,
+                s_free,
+                s_total,
                 diff,
-                bPrin, bAv, bCom,
+                bPrin, bAv, bCom, bLib,
                 bTr: Number(item.bTransito) || 0,
                 bPer: Number(item.bPerdida) || 0,
                 bD: Number(item.bDos) || 0
@@ -280,7 +304,7 @@ export default function CierreActasPage() {
     const refConDiferencias = itemsWithDifferences.length;
     const exactitud = totalReferencias > 0 ? ((totalReferencias - refConDiferencias) / totalReferencias) * 100 : 0;
 
-    const totalUnidadesSistema = processedItems.reduce((sum, item) => sum + item.s, 0);
+    const totalUnidadesSistema = processedItems.reduce((sum, item) => sum + item.s_total, 0);
     const totalUnidadesDiferencia = processedItems.reduce((sum, item) => sum + Math.abs(item.diff), 0);
     const exactitudUnidades = totalUnidadesSistema > 0 ? ((totalUnidadesSistema - totalUnidadesDiferencia) / totalUnidadesSistema) * 100 : 0;
 
@@ -302,7 +326,30 @@ export default function CierreActasPage() {
                     tr { page-break-inside: avoid; page-break-after: auto; }
                     th, td { border: 1px solid #ddd; padding: 4px; font-size: 10px; }
                     h1, h2, h3 { page-break-after: avoid; }
+                    .watermark { 
+                        position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+                        font-size: 80px; color: rgba(0,0,0,0.06); font-weight: 900; pointer-events: none;
+                        z-index: 0; white-space: nowrap; text-transform: uppercase; border: 12px solid rgba(0,0,0,0.06);
+                        padding: 30px; border-radius: 30px; line-height: 1;
+                    }
+                    .finalized-lock { opacity: 1; pointer-events: none; }
                 }
+
+                .status-badge { 
+                    position: absolute; top: 25px; right: 25px; padding: 6px 14px; border-radius: 99px;
+                    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
+                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); z-index: 10;
+                }
+                .status-draft { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+                .status-final { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
+                
+                .watermark { 
+                    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+                    font-size: 80px; color: rgba(0,0,0,0.06); font-weight: 900; pointer-events: none;
+                    z-index: 0; white-space: nowrap; text-transform: uppercase; border: 12px solid rgba(0,0,0,0.06);
+                    padding: 30px; border-radius: 30px; line-height: 1;
+                }
+                .finalized-lock { opacity: 1; pointer-events: none; }
             `}} />
 
             {/* Loading Overlay */}
@@ -321,21 +368,40 @@ export default function CierreActasPage() {
             {viewMode === "form" ? (
                 <div className="max-w-7xl mx-auto space-y-6">
                     <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div>
-                            <h1 className="text-2xl font-bold text-[#183C30] flex items-center gap-2">
-                                <FileText className="h-6 w-6" />
-                                Generador de Actas de Cierre
-                            </h1>
-                            <p className="text-sm text-gray-500 mt-1">Ingresa el conteo físico y el saldo del sistema para generar el documento formal.</p>
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <h1 className="text-2xl font-bold text-[#183C30] flex items-center gap-2">
+                                    <FileText className="h-6 w-6" />
+                                    Generador de Actas de Cierre
+                                </h1>
+                                <p className="text-sm text-gray-500 mt-1">Ingresa el conteo físico y el saldo del sistema para generar el documento formal.</p>
+                            </div>
+                            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status === 'draft' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-green-100 text-green-700 border border-green-200'}`}>
+                                {status === 'draft' ? 'Borrador' : 'Cerrada y Firmada'}
+                            </div>
                         </div>
-                        <button
-                            onClick={handleGenerate}
-                            className="bg-[#183C30] text-white px-6 py-2.5 rounded-xl font-medium hover:bg-[#122e24] transition-all flex items-center gap-2 shadow-sm"
-                        >
-                            <FileText className="h-5 w-5" />
-                            Generar Acta
-                        </button>
+                        <div className="flex gap-2">
+                            {status === "draft" && (
+                                <button
+                                    onClick={() => handleSaveActa("draft")}
+                                    disabled={isSaving}
+                                    className="bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+                                >
+                                    <Save className="h-5 w-5" />
+                                    Guardar Borrador
+                                </button>
+                            )}
+                            <button
+                                onClick={handleGenerate}
+                                className="bg-[#183C30] text-white px-6 py-2.5 rounded-xl font-medium hover:bg-[#122e24] transition-all flex items-center gap-2 shadow-sm"
+                            >
+                                <FileText className="h-5 w-5" />
+                                Previsualizar Acta
+                            </button>
+                        </div>
                     </div>
+
+                    <div className={`space-y-6 ${status === 'final' ? 'pointer-events-none opacity-75 grayscale-[0.5]' : ''}`}>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Configuración */}
@@ -400,14 +466,14 @@ export default function CierreActasPage() {
                                 <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                     <p className="text-xs font-medium text-indigo-500 uppercase">Total Conteo Físico</p>
                                     <div className="flex items-end gap-2 mt-1">
-                                        <h3 className="text-2xl font-bold text-indigo-700">{processedItems.reduce((sum,i) => sum + i.p, 0)}</h3>
+                                        <h3 className="text-2xl font-bold text-indigo-700">{processedItems.reduce((sum,i) => sum + i.p_total, 0)}</h3>
                                         <span className="text-xs font-medium text-indigo-400 mb-1">und</span>
                                     </div>
                                 </div>
                                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 font-bold">
                                     <p className="text-xs font-medium text-orange-500 uppercase">Total Saldo Sistema</p>
                                     <div className="flex items-end gap-2 mt-1">
-                                        <h3 className="text-2xl font-bold text-orange-700">{totalUnidadesSistema}</h3>
+                                        <h3 className="text-2xl font-bold text-orange-700">{processedItems.reduce((sum, i) => sum + i.s_total, 0)}</h3>
                                         <span className="text-xs font-medium text-orange-400 mb-1">und</span>
                                     </div>
                                 </div>
@@ -459,22 +525,31 @@ export default function CierreActasPage() {
                                     <tr>
                                         <th className="px-6 py-4 font-semibold">SKU</th>
                                         <th className="px-6 py-4 font-semibold min-w-[200px]">Nombre del Producto</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-28 border-x border-gray-200 bg-blue-50/50">Conteo Físico</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-24 border-x border-gray-200 bg-blue-50/50">C. Central</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-24 border-r border-gray-200 bg-blue-50/50">U. Libres (F)</th>
                                         <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega Principal">B. Principal</th>
                                         <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega de Averías">B. Averías</th>
                                         <th className="px-3 py-4 font-semibold text-center text-[10px]" title="Bodega Comercio Exterior">B. C.Ext.</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-28 border-x border-gray-200 bg-orange-50/50" title="Suma de Principal, Averías y COMEX">Saldo Sistema</th>
-                                        <th className="px-3 py-4 font-semibold text-center">Diferencia</th>
-                                        <th className="px-3 py-4 font-semibold text-center w-28">P. Unit. (Faltante)</th>
+                                        <th className="px-3 py-4 font-semibold text-center text-[10px] bg-orange-50/10" title="Bodega Libre de Siigo">B. Libre (S)</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-24 border-l border-gray-200 bg-orange-100/30">Libres (Sheets)</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-28 border-x border-gray-200 bg-orange-100/50" title="Suma de Bodegas y Libres Sheets">Total Sistema</th>
+                                        <th className="px-3 py-4 font-semibold text-center">Dif. Real</th>
+                                        <th className="px-3 py-4 font-semibold text-center w-28">P. Unit.</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {items.map((item, idx) => {
-                                        const p = Number(item.physical) || 0;
-                                        const s = (Number(item.bPrincipal) || 0) + (Number(item.bAverias) || 0) + (Number(item.bComercExt) || 0);
-                                        const diff = p - s;
-                                        const hasSystemValue = item.bPrincipal !== '' || item.bAverias !== '' || item.bComercExt !== '';
-                                        const hasDiff = item.physical !== '' && hasSystemValue && diff !== 0;
+                                        const p_base = Number(item.physical) || 0;
+                                        const p_free = Number(item.physicalFree) || 0;
+                                        const p_total = p_base + p_free;
+
+                                        const s_base = (Number(item.bPrincipal) || 0) + (Number(item.bAverias) || 0) + (Number(item.bComercExt) || 0) + (Number(item.bLibre) || 0);
+                                        const s_free = (Number(item.systemFree) || 0);
+                                        const s_total = s_base + s_free;
+
+                                        const diff = p_total - s_total;
+                                        const hasSystemValue = item.bPrincipal !== '' || item.bAverias !== '' || item.bComercExt !== '' || item.bLibre !== '' || item.systemFree !== '';
+                                        const hasDiff = (item.physical !== '' || item.physicalFree !== '') && hasSystemValue && diff !== 0;
                                         const isFaltante = diff < 0;
 
                                         return (
@@ -492,7 +567,7 @@ export default function CierreActasPage() {
                                                         className="w-full bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#183C30] outline-none px-1 py-0.5 text-sm transition-all"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-2 border-x border-gray-100 bg-blue-50/10 hover:bg-blue-50/30 transition-colors">
+                                                <td className="px-2 py-2 border-x border-gray-100 bg-blue-50/5 hover:bg-blue-50/20 transition-colors">
                                                     <input
                                                         type="number"
                                                         placeholder="0"
@@ -502,7 +577,20 @@ export default function CierreActasPage() {
                                                             newItems[idx].physical = e.target.value === '' ? '' : Number(e.target.value);
                                                             setItems(newItems);
                                                         }}
-                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 font-bold transition-all"
+                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/20 font-bold transition-all"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 border-r border-gray-100 bg-blue-50/10 hover:bg-blue-50/30 transition-colors">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={item.physicalFree}
+                                                        onChange={(e) => {
+                                                            const newItems = [...items];
+                                                            newItems[idx].physicalFree = e.target.value === '' ? '' : Number(e.target.value);
+                                                            setItems(newItems);
+                                                        }}
+                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-blue-400 focus:border-blue-600 rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-600/20 font-bold transition-all text-blue-700"
                                                     />
                                                 </td>
                                                 <td className="px-2 py-2 border-r border-gray-100 transition-colors">
@@ -544,14 +632,40 @@ export default function CierreActasPage() {
                                                         className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-[#183C30]/20 transition-all font-mono"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-2 border-r border-gray-100 bg-orange-50/10 text-center font-bold text-orange-900 transition-colors">
-                                                    {Number(item.bPrincipal || 0) + Number(item.bAverias || 0) + Number(item.bComercExt || 0)}
+                                                <td className="px-2 py-2 border-r border-gray-100 bg-orange-50/5 transition-colors">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={item.bLibre}
+                                                        onChange={(e) => {
+                                                            const newItems = [...items];
+                                                            newItems[idx].bLibre = e.target.value === '' ? '' : Number(e.target.value);
+                                                            setItems(newItems);
+                                                        }}
+                                                        className="w-full text-center bg-transparent border border-gray-200 rounded-lg p-2 text-xs outline-none focus:ring-2 focus:ring-orange-500/10 transition-all font-bold text-orange-900"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 border-l border-gray-100 bg-orange-50/5 hover:bg-orange-50/20 transition-colors">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={item.systemFree}
+                                                        onChange={(e) => {
+                                                            const newItems = [...items];
+                                                            newItems[idx].systemFree = e.target.value === '' ? '' : Number(e.target.value);
+                                                            setItems(newItems);
+                                                        }}
+                                                        className="w-full text-center bg-transparent border border-gray-200 hover:border-orange-300 focus:border-orange-500 rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-orange-500/20 font-bold transition-all text-orange-700"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 border-x border-gray-200 bg-orange-50/20 text-center font-black text-orange-950 transition-colors">
+                                                    {s_total}
                                                 </td>
                                                 <td className="px-3 py-3 text-center">
-                                                    {item.physical === '' ? (
+                                                    {(item.physical === '' && item.physicalFree === '') ? (
                                                         <span className="text-gray-300">-</span>
                                                     ) : (
-                                                        <span className={`font-bold px-3 py-1 rounded-full text-xs ${hasDiff ? (diff < 0 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700') : 'bg-green-100 text-green-700'}`}>
+                                                        <span className={`font-black px-3 py-1 rounded-full text-xs shadow-sm ${hasDiff ? (diff < 0 ? 'bg-red-500 text-white' : 'bg-blue-500 text-white') : 'bg-emerald-500 text-white'}`}>
                                                             {diff > 0 ? '+' : ''}{diff}
                                                         </span>
                                                     )}
@@ -657,7 +771,8 @@ export default function CierreActasPage() {
                         </div>
                     </div>
                 </div>
-            ) : (
+            </div>
+        ) : (
                 /* === DOCUMENT PRINT VIEW === */
                 <div className="max-w-[800px] mx-auto bg-white shadow-xl min-h-screen relative print-section">
 
@@ -678,30 +793,55 @@ export default function CierreActasPage() {
                         </button>
 
                         <button
-                            onClick={handleDownloadPDF}
+                            onClick={() => handleDownloadPDF()}
                             className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-all flex items-center gap-2 shadow-sm"
                         >
                             <FileDown className="h-4 w-4" /> PDF
                         </button>
 
                         <button
-                            onClick={handlePrint}
+                            onClick={() => handlePrint()}
                             className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-900 transition-all flex items-center gap-2 shadow-sm"
                         >
                             <Printer className="h-4 w-4" /> Imprimir
                         </button>
 
-                        <button
-                            onClick={handleSaveActa}
-                            disabled={isSaving}
-                            className={`${isSaving ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm ml-2`}
-                        >
-                            <Save className="h-4 w-4" /> {isSaving ? "Guardando..." : "Guardar Acta"}
-                        </button>
+                        {status === "draft" && (
+                            <>
+                                <button
+                                    onClick={() => handleSaveActa("draft")}
+                                    disabled={isSaving}
+                                    className={`${isSaving ? 'bg-indigo-300' : 'bg-indigo-50 border border-indigo-200 hover:bg-indigo-100'} text-indigo-700 px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm ml-2`}
+                                >
+                                    <Save className="h-4 w-4" /> {isSaving ? "..." : "Guardar Borrador"}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirm("¿Estás seguro de CERRAR Y FIRMAR esta acta? Una vez firmada no podrá ser editada.")) {
+                                            handleSaveActa("final");
+                                        }
+                                    }}
+                                    disabled={isSaving}
+                                    className={`${isSaving ? 'bg-green-300' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm`}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" /> {isSaving ? "Guardando..." : "Cerrar y Firmar"}
+                                </button>
+                            </>
+                        )}
                     </div>
 
-                    {/* Hoja Formato A4 */}
-                    <div ref={printRef} className="p-8 sm:p-12 print:p-2 text-[12px] leading-relaxed text-gray-900 font-sans bg-white pb-32 print:pb-0">
+                    {/* Hoja Formato Carta */}
+                    <div ref={printRef} className={`p-8 sm:p-12 print:p-2 text-[12px] leading-relaxed text-gray-900 font-sans bg-white pb-32 print:pb-0 relative ${status === 'final' ? 'finalized-lock' : ''}`}>
+                        
+                        {/* Marcas de Agua y Tags */}
+                        {status === "draft" ? (
+                            <div className="watermark no-print">BORRADOR</div>
+                        ) : (
+                            <div className="watermark no-print" style={{ color: 'rgba(22, 101, 52, 0.08)', borderColor: 'rgba(22, 101, 52, 0.08)' }}>CERRADA Y FIRMADA</div>
+                        )}
+                        <div className={`status-badge no-print ${status === 'draft' ? 'status-draft' : 'status-final'}`}>
+                            {status === 'draft' ? 'Estado: Borrador' : 'Estado: Cerrada y Firmada'}
+                        </div>
 
                         {/* Cabecera Profesional */}
                         <div className="border-b-2 border-[#183C30] pb-6 mb-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
@@ -751,35 +891,43 @@ export default function CierreActasPage() {
                         <div className="mb-6">
                             <h3 className="font-bold text-sm mb-3 text-[#183C30] border-b border-gray-200 pb-1">2. Hallazgos del Inventario</h3>
                             <div className="bg-blue-50 p-2 border border-blue-100 rounded text-[10px] text-blue-900 mb-3 text-justify">
-                                <strong>Nota Aclaratoria sobre Saldos del Sistema:</strong> El saldo reflejado en este documento bajo la columna "Sistema (Und)" corresponde <strong>exclusivamente a la suma consolidada de la Bodega Principal, Bodega de Averías y Bodega de Comercio Exterior</strong>. Dichas bodegas reflejan el inventario real en sitio y son las únicas que se comparan contra el Conteo Físico.
+                                <strong>Nota Aclaratoria sobre Saldos del Sistema:</strong> El saldo reflejado en este documento bajo la columna "Sist. (Bodegas)" corresponde <strong>a la suma consolidada de las bodegas en Siigo: Principal, Averías, Comercio Exterior y Libre</strong>. Dichas bodegas junto con las Unidades Libres de Sheets reflejan el inventario total comparado.
                             </div>
                             <p className="mb-2">Según el informe de inventario de <strong>{periodo}</strong>, se identificaron las siguientes novedades (Diferencias entre físico y sistema):</p>
 
                             <table className="w-full border-collapse border border-gray-300 text-center text-[10px] mb-4">
                                 <thead className="bg-[#183C30] text-white">
                                     <tr>
-                                        <th className="border border-gray-300 p-2 text-left">Referencia</th>
-                                        <th className="border border-gray-300 p-2">Sistema (Und)</th>
-                                        <th className="border border-gray-300 p-2">Físico (Und)</th>
-                                        <th className="border border-gray-300 p-2">Diferencia</th>
-                                        <th className="border border-gray-300 p-2">Estado</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Referencia</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Sist. (Bodegas)</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Libres (Sheets)</th>
+                                        <th className="border border-gray-300 p-1 text-[9px] bg-gray-100">Total Sist.</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Físico (C)</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Libres (F)</th>
+                                        <th className="border border-gray-300 p-1 text-[9px] bg-gray-100">Total Fís.</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Diferencia</th>
+                                        <th className="border border-gray-300 p-1 text-[9px]">Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {displayComparisonItems.map(item => (
                                         <tr key={item.sku} className="hover:bg-gray-50">
-                                            <td className="border border-gray-300 p-2 text-left font-medium">{item.sku} - {item.name}</td>
-                                            <td className="border border-gray-300 p-2">{item.s}</td>
-                                            <td className="border border-gray-300 p-2">{item.p}</td>
-                                            <td className="border border-gray-300 p-2 font-bold">{item.diff > 0 ? `+${item.diff}` : item.diff}</td>
-                                            <td className={`border border-gray-300 p-2 font-bold ${item.diff < 0 ? 'text-red-600' : item.diff > 0 ? 'text-blue-600' : 'text-green-600'}`}>
+                                            <td className="border border-gray-300 p-1 text-left font-medium max-w-[120px] truncate">{item.sku} - {item.name}</td>
+                                            <td className="border border-gray-300 p-1">{item.s}</td>
+                                            <td className="border border-gray-300 p-1">{item.s_free}</td>
+                                            <td className="border border-gray-300 p-1 font-bold bg-gray-50">{item.s_total}</td>
+                                            <td className="border border-gray-300 p-1">{item.p}</td>
+                                            <td className="border border-gray-300 p-1">{item.p_free}</td>
+                                            <td className="border border-gray-300 p-1 font-bold bg-gray-50">{item.p_total}</td>
+                                            <td className="border border-gray-300 p-1 font-bold">{item.diff > 0 ? `+${item.diff}` : item.diff}</td>
+                                            <td className={`border border-gray-300 p-1 font-bold ${item.diff < 0 ? 'text-red-600' : item.diff > 0 ? 'text-blue-600' : 'text-green-600'}`}>
                                                 {item.diff < 0 ? 'Faltante' : item.diff > 0 ? 'Sobrante' : 'OK'}
                                             </td>
                                         </tr>
                                     ))}
                                     {itemsWithDifferences.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="border border-gray-300 p-2 italic text-gray-500 text-center">
+                                            <td colSpan={9} className="border border-gray-300 p-2 italic text-gray-500 text-center">
                                                 No se encontraron diferencias en este periodo. La tabla muestra una muestra de referencias.
                                             </td>
                                         </tr>
@@ -838,8 +986,11 @@ export default function CierreActasPage() {
 
                         {/* 4. Justificaciones */}
                         <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">4. Justificación de Saldos en Otras Bodegas</h3>
-                            <p className="text-justify mb-2">A continuación se detallan las cantidades registradas por referencia en otras bodegas de sistema (En Tránsito, Pérdida y Destrucción, y Bodega 2) que justifican saldos que no fueron parte del conteo físico:</p>
+                            <h3 className="font-bold text-sm mb-2 text-[#183C30] border-b border-gray-200 pb-1">4. Justificación de Saldos en Otras Bodegas (No Comparativas)</h3>
+                            <div className="bg-amber-50 border border-amber-200 p-3 rounded mb-3 text-[10px] text-amber-900 leading-relaxed italic">
+                                <strong>Nota Importante sobre Bodegas de Justificación:</strong> Los saldos reflejados en esta sección (Tránsito, Pérdida y Bodega 2) <strong>NO forman parte de las unidades físicas reales en sitio</strong> y por lo tanto <strong>no se comparan contra el Conteo Físico</strong> del punto 2. Estas cantidades existen únicamente a nivel de sistema por procesos logísticos o contables externos. Para mayor detalle, por favor recomendar revisar las Políticas de Bodegas si existen dudas.
+                            </div>
+                            <p className="text-justify mb-2 text-[11px]">A continuación se detallan las cantidades registradas por referencia en otras bodegas de sistema que justifican saldos que no fueron parte del conteo físico:</p>
                             <table className="w-full border-collapse border border-gray-300 text-[10px] text-center mb-2">
                                 <thead className="bg-gray-100 text-[#183C30]">
                                     <tr>
@@ -893,20 +1044,20 @@ export default function CierreActasPage() {
                                 <thead className="bg-[#183C30] text-white">
                                     <tr>
                                         <th className="border border-gray-300 p-1 text-left">SKU - Producto</th>
-                                        <th className="border border-gray-300 p-1 text-center w-28">Saldo Sistema (3 Bodegas)</th>
-                                        <th className="border border-gray-300 p-1 text-center w-24">Ajuste</th>
-                                        <th className="border border-gray-300 p-1 text-center w-24">Saldo Físico Real</th>
+                                        <th className="border border-gray-300 p-1 text-center w-28">Saldo Sistema Total</th>
+                                        <th className="border border-gray-300 p-1 text-center w-24">Ajuste Requerido</th>
+                                        <th className="border border-gray-300 p-1 text-center w-24">Saldo Físico Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {processedItems.map(item => (
                                         <tr key={item.sku} className="hover:bg-gray-50">
                                             <td className="border border-gray-300 p-1 text-left font-medium">{item.sku} - {item.name}</td>
-                                            <td className="border border-gray-300 p-1 text-center">{item.s}</td>
-                                            <td className={`border border-gray-300 p-1 text-center ${item.diff > 0 ? 'text-blue-600' : item.diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                                                {item.diff > 0 ? `+${item.diff} (Sobrante)` : item.diff < 0 ? `${item.diff} (Faltante)` : '0'}
+                                            <td className="border border-gray-300 p-1 text-center">{item.s_total}</td>
+                                            <td className={`border border-gray-300 p-1 text-center font-bold ${item.diff > 0 ? 'text-blue-600' : item.diff < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                {item.diff > 0 ? `+${item.diff}` : item.diff < 0 ? `${item.diff}` : '0'}
                                             </td>
-                                            <td className="border border-gray-300 p-1 text-center font-bold bg-green-50 text-[#183C30]">{item.p}</td>
+                                            <td className="border border-gray-300 p-1 text-center font-bold bg-green-50 text-[#183C30]">{item.p_total}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -958,11 +1109,11 @@ export default function CierreActasPage() {
                                         </tr>
                                         <tr>
                                             <td className="border border-gray-300 p-2 font-medium bg-[#183C30] text-white">Exactitud Referencias</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold bg-[#183C30] text-white">{exactitud.toFixed(2)}%</td>
+                                            <td className="border border-gray-300 p-2 text-center font-bold bg-[#183C30] text-white">{exactitud.toFixed(2)}{"%"}</td>
                                         </tr>
                                         <tr>
                                             <td className="border border-gray-300 p-2 font-medium bg-[#183C30] text-white">Exactitud Unidades Totales</td>
-                                            <td className="border border-gray-300 p-2 text-center font-bold bg-[#183C30] text-white">{exactitudUnidades.toFixed(2)}%</td>
+                                            <td className="border border-gray-300 p-2 text-center font-bold bg-[#183C30] text-white">{exactitudUnidades.toFixed(2)}{"%"}</td>
                                         </tr>
                                     </tbody>
                                 </table>
