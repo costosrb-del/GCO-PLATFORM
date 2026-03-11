@@ -230,30 +230,31 @@ export default function CierreActasPage() {
             const pdf = new jsPDF("p", "mm", "letter");
             const pageWidth = 215.9;
             const pageHeight = 279.4;
+            const pdfMargin = 12; // Margen estético en el PDF
             
-            // Mantener márgenes de 10mm
-            const margin = 10;
-            const contentWidth = pageWidth - (margin * 2);
+            const contentWidth = pageWidth - (pdfMargin * 2);
             const imgWidth = contentWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             
             let heightLeft = imgHeight;
-            let position = margin;
+            let position = 0; 
+            let pageCount = 1;
 
             // Primera página
-            pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+            pdf.addImage(imgData, "PNG", pdfMargin, pdfMargin, imgWidth, imgHeight);
+            heightLeft -= (pageHeight - pdfMargin * 2);
 
-            // Páginas adicionales si el contenido es largo
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight + margin;
+            // Páginas adicionales con lógica de desplazamiento
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight + pdfMargin;
                 pdf.addPage();
-                pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
+                pdf.addImage(imgData, "PNG", pdfMargin, position, imgWidth, imgHeight);
+                heightLeft -= (pageHeight - pdfMargin * 2);
+                pageCount++;
             }
 
             pdf.save(`Acta_Inventario_${company}_${fecha.replace(/-/g, "")}.pdf`);
-            toast.success("PDF descargado", { id: "pdf_wait" });
+            toast.success(`PDF de ${pageCount} páginas generado correctamente`, { id: "pdf_wait" });
         } catch (err) {
             console.error(err);
             toast.error("Error al generar el PDF", { id: "pdf_wait" });
@@ -319,18 +320,23 @@ export default function CierreActasPage() {
                     body { margin: 0; padding: 0; }
                     body * { visibility: hidden; }
                     .print-section, .print-section * { visibility: visible; }
-                    .print-section { position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; padding: 5mm 15mm 15mm 15mm; box-sizing: border-box; font-size: 11px; background: white; color: black; }
+                    .print-section { 
+                        position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; 
+                        padding: 15mm 20mm; box-sizing: border-box; 
+                        font-size: 11px; background: white; color: black; 
+                        line-height: 1.5;
+                    }
                     .no-print { display: none !important; }
-                    aside, header, nav { display: none !important; }
-                    table { page-break-inside: auto; border-collapse: collapse; width: 100%; }
+                    aside, header, nav, .sidebar-class { display: none !important; }
+                    table { page-break-inside: auto; border-collapse: collapse; width: 100%; margin-bottom: 15px; }
                     tr { page-break-inside: avoid; page-break-after: auto; }
-                    th, td { border: 1px solid #ddd; padding: 4px; font-size: 10px; }
-                    h1, h2, h3 { page-break-after: avoid; }
+                    th, td { border: 1px solid #000; padding: 6px; font-size: 9px; line-height: 1.2; }
+                    h1, h2, h3, h4 { page-break-after: avoid; color: #183C30 !important; }
                     .watermark { 
-                        position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-                        font-size: 80px; color: rgba(0,0,0,0.06); font-weight: 900; pointer-events: none;
-                        z-index: 0; white-space: nowrap; text-transform: uppercase; border: 12px solid rgba(0,0,0,0.06);
-                        padding: 30px; border-radius: 30px; line-height: 1;
+                        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+                        font-size: 70px; color: rgba(0,0,0,0.04); font-weight: 900; pointer-events: none;
+                        z-index: -1; white-space: nowrap; text-transform: uppercase; border: 8px solid rgba(0,0,0,0.04);
+                        padding: 20px; border-radius: 20px;
                     }
                     .finalized-lock { opacity: 1; pointer-events: none; }
                 }
