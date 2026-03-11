@@ -75,7 +75,7 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                     if (ins?.clasificacion) {
                         const cls = ins.clasificacion.trim().toUpperCase();
                         // REGLA: Si es subproducto de un kit, omitimos embalaje propio del subproducto
-                        if (subKit && (cls.includes("CAJA") || cls.includes("TERMO") || cls.includes("EMPAQUE"))) {
+                        if (subKit && (cls.includes("CAJA") || cls.includes("TERMO") || cls.includes("EMPAQUE") || cls.includes("SELLO"))) {
                             continue;
                         }
                         foundCategories.add(cls);

@@ -66,6 +66,7 @@ interface ActaItem {
     bTransito: number | '';
     bPerdida: number | '';
     bDos: number | '';
+    bCustodia: number | '';
     justificacion: string;
     physicalFree: number | '';
     systemFree: number | '';
@@ -95,7 +96,7 @@ export default function CierreActasPage() {
         SALES_CODES.map(sku => ({
             sku,
             name: DEFAULT_PRODUCT_NAMES[sku] || `Producto ${sku}`,
-            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', justificacion: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
+            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', bCustodia: '', justificacion: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
         }))
     );
 
@@ -146,10 +147,10 @@ export default function CierreActasPage() {
         setActaId(null);
         setStatus("draft");
         setObservaciones("");
-        const newItems = SALES_CODES.map(sku => ({
+        const newItems: ActaItem[] = SALES_CODES.map(sku => ({
             sku,
             name: DEFAULT_PRODUCT_NAMES[sku] || `Producto ${sku}`,
-            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', justificacion: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
+            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', bCustodia: '', justificacion: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
         }));
         if (inventoryData) {
             const realNamesMap: Record<string, string> = {};
@@ -183,7 +184,9 @@ export default function CierreActasPage() {
             diff: (p_base + p_free) - (s_base + s_free),
             bTr: Number(i.bTransito) || 0,
             bPer: Number(i.bPerdida) || 0,
-            bD: Number(i.bDos) || 0
+            bD: Number(i.bDos) || 0,
+            bCus: Number(i.bCustodia) || 0,
+            bComExt: Number(i.bComercExt) || 0
         };
     }), [items]);
 
@@ -346,10 +349,12 @@ export default function CierreActasPage() {
                                                 <th className="p-4">Referencia / Producto</th>
                                                 <th className="p-2 text-center">Físico (C)</th>
                                                 <th className="p-2 text-center">Libre (F)</th>
-                                                <th className="p-2 text-center bg-[#132f26]">B. Princ</th>
-                                                <th className="p-2 text-center bg-[#132f26]">B. Averia</th>
-                                                <th className="p-2 text-center bg-amber-950/20">Tránsito</th>
-                                                <th className="p-2 text-center bg-red-950/20">Pérdida</th>
+                                                <th className="p-2 text-center bg-[#132f26]">Bodega Principal</th>
+                                                <th className="p-2 text-center bg-[#132f26]">Bodega Avería</th>
+                                                <th className="p-2 text-center bg-[#132f26]">Comercio Ext.</th>
+                                                <th className="p-2 text-center bg-gray-500/20">Custodia (@)</th>
+                                                <th className="p-2 text-center bg-amber-950/20">Bodega Tránsito</th>
+                                                <th className="p-2 text-center bg-red-950/20">Bodega Pérdida</th>
                                                 <th className="p-2 text-center">Sheets (L)</th>
                                                 <th className="p-2 text-center font-bold">Total Sistema</th>
                                                 <th className="p-2 text-center">Diferencia</th>
@@ -372,6 +377,8 @@ export default function CierreActasPage() {
                                                         <td className="p-1"><input type="text" value={item.physicalFree} onChange={(e) => updateItem(idx, 'physicalFree', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
                                                         <td className="p-1 bg-gray-50/30"><input type="text" value={item.bPrincipal} onChange={(e) => updateItem(idx, 'bPrincipal', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
                                                         <td className="p-1 bg-gray-50/30"><input type="text" value={item.bAverias} onChange={(e) => updateItem(idx, 'bAverias', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
+                                                        <td className="p-1 bg-gray-50/30"><input type="text" value={item.bComercExt} onChange={(e) => updateItem(idx, 'bComercExt', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
+                                                        <td className="p-1 bg-gray-100/50"><input type="text" value={item.bCustodia} onChange={(e) => updateItem(idx, 'bCustodia', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px] text-gray-500" placeholder="@" /></td>
                                                         <td className="p-1 bg-amber-50/30"><input type="text" value={item.bTransito} onChange={(e) => updateItem(idx, 'bTransito', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px] text-amber-700 font-bold" placeholder="T" /></td>
                                                         <td className="p-1 bg-red-50/30"><input type="text" value={item.bPerdida} onChange={(e) => updateItem(idx, 'bPerdida', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px] text-red-700 font-bold" placeholder="P" /></td>
                                                         <td className="p-1"><input type="text" value={item.systemFree} onChange={(e) => updateItem(idx, 'systemFree', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
@@ -499,8 +506,9 @@ export default function CierreActasPage() {
                                         <thead className="bg-gray-100 text-gray-700">
                                             <tr>
                                                 <th className="p-3 text-left border-r w-[240px]">Referencia</th>
-                                                <th className="p-3 border-r text-amber-700">Tránsito</th>
-                                                <th className="p-3 border-r text-red-700">Pérdidas</th>
+                                                <th className="p-3 border-r text-amber-700">Bodega Tránsito</th>
+                                                <th className="p-3 border-r text-red-700">Bodega Pérdida</th>
+                                                <th className="p-3 border-r text-gray-500">Custodia (@)</th>
                                                 <th className="p-3 text-left">Observaciones de Auditoría</th>
                                             </tr>
                                         </thead>
@@ -510,6 +518,7 @@ export default function CierreActasPage() {
                                                     <td className="p-3 text-left font-black text-gray-800 border-r">{i.sku} <span className="text-[7px] text-gray-400 opacity-50 block">{i.name}</span></td>
                                                     <td className="p-3 border-r font-bold">{i.bTr || '-'}</td>
                                                     <td className="p-3 border-r font-bold">{i.bPer || '-'}</td>
+                                                    <td className="p-3 border-r font-medium text-gray-400">{i.bCus || '-'}</td>
                                                     <td className="p-3 text-left italic text-gray-500 font-medium px-4">{i.justificacion || 'Sin observaciones registradas.'}</td>
                                                 </tr>
                                             ))}
