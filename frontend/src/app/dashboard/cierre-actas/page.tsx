@@ -68,10 +68,12 @@ interface ActaItem {
     bDos: number | '';
     bCustodia: number | '';
     justificacion: string;
+    justificacion_bodegas_externas?: string; // New: Specific justification for Transit/Loss/Custody
     physicalFree: number | '';
     systemFree: number | '';
     system: number | '';
     unitPrice: number | '';
+    physicalFree_just?: string; // New: Justification for free physical stock
 }
 
 export default function CierreActasPage() {
@@ -96,7 +98,7 @@ export default function CierreActasPage() {
         SALES_CODES.map(sku => ({
             sku,
             name: DEFAULT_PRODUCT_NAMES[sku] || `Producto ${sku}`,
-            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', bCustodia: '', justificacion: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
+            physical: '', bPrincipal: '', bAverias: '', bComercExt: '', bLibre: '', bTransito: '', bPerdida: '', bDos: '', bCustodia: '', justificacion: '', justificacion_bodegas_externas: '', system: '', unitPrice: '', physicalFree: '', systemFree: ''
         }))
     );
 
@@ -169,10 +171,18 @@ export default function CierreActasPage() {
     };
 
     const processedItems = useMemo(() => items.map(i => {
+        // AUDITED WAREHOUSES (Compare vs Physical)
         const s_base = (Number(i.bPrincipal) || 0) + (Number(i.bAverias) || 0) + (Number(i.bComercExt) || 0) + (Number(i.bLibre) || 0);
         const s_free = Number(i.systemFree) || 0;
         const p_base = Number(i.physical) || 0;
         const p_free = Number(i.physicalFree) || 0;
+        
+        // NON-AUDITED WAREHOUSES (Informative)
+        const bTr = Number(i.bTransito) || 0;
+        const bPer = Number(i.bPerdida) || 0;
+        const bD = Number(i.bDos) || 0;
+        const bCus = Number(i.bCustodia) || 0;
+
         return {
             ...i,
             s: s_base,
@@ -182,11 +192,12 @@ export default function CierreActasPage() {
             p_free,
             p_total: p_base + p_free,
             diff: (p_base + p_free) - (s_base + s_free),
-            bTr: Number(i.bTransito) || 0,
-            bPer: Number(i.bPerdida) || 0,
-            bD: Number(i.bDos) || 0,
-            bCus: Number(i.bCustodia) || 0,
-            bComExt: Number(i.bComercExt) || 0
+            bTr,
+            bPer,
+            bD,
+            bCus,
+            bComExt: Number(i.bComercExt) || 0,
+            hasExternalUnits: bTr > 0 || bPer > 0 || bD > 0 || bCus > 0
         };
     }), [items]);
 
@@ -359,14 +370,14 @@ export default function CierreActasPage() {
                                                 <th className="p-2 text-center font-bold">Total Sistema</th>
                                                 <th className="p-2 text-center">Diferencia</th>
                                                 <th className="p-2">$$ Unit.</th>
-                                                <th className="p-2">Justificación</th>
+                                                <th className="p-2">Justificación Conciliación / Notas Bodegas Externas</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
                                             {items.map((item, idx) => {
                                                 const p = processedItems[idx];
                                                 const isEssential = SALES_CODES.includes(item.sku);
-                                                const hasData = p.s_total > 0 || p.p_total > 0 || item.physical !== '' || p.bTr > 0 || p.bPer > 0;
+                                                const hasData = p.s_total > 0 || p.p_total > 0 || item.physical !== '' || p.bTr > 0 || p.bPer > 0 || p.bCus > 0;
                                                 if (!isEssential && !hasData) return null;
                                                 return (
                                                     <tr key={item.sku} className="hover:bg-gray-50/50 transition-colors">
@@ -380,12 +391,21 @@ export default function CierreActasPage() {
                                                         <td className="p-1 bg-gray-50/30"><input type="text" value={item.bComercExt} onChange={(e) => updateItem(idx, 'bComercExt', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
                                                         <td className="p-1 bg-gray-100/50"><input type="text" value={item.bCustodia} onChange={(e) => updateItem(idx, 'bCustodia', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px] text-gray-500" placeholder="@" /></td>
                                                         <td className="p-1 bg-amber-50/30"><input type="text" value={item.bTransito} onChange={(e) => updateItem(idx, 'bTransito', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px] text-amber-700 font-bold" placeholder="T" /></td>
-                                                        <td className="p-1 bg-red-50/30"><input type="text" value={item.bPerdida} onChange={(e) => updateItem(idx, 'bPerdida', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px] text-red-700 font-bold" placeholder="P" /></td>
+                                                        <td className="p-1 bg-red-50/30"><input type="text" value={item.bPerdida} onChange={(e) => updateItem(idx, 'bPerdida', e.target.value)} className="w-14 text-center p-1.5 border rounded-lg text-[10px] text-red-700 font-bold" placeholder="P" /></td>
                                                         <td className="p-1"><input type="text" value={item.systemFree} onChange={(e) => updateItem(idx, 'systemFree', e.target.value)} className="w-10 text-center p-1.5 border rounded-lg text-[10px]" /></td>
                                                         <td className="p-2 text-center font-bold text-[11px] text-gray-400">{p.s_total}</td>
                                                         <td className={`p-2 text-center font-black text-[11px] ${p.diff < 0 ? 'text-red-600' : p.diff > 0 ? 'text-blue-600' : 'text-green-600'}`}>{p.diff}</td>
                                                         <td className="p-1"><input type="text" value={item.unitPrice} onChange={(e) => updateItem(idx, 'unitPrice', e.target.value)} className="w-24 p-1.5 border rounded-lg text-[10px] bg-emerald-50/30" placeholder="$" /></td>
-                                                        <td className="p-1"><input type="text" value={item.justificacion} onChange={(e) => updateItem(idx, 'justificacion', e.target.value)} className="w-full border-b p-1.5 text-[10px] outline-none transparent-input" placeholder="Justificación..." /></td>
+                                                        <td className="p-1 space-y-2">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[8px] font-bold text-gray-400 uppercase">Gral / Conciliación:</span>
+                                                                <input type="text" value={item.justificacion} onChange={(e) => updateItem(idx, 'justificacion', e.target.value)} className="w-full border-b p-1 text-[9px] outline-none transparent-input" placeholder="Justificación principal..." />
+                                                            </div>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[8px] font-bold text-amber-600 uppercase">Bodegas Transito/Perdida/Cus:</span>
+                                                                <input type="text" value={item.justificacion_bodegas_externas || ''} onChange={(e) => updateItem(idx, 'justificacion_bodegas_externas', e.target.value)} className="w-full border-b p-1 text-[9px] outline-none border-amber-100 bg-amber-50/5" placeholder="¿Por qué están allí? (Ej: Traslado pendiente)..." />
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
@@ -629,9 +649,9 @@ export default function CierreActasPage() {
                         </div>
 
                         {/* 5. Saldos Finales Grid */}
-                        <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
-                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">5. Saldos de Certificación Post-Ajuste</h3>
-                            <p className="text-[10px] text-gray-400 italic mb-4">*Cantidades auditadas que deberán reflejarse en el sistema tras la ejecución de los ajustes manuales.</p>
+                        <div className="mb-12" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">5. Saldos de Certificación Post-Ajuste (Auditados)</h3>
+                            <p className="text-[10px] text-gray-400 italic mb-4">*Cantidades que deben reflejarse en las bodegas auditadas (Principal, Avería, etc.) tras el cierre.</p>
                             <div className="grid grid-cols-4 gap-4">
                                 {processedItems.filter(i => i.p_total > 0).map(i => (
                                     <div key={i.sku} className="bg-white border-2 border-dashed border-gray-200 p-3 rounded-xl flex flex-col items-center justify-center text-center">
@@ -643,17 +663,50 @@ export default function CierreActasPage() {
                             </div>
                         </div>
 
-                        {/* 6 y 7. Indicadores */}
+                        {/* 6. Bodegas No Auditadas (New Section) */}
+                        <div className="mb-12" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-amber-500 mb-4">6. Conciliación de Bodegas Externas e Informativas (No Auditadas)</h3>
+                            <p className="text-[10px] text-gray-400 italic mb-4">Unidades que no forman parte del conteo físico directo pero se encuentran bajo control administrativo (Tránsito, Pérdida y Custodia).</p>
+                            <table className="w-full text-center text-[9px] border-collapse border border-gray-100">
+                                <thead className="bg-gray-900 text-white">
+                                    <tr>
+                                        <th className="p-3 text-left w-[200px]">Referencia</th>
+                                        <th className="p-3 bg-amber-800">Tránsito</th>
+                                        <th className="p-3 bg-red-800">Pérdida</th>
+                                        <th className="p-3 bg-gray-700">Custodia</th>
+                                        <th className="p-3 text-left">Motivo / Justificación de la Existencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y relative">
+                                    {processedItems.filter(i => i.hasExternalUnits || i.justificacion_bodegas_externas).map(i => (
+                                        <tr key={i.sku} className="bg-amber-50/10">
+                                            <td className="p-3 text-left font-black text-gray-800 border-r">{i.sku} <span className="text-[7px] text-gray-400 opacity-50 block uppercase">{i.name}</span></td>
+                                            <td className="p-3 border-r font-bold text-amber-700">{i.bTr || '0'}</td>
+                                            <td className="p-3 border-r font-bold text-red-700">{i.bPer || '0'}</td>
+                                            <td className="p-3 border-r font-black text-gray-600">{i.bCus || '0'}</td>
+                                            <td className="p-3 text-left italic text-gray-500 font-medium px-4">
+                                                {i.justificacion_bodegas_externas || <span className="text-gray-300">Sin justificación técnica registrada.</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {processedItems.filter(i => i.hasExternalUnits || i.justificacion_bodegas_externas).length === 0 && (
+                                        <tr><td colSpan={5} className="p-8 text-center text-gray-400">No se detectaron saldos en bodegas externas para el presente período.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* 7 y 8. Indicadores (Re-numbered) */}
                         <div className="grid grid-cols-2 gap-8 mb-12" style={{ pageBreakInside: 'avoid' }}>
                             <div>
-                                <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">6. Dictamen de Auditoría</h3>
+                                <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">7. Dictamen de Auditoría</h3>
                                 <div className="p-6 bg-[#183C30]/5 rounded-[2rem] border-2 border-dashed border-[#183C30]/10 text-[11px] italic leading-relaxed text-gray-600">
                                     <strong className="text-[#183C30] uppercase not-italic mb-2 block tracking-tighter font-black">Conclusiones del Auditor:</strong>
                                     {observaciones || "Se certifica que el proceso de conteo cumplió con los estándares de control interno de la organización. No se detectaron anomalías estructurales en el almacenamiento, delegando la responsabilidad de los ajustes operativos al área contable según los hallazgos del punto 2."}
                                 </div>
                             </div>
                             <div>
-                                <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-emerald-500 mb-4">7. Indicadores de Confiabilidad (KPIs)</h3>
+                                <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-emerald-500 mb-4">8. Indicadores de Confiabilidad (KPIs)</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex flex-col items-center">
                                         <span className="text-[9px] font-black text-emerald-600 uppercase">Exactitud Stock</span>
