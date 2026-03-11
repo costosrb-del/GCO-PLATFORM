@@ -57,7 +57,7 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
     const [isDownloading, setIsDownloading] = useState(false);
 
     // ── Calcular costo y completitud ─────────────────────────────────────────
-    const getProductStats = (p: ProductoFabricado) => {
+    const getProductStats = (p: ProductoFabricado, isSubProductOfKit: boolean = false) => {
         const countInsumos = p.insumosAsociados?.length ?? 0;
         const countProductos = p.productosAsociados?.length ?? 0;
         const completo = countInsumos > 0 || countProductos > 0;
@@ -67,12 +67,19 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
             : ["ENVASE", "TAPA", "SELLO", "ETIQUETA", "MATERIA PRIMA", "CAJA"];
         const foundCategories = new Set<string>();
 
-        const calcularCostoRecursivo = (prod: ProductoFabricado): number => {
+        const calcularCostoRecursivo = (prod: ProductoFabricado, subKit: boolean): number => {
             let costo = 0;
             if (prod.insumosAsociados) {
                 for (const ia of prod.insumosAsociados) {
                     const ins = insumos.find(i => i.id === ia.insumoId);
-                    if (ins?.clasificacion) foundCategories.add(ins.clasificacion.trim().toUpperCase());
+                    if (ins?.clasificacion) {
+                        const cls = ins.clasificacion.trim().toUpperCase();
+                        // REGLA: Si es subproducto de un kit, omitimos embalaje propio del subproducto
+                        if (subKit && (cls.includes("CAJA") || cls.includes("TERMO") || cls.includes("EMPAQUE"))) {
+                            continue;
+                        }
+                        foundCategories.add(cls);
+                    }
 
                     const rendStr = ia.rendimientoAjustado ? String(ia.rendimientoAjustado) : ins?.rendimiento;
                     const factor = parseRendimientoFactor(rendStr);
@@ -97,15 +104,15 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                     if (sp) {
                         // Si el sub-producto es de una categoría mandatoria (difícil pero posible)
                         // o si su contenido cuenta como Materia Prima
-                        const spCostAndFound = calcularCostoRecursivo(sp);
-                        costo += spCostAndFound * pa.cantidadRequerida;
+                        const spCost = calcularCostoRecursivo(sp, prod.tipo === "Kit" || subKit);
+                        costo += spCost * pa.cantidadRequerida;
                     }
                 }
             }
             return costo;
         };
 
-        const costo = calcularCostoRecursivo(p);
+        const costo = calcularCostoRecursivo(p, isSubProductOfKit);
         const missing = mandatory.filter(m => !foundCategories.has(m));
         const rotos = p.insumosAsociados?.filter(ia => !insumos.find(i => i.id === ia.insumoId)).length ?? 0;
 
@@ -655,7 +662,7 @@ export const ProductosSection = ({ productos, insumos, terceros, createProducto,
                                             })}
                                             {p.productosAsociados?.map((pa, idx) => {
                                                 const subP = productos.find(sub => sub.id === pa.productoId);
-                                                const subPStats = subP ? getProductStats(subP) : null;
+                                                const subPStats = subP ? getProductStats(subP, p.tipo === "Kit") : null;
                                                 const subCostoUnitario = subPStats ? subPStats.costo : 0;
                                                 const subCostoTotal = subCostoUnitario * pa.cantidadRequerida;
                                                 

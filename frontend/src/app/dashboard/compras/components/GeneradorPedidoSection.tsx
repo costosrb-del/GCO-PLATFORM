@@ -270,7 +270,7 @@ export const GeneradorPedidoSection = ({
 
                     if (ignorarEmpaque && ins.clasificacion) {
                         const clasif = ins.clasificacion.toUpperCase();
-                        if (clasif.includes("CAJA") || clasif.includes("TERMO") || clasif.includes("TERMOENCOGIBLE")) {
+                        if (clasif.includes("CAJA") || clasif.includes("TERMO") || clasif.includes("EMPAQUE") || clasif.includes("SELLO")) {
                             continue;
                         }
                     }

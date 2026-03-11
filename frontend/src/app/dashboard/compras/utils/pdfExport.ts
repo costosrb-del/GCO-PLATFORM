@@ -583,7 +583,7 @@ function explotarBOM(
             if (ins) {
                 if (ignorarEmpaque && ins.clasificacion) {
                     const clasif = ins.clasificacion.toUpperCase();
-                    if (clasif.includes("CAJA") || clasif.includes("TERMO") || clasif.includes("TERMOENCOGIBLE") || clasif.includes("EMPAQUE")) {
+                    if (clasif.includes("CAJA") || clasif.includes("TERMO") || clasif.includes("EMPAQUE") || clasif.includes("SELLO")) {
                         continue;
                     }
                 }
