@@ -542,18 +542,18 @@ export default function CierreActasPage() {
                                 <div className="flex flex-col items-center justify-center py-40 gap-4"><div className="w-12 h-12 border-4 border-gray-100 border-t-[#183C30] rounded-full animate-spin"></div><p className="text-xs font-black text-gray-300 uppercase tracking-widest">Consultando Nube...</p></div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    {savedActas.filter(a => viewTab === 'drafts' ? a.status === 'draft' : a.status === 'final').slice().reverse().map(acta => (
-                                        <div key={acta.id} onClick={() => handleLoadActa(acta)} className={`group relative p-8 bg-white rounded-[2rem] border-2 transition-all cursor-pointer shadow-sm hover:shadow-2xl hover:-translate-y-1 ${viewTab === 'drafts' ? 'border-amber-50 hover:border-amber-300' : 'border-blue-50 hover:border-blue-400'}`}>
+                                    {savedActas?.filter(a => viewTab === 'drafts' ? a?.status === 'draft' : a?.status === 'final').slice().reverse().map(acta => (
+                                        <div key={acta?.id || Math.random()} onClick={() => handleLoadActa(acta)} className={`group relative p-8 bg-white rounded-[2rem] border-2 transition-all cursor-pointer shadow-sm hover:shadow-2xl hover:-translate-y-1 ${viewTab === 'drafts' ? 'border-amber-50 hover:border-amber-300' : 'border-blue-50 hover:border-blue-400'}`}>
                                             <div className="flex justify-between mb-6">
-                                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${acta.status === 'draft' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{acta.status === 'draft' ? 'Draft' : 'Final'}</span>
+                                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${acta?.status === 'draft' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{acta?.status === 'draft' ? 'Draft' : 'Final'}</span>
                                             </div>
-                                            <h4 className="text-lg font-black text-gray-900 leading-tight uppercase line-clamp-2 mb-2">{acta.data?.company}</h4>
+                                            <h4 className="text-lg font-black text-gray-900 leading-tight uppercase line-clamp-2 mb-2">{acta?.data?.company || 'Sin Empresa'}</h4>
                                             <div className="flex flex-col gap-2 mb-8">
-                                                <div className="flex items-center gap-2 text-xs text-gray-500 font-bold"><Calendar className="h-4 w-4 text-gray-300" />{acta.data?.periodo}</div>
-                                                <div className="flex items-center gap-2 text-[10px] text-gray-400"><FileText className="h-4 w-4 text-gray-200" />Doc: {acta.data?.consecutivo}</div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 font-bold"><Calendar className="h-4 w-4 text-gray-300" />{acta?.data?.periodo || 'Sin Periodo'}</div>
+                                                <div className="flex items-center gap-2 text-[10px] text-gray-400"><FileText className="h-4 w-4 text-gray-200" />Doc: {acta?.data?.consecutivo || 'S/C'}</div>
                                             </div>
                                             <div className="flex items-center justify-between pt-6 border-t border-gray-50">
-                                                <span className="text-[10px] font-bold text-gray-300">{new Date(acta.date).toLocaleDateString()}</span>
+                                                <span className="text-[10px] font-bold text-gray-300">{acta?.date ? new Date(acta.date).toLocaleDateString() : 'Sin Fecha'}</span>
                                                 <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-[#183C30] group-hover:text-white transition-all"><ArrowLeft className="h-4 w-4 rotate-180" /></div>
                                             </div>
                                         </div>
