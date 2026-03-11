@@ -431,7 +431,7 @@ export default function CierreActasPage() {
                     )}
                 </div>
             ) : (
-                <div className="max-w-[850px] mx-auto pb-20 no-print">
+                <div className="max-w-[1000px] mx-auto pb-20 no-print">
                     <div className="flex justify-between items-center bg-white/90 backdrop-blur p-4 rounded-2xl shadow-2xl mb-10 sticky top-4 z-50 border border-white">
                         <button onClick={() => setViewMode("form")} className="flex items-center gap-2 text-xs font-black bg-gray-100 px-5 py-3 rounded-xl hover:bg-gray-200 transition-all"><ArrowLeft className="h-4 w-4" /> REGRESAR AL EDITOR</button>
                         <div className="flex gap-2">
@@ -440,127 +440,269 @@ export default function CierreActasPage() {
                         </div>
                     </div>
 
-                    <div ref={printRef} className="print-section bg-white shadow-2xl relative overflow-hidden p-16" style={{ minHeight: '1120px' }}>
+                    <div ref={printRef} className="print-section bg-white shadow-2xl relative overflow-hidden p-12 text-[#1f2937]" style={{ minHeight: '1120px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {status === 'draft' && <div className="watermark">BORRADOR</div>}
-                        <div className={`status-badge ${status === 'draft' ? 'status-draft' : 'status-final'}`}>{status === 'draft' ? 'Borrador No Oficial' : 'Documento Oficial de Cierre'}</div>
-
-                        <div className="flex justify-between items-start mb-12 border-b-4 border-[#183C30] pb-8">
-                            <div>
-                                <div className="bg-[#183C30] text-white px-4 py-1.5 rounded-lg mb-4 inline-block font-black text-[10px] tracking-widest uppercase">Acta de Cierre de Inventario</div>
-                                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight leading-none">{company}</h2>
-                                <p className="text-[11px] font-bold text-gray-400 mt-2 uppercase tracking-wide">Registro de Diferencias de Bodega y Auditoría de Stock</p>
+                        
+                        {/* Header Official */}
+                        <div className="flex justify-between items-stretch border-2 border-black mb-8">
+                            <div className="w-1/4 p-4 border-r-2 border-black flex items-center justify-center">
+                                <div className="text-center">
+                                    <p className="font-black text-xs leading-none">ORIGEN</p>
+                                    <p className="font-light text-[10px] tracking-[0.2em]">BOTÁNICO</p>
+                                </div>
                             </div>
-                            <div className="text-right flex flex-col items-end gap-1">
-                                <span className="text-[10px] font-black text-gray-300 uppercase">Documento No.</span>
-                                <p className="text-sm font-black text-[#183C30] font-mono">{consecutivo}</p>
-                                <p className="text-xs font-black text-gray-500 mt-2 uppercase">{fecha} · {periodo}</p>
+                            <div className="w-2/4 p-4 border-r-2 border-black flex flex-col items-center justify-center text-center">
+                                <h1 className="font-black text-sm uppercase">Acta de Inventario de Producto Terminado</h1>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase">Control de Existencias y Auditoría de Stock</p>
+                            </div>
+                            <div className="w-1/4 text-[9px] font-bold">
+                                <div className="p-2 border-b-2 border-black">CÓDIGO: FI-004 V2</div>
+                                <div className="p-2 border-b-2 border-black">FECHA: 07/2024</div>
+                                <div className="p-2">PÁGINA: 1 de 2</div>
                             </div>
                         </div>
 
-                        <div className="bg-gray-50/50 border border-gray-100 p-8 rounded-3xl mb-12 space-y-4">
-                            <h4 className="font-black text-[#183C30] text-[11px] uppercase tracking-widest flex items-center gap-2 border-b pb-2"><AlertTriangle className="h-4 w-4" /> Declaración Operativa</h4>
-                            <p className="text-justify text-[13px] leading-relaxed text-gray-700 font-medium italic">
-                                Por medio de la presente acta, se certifica el cierre del conteo físico correspondiente al período de <strong>{periodo}</strong> efectuado en las instalaciones de <strong>{company}</strong> operado por <strong>GRUPO HUMAN PROJECT / EMPAQUES Y SOLUCIONES</strong>. Los valores consignados a continuación representan la conciliación final entre lo registrado en el software contable (Siigo) y el conteo físico validado por auditoría. Se aclara que cualquier faltante no justificado será objeto de análisis administrativo y potencial cobro de acuerdo a las políticas de la empresa.
-                            </p>
+                        {/* General Info */}
+                        <div className="grid grid-cols-3 gap-0 border-2 border-black mb-8 text-[10px]">
+                            <div className="p-3 border-r-2 border-b-2 border-black bg-gray-50">
+                                <span className="block font-black uppercase text-gray-400 text-[8px]">Empresa Auditada</span>
+                                <span className="font-bold">{company}</span>
+                            </div>
+                            <div className="p-3 border-r-2 border-b-2 border-black bg-gray-50">
+                                <span className="block font-black uppercase text-gray-400 text-[8px]">Consecutivo de Acta</span>
+                                <span className="font-bold">{consecutivo}</span>
+                            </div>
+                            <div className="p-3 border-b-2 border-black bg-gray-50">
+                                <span className="block font-black uppercase text-gray-400 text-[8px]">Fecha de Elaboración</span>
+                                <span className="font-bold">{fecha}</span>
+                            </div>
+                            <div className="p-3 border-r-2 border-black">
+                                <span className="block font-black uppercase text-gray-400 text-[8px]">Período de Cierre</span>
+                                <span className="font-bold uppercase">{periodo}</span>
+                            </div>
+                            <div className="p-3 border-r-2 border-black">
+                                <span className="block font-black uppercase text-gray-400 text-[8px]">Responsable Logística</span>
+                                <span className="font-bold">EMPAQUES Y SOLUCIONES</span>
+                            </div>
+                            <div className="p-3">
+                                <span className="block font-black uppercase text-gray-400 text-[8px]">Metodología de Control</span>
+                                <span className="font-bold">Doble Ciego / Auditoría Selectiva</span>
+                            </div>
                         </div>
 
-                        <div className="space-y-16">
-                            <div>
-                                <h3 className="font-black text-[11px] uppercase text-[#183C30] mb-6 border-b-2 border-gray-100 flex items-center gap-3 pb-2"><LayoutGrid className="h-4 w-4" /> 1. Resumen de Diferencias (Conteo Principal)</h3>
-                                <table className="w-full text-center text-[10px] border-collapse">
-                                    <thead className="bg-[#183C30] text-white">
-                                        <tr>
-                                            <th className="p-3 text-left rounded-tl-xl border-r border-[#ffffff33]">Referencia / SKU</th>
-                                            <th className="p-3 border-r border-[#ffffff33]">Stock Teórico</th>
-                                            <th className="p-3 border-r border-[#ffffff33]">Conteo Físico</th>
-                                            <th className="p-3 rounded-tr-xl">Variación (Dif)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y border-x border-b border-gray-100">
-                                        {processedItems.filter(i => i.s_total > 0 || i.p_total > 0).map(i => (
-                                            <tr key={i.sku} className="hover:bg-gray-50/50">
-                                                <td className="p-3 text-left font-bold text-gray-800 border-r border-gray-100 bg-gray-50/30">
-                                                    <div className="flex flex-col"><span className="text-[11px]">{i.sku}</span><span className="text-[9px] text-gray-400 font-medium uppercase truncate w-[200px]">{i.name}</span></div>
-                                                </td>
-                                                <td className="p-3 border-r border-gray-100 text-gray-600 font-bold">{i.s_total}</td>
-                                                <td className="p-3 border-r border-gray-100 font-black text-gray-800">{i.p_total}</td>
-                                                <td className={`p-3 font-black ${i.diff < 0 ? 'text-red-700 bg-red-50/30' : i.diff > 0 ? 'text-blue-700 bg-blue-50/30' : 'text-emerald-700 bg-emerald-50/30'}`}>{i.diff}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot className="bg-gray-900 text-white font-black uppercase text-[10px]">
-                                        <tr>
-                                            <td className="p-3 text-right">Totales Globales:</td>
-                                            <td className="p-3">{processedItems.reduce((s,i)=>s+i.s_total,0)}</td>
-                                            <td className="p-3">{processedItems.reduce((s,i)=>s+i.p_total,0)}</td>
-                                            <td className="p-3">{processedItems.reduce((s,i)=>s+i.diff,0)}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                        {/* 1. Desarrollo */}
+                        <div className="mb-8">
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">1. Desarrollo del Conteo Físico</h3>
+                            <div className="text-[11px] leading-relaxed space-y-3 px-2">
+                                <p>
+                                    Se realizó el levantamiento físico de inventario aplicando el <strong>Principio de Verificación Dual</strong>. El equipo de auditoría validó el 100% de las unidades en estantería y zona de packing.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    <div className="space-y-1">
+                                        <p className="font-bold flex items-center gap-2"><span className="w-3 h-3 bg-green-500 rounded-full"></span> Grupo 1: Identificación con sticker verde</p>
+                                        <p className="font-bold flex items-center gap-2"><span className="w-3 h-3 bg-blue-500 rounded-full"></span> Grupo 2: Identificación con sticker azul</p>
+                                        <p className="font-bold flex items-center gap-2"><span className="w-3 h-3 bg-orange-500 rounded-full"></span> Reconteo: Identificación con sticker naranja</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-black text-[9px] uppercase text-gray-400 mb-1">Metodología de Auditoría</p>
+                                        <p className="italic text-gray-600">
+                                            Se verificó cada estiba por posición. Dentro de cada unidad de carga, se auditaron cajas al azar. Una vez validado, se procedió al sellado de seguridad con el rotulado correspondiente.
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="bg-amber-50 p-3 rounded-lg border border-amber-100 font-medium italic">
+                                    <strong>Nota Aclaratoria:</strong> Todos los ajustes derivados del presente cierre de inventario serán realizados en la empresa <strong>{company}</strong>, garantizando la trazabilidad documental ante entes reguladores.
+                                </p>
                             </div>
+                        </div>
 
-                            {processedItems.some(i => i.bTr > 0 || i.bPer > 0 || i.justificacion) && (
-                                <div style={{ pageBreakInside: 'avoid' }}>
-                                    <h3 className="font-black text-[11px] uppercase text-[#183C30] mb-6 border-b-2 border-gray-100 flex items-center gap-3 pb-2"><History className="h-4 w-4" /> 2. Desglose de Bodegas y Justificaciones Técnicas</h3>
-                                    <table className="w-full text-center text-[9px] border-collapse border border-gray-100">
-                                        <thead className="bg-gray-100 text-gray-700">
+                        {/* 2. Hallazgos */}
+                        <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">2. Hallazgos del Inventario (Matriz de Variaciones)</h3>
+                            <table className="w-full text-center text-[10px] border-collapse">
+                                <thead className="bg-[#183C30] text-white">
+                                    <tr>
+                                        <th className="p-3 text-left">Referencia / SKU</th>
+                                        <th className="p-3">Sistema (Und)</th>
+                                        <th className="p-3">Físico (Und)</th>
+                                        <th className="p-3">Diferencia</th>
+                                        <th className="p-3">Estado Operativo</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y border-x border-b border-gray-100">
+                                    {processedItems.filter(i => i.s_total > 0 || i.p_total > 0).map(i => (
+                                        <tr key={i.sku} className="hover:bg-gray-50/10">
+                                            <td className="p-3 text-left border-r bg-gray-50/20">
+                                                <div className="flex flex-col"><span className="font-black text-[11px]">{i.sku}</span><span className="text-[9px] text-gray-400 font-bold uppercase truncate w-[250px]">{i.name}</span></div>
+                                            </td>
+                                            <td className="p-3 border-r font-bold text-gray-500">{i.s_total}</td>
+                                            <td className="p-3 border-r font-black text-gray-800">{i.p_total}</td>
+                                            <td className={`p-3 border-r font-black ${i.diff < 0 ? 'text-red-700' : i.diff > 0 ? 'text-blue-700' : 'text-emerald-700'}`}>
+                                                {i.diff > 0 ? `+${i.diff}` : i.diff}
+                                            </td>
+                                            <td className="p-3 font-bold uppercase">
+                                                {i.diff < 0 ? <span className="text-red-600 bg-red-50 px-2 py-1 rounded">Faltante</span> : i.diff > 0 ? <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded">Sobrante</span> : <span className="text-green-600">Exacto</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* 3. Novedades y Cobros */}
+                        <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">3. Novedades Pendientes y Gestión de Cobros</h3>
+                            <div className="grid grid-cols-1 gap-6">
+                                <div className="border border-red-200 rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="bg-red-600 text-white p-3 font-black text-[10px] uppercase tracking-widest flex justify-between items-center">
+                                        <span>Cobro a Operador Logístico (Empaques y Soluciones)</span>
+                                        <span className="bg-white text-red-600 px-3 py-1 rounded-full text-xs">FALTANTES</span>
+                                    </div>
+                                    <table className="w-full text-[10px]">
+                                        <thead className="bg-red-50 text-red-700">
                                             <tr>
-                                                <th className="p-3 text-left border-r w-[240px]">Referencia</th>
-                                                <th className="p-3 border-r text-amber-700">Bodega Tránsito</th>
-                                                <th className="p-3 border-r text-red-700">Bodega Pérdida</th>
-                                                <th className="p-3 border-r text-gray-500">Custodia (@)</th>
-                                                <th className="p-3 text-left">Observaciones de Auditoría</th>
+                                                <th className="p-2 text-left">SKU - Producto</th>
+                                                <th className="p-2 text-center">Unidades</th>
+                                                <th className="p-2 text-right">Valor Unit.</th>
+                                                <th className="p-2 text-right">Subtotal</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y">
-                                            {processedItems.filter(i => i.bTr > 0 || i.bPer > 0 || i.justificacion).map(i => (
-                                                <tr key={i.sku} className="bg-gray-50/10">
-                                                    <td className="p-3 text-left font-black text-gray-800 border-r">{i.sku} <span className="text-[7px] text-gray-400 opacity-50 block">{i.name}</span></td>
-                                                    <td className="p-3 border-r font-bold">{i.bTr || '-'}</td>
-                                                    <td className="p-3 border-r font-bold">{i.bPer || '-'}</td>
-                                                    <td className="p-3 border-r font-medium text-gray-400">{i.bCus || '-'}</td>
-                                                    <td className="p-3 text-left italic text-gray-500 font-medium px-4">{i.justificacion || 'Sin observaciones registradas.'}</td>
+                                            {processedItems.filter(i => i.diff < 0).map(i => (
+                                                <tr key={i.sku}>
+                                                    <td className="p-2 font-bold">{i.sku} - <span className="font-normal text-gray-500 italic">{i.name}</span></td>
+                                                    <td className="p-2 text-center font-black">{Math.abs(i.diff)}</td>
+                                                    <td className="p-2 text-right font-mono text-gray-500">${(Number(i.unitPrice) || 0).toLocaleString()}</td>
+                                                    <td className="p-2 text-right font-black text-red-800">${(Math.abs(i.diff) * (Number(i.unitPrice) || 0)).toLocaleString()}</td>
                                                 </tr>
                                             ))}
+                                            {processedItems.filter(i => i.diff < 0).length === 0 && (
+                                                <tr><td colSpan={4} className="p-6 text-center text-gray-400 italic">No se registran faltantes para cobro en este acta.</td></tr>
+                                            )}
                                         </tbody>
+                                        <tfoot className="bg-red-600 text-white font-black uppercase">
+                                            <tr>
+                                                <td colSpan={3} className="p-3 text-right">Total a Cobrar:</td>
+                                                <td className="p-3 text-right text-sm">${totalDeudaEmpaques.toLocaleString()}</td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
-                            )}
 
-                            {observaciones && (
-                                <div style={{ pageBreakInside: 'avoid' }} className="p-8 bg-[#183C30]/5 rounded-[2rem] border-2 border-dashed border-[#183C30]/10 text-[12px] italic leading-relaxed shadow-inner">
-                                    <strong className="text-[#183C30] uppercase not-italic mb-3 block tracking-tighter font-black border-b border-[#183C30]/10 pb-1">Dictamen General del Auditor:</strong>
-                                    "{observaciones}"
-                                </div>
-                            )}
-
-                            <div className="mt-40 space-y-16" style={{ pageBreakInside: 'avoid' }}>
-                                <div className="p-6 bg-gray-50 rounded-2xl border mb-16">
-                                    <p className="text-[10px] text-gray-500 text-center uppercase font-black tracking-widest">Compromiso Legal y Firmas</p>
-                                    <p className="text-[9px] text-gray-400 text-center mt-2 px-10">Al firmar este documento, todas las partes aceptan la veracidad de los datos aquí consignados y se comprometen a realizar los ajustes contables y administrativos pertinentes en un plazo no mayor a 5 días hábiles.</p>
-                                </div>
-                                <div className="grid grid-cols-3 gap-16">
-                                    <div className="text-center">
-                                        <div className="border-b-2 border-gray-900 mb-2 w-48 mx-auto h-[40px]"></div>
-                                        <p className="font-black uppercase text-[9px] text-gray-800">Responsable Inventario</p>
-                                        <p className="text-[8px] text-gray-400 uppercase tracking-tighter">Firma y Cédula</p>
+                                <div className="border border-blue-200 rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="bg-blue-600 text-white p-3 font-black text-[10px] uppercase tracking-widest flex justify-between items-center">
+                                        <span>Relocalización de Inventario Excedente</span>
+                                        <span className="bg-white text-blue-600 px-3 py-1 rounded-full text-xs">BODEGA CUSTODIA</span>
                                     </div>
-                                    <div className="text-center">
-                                        <div className="border-b-2 border-gray-900 mb-2 w-48 mx-auto h-[40px]"></div>
-                                        <p className="font-black uppercase text-[9px] text-gray-800">Auditor de Calidad</p>
-                                        <p className="text-[8px] text-gray-400 uppercase tracking-tighter">Validación de Stock</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="border-b-2 border-gray-900 mb-2 w-48 mx-auto h-[40px]"></div>
-                                        <p className="font-black uppercase text-[9px] text-gray-800">Gerencia / Rep. Legal</p>
-                                        <p className="text-[8px] text-gray-400 uppercase tracking-tighter">Aprobación Final</p>
+                                    <div className="p-4 grid grid-cols-2 gap-4 text-[11px]">
+                                        {processedItems.filter(i => i.diff > 0).map(i => (
+                                            <div key={i.sku} className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                                <span className="font-bold flex-1 truncate pr-2 tracking-tighter uppercase">{i.name}</span>
+                                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-md font-black">{i.diff} UND</span>
+                                            </div>
+                                        ))}
+                                        {processedItems.filter(i => i.diff > 0).length === 0 && (
+                                            <p className="col-span-2 text-center text-gray-400 italic py-4">No se registran excedentes para custodia.</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-20 border-t pt-6 text-center text-gray-300 text-[8px] font-black uppercase tracking-[0.3em]">
-                            Generado Digitalmente por GCO PLATFORM v2.0 · {new Date().toLocaleString()}
+                        {/* 4. Acciones */}
+                        <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">4. Plan de Acción y Mejora Continua</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-[10px] bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                                <div className="space-y-3">
+                                    <p className="font-black text-[#183C30] uppercase border-b border-[#183C30]/10 pb-1">Gestión Logística</p>
+                                    <p className="flex gap-2"><span>●</span> <span className="font-medium text-gray-600 italic">Obligatoriedad de soporte físico (Remisión) para traslados interestatales.</span></p>
+                                    <p className="flex gap-2"><span>●</span> <span className="font-medium text-gray-600 italic">Conciliación documental previa al inventario para mitigar errores de digitación.</span></p>
+                                    <p className="flex gap-2"><span>●</span> <span className="font-medium text-gray-600 italic">Formación de kits (Dúos/Combos) al menos 48 horas antes del conteo oficial.</span></p>
+                                </div>
+                                <div className="space-y-3">
+                                    <p className="font-black text-[#183C30] uppercase border-b border-[#183C30]/10 pb-1">Control de Calidad</p>
+                                    <p className="flex gap-2"><span>●</span> <span className="font-medium text-gray-600 italic">Ingreso total a SIIGO el último día hábil del mes. Corte de facturación estricto.</span></p>
+                                    <p className="flex gap-2"><span>●</span> <span className="font-medium text-gray-600 italic">Veda de recepción de vehículos de carga el último día del período fiscal.</span></p>
+                                    <p className="flex gap-2"><span>●</span> <span className="font-medium text-gray-600 italic">Auditoría selectiva de pesos en productos de alta rotación (Shampoos).</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 5. Saldos Finales Grid */}
+                        <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
+                            <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">5. Saldos de Certificación Post-Ajuste</h3>
+                            <p className="text-[10px] text-gray-400 italic mb-4">*Cantidades auditadas que deberán reflejarse en el sistema tras la ejecución de los ajustes manuales.</p>
+                            <div className="grid grid-cols-4 gap-4">
+                                {processedItems.filter(i => i.p_total > 0).map(i => (
+                                    <div key={i.sku} className="bg-white border-2 border-dashed border-gray-200 p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                                        <span className="text-[10px] font-black text-gray-400 uppercase leading-tight mb-1">{i.name.split(' ').slice(0,3).join(' ')}...</span>
+                                        <span className="text-sm font-black text-[#183C30]">{i.p_total} UND</span>
+                                        <span className="text-[8px] font-bold text-gray-300 mt-1 uppercase">{i.sku}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 6 y 7. Indicadores */}
+                        <div className="grid grid-cols-2 gap-8 mb-12" style={{ pageBreakInside: 'avoid' }}>
+                            <div>
+                                <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-[#183C30] mb-4">6. Dictamen de Auditoría</h3>
+                                <div className="p-6 bg-[#183C30]/5 rounded-[2rem] border-2 border-dashed border-[#183C30]/10 text-[11px] italic leading-relaxed text-gray-600">
+                                    <strong className="text-[#183C30] uppercase not-italic mb-2 block tracking-tighter font-black">Conclusiones del Auditor:</strong>
+                                    {observaciones || "Se certifica que el proceso de conteo cumplió con los estándares de control interno de la organización. No se detectaron anomalías estructurales en el almacenamiento, delegando la responsabilidad de los ajustes operativos al área contable según los hallazgos del punto 2."}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="bg-gray-100 p-2 font-black text-xs uppercase border-l-4 border-emerald-500 mb-4">7. Indicadores de Confiabilidad (KPIs)</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex flex-col items-center">
+                                        <span className="text-[9px] font-black text-emerald-600 uppercase">Exactitud Stock</span>
+                                        <span className="text-2xl font-black text-emerald-700">{exactitudUnidades.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex flex-col items-center">
+                                        <span className="text-[9px] font-black text-blue-600 uppercase">Referencias</span>
+                                        <span className="text-2xl font-black text-blue-700">{processedItems.filter(i => i.s_total > 0 || i.p_total > 0).length}</span>
+                                    </div>
+                                    <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex flex-col items-center col-span-2">
+                                        <span className="text-[9px] font-black text-red-600 uppercase">Efectividad de Registro</span>
+                                        <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden flex">
+                                            <div className="bg-emerald-500 h-full" style={{ width: `${exactitudUnidades}%` }}></div>
+                                            <div className="bg-red-500 h-full" style={{ width: `${100-exactitudUnidades}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Signatures */}
+                        <div className="mt-40 space-y-16" style={{ pageBreakInside: 'avoid' }}>
+                            <div className="p-6 bg-gray-50 rounded-2xl border mb-16">
+                                <p className="text-[10px] text-gray-500 text-center uppercase font-black tracking-widest">Compromiso Legal y Firmas</p>
+                                <p className="text-[9px] text-gray-400 text-center mt-2 px-10 italic">
+                                    Al firmar este documento, las partes aceptan que el conteo físico es la verdad absoluta para fines contables y fiscales del período {periodo}. El operador logístico reconoce los faltantes y autoriza el trámite de cobro o reposición según contrato vigente.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-16">
+                                <div className="text-center">
+                                    <div className="border-b-2 border-black mb-2 w-48 mx-auto h-[40px]"></div>
+                                    <p className="font-black uppercase text-[9px] text-gray-800">Responsable Inventario</p>
+                                    <p className="text-[8px] text-gray-400 uppercase tracking-tighter">EMPAQUES Y SOLUCIONES</p>
+                                </div>
+                                <div className="text-center">
+                                    <div className="border-b-2 border-black mb-2 w-48 mx-auto h-[40px]"></div>
+                                    <p className="font-black uppercase text-[9px] text-gray-800">Auditor de Calidad</p>
+                                    <p className="text-[8px] text-gray-400 uppercase tracking-tighter">VALIDADOR GCO</p>
+                                </div>
+                                <div className="text-center">
+                                    <div className="border-b-2 border-black mb-2 w-48 mx-auto h-[40px]"></div>
+                                    <p className="font-black uppercase text-[9px] text-gray-800">Gerencia / Rep. Legal</p>
+                                    <p className="text-[8px] text-gray-400 uppercase tracking-tighter">APROBACIÓN FINAL</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-2 text-center text-gray-200 text-[8px] font-black uppercase tracking-[0.3em] py-10">
+                            GCO PLATFORM v2.0.5 · SISTEMA DE AUDITORÍA AVANZADA · {new Date().toLocaleString()}
                         </div>
                     </div>
                 </div>
