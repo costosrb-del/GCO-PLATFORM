@@ -100,8 +100,10 @@ export default function CierreActasPage() {
         return `${months[d.getMonth()]} ${d.getFullYear()}`;
     });
     const [observaciones, setObservaciones] = useState("");
-    const [actaId, setActaId] = useState<string | null>(null);
     const [status, setStatus] = useState<"draft" | "final">("draft");
+    const [actaId, setActaId] = useState<string | null>(null);
+    const [savedActas, setSavedActas] = useState<any[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
     // Items
     const [items, setItems] = useState<ActaItem[]>(
@@ -154,6 +156,64 @@ export default function CierreActasPage() {
         }
     }, [inventoryData]);
 
+    const fetchActas = async () => {
+        setIsLoadingHistory(true);
+        try {
+            const token = localStorage.getItem("gco_token");
+            if (!token) return;
+            const res = await axios.get(`${API_URL}/inventory/actas`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data?.status === "success") {
+                setSavedActas(res.data.data || []);
+            }
+        } catch (error) {
+            console.error("Error al cargar historial", error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchActas();
+    }, []);
+
+    const handleLoadActa = (acta: any) => {
+        const d = acta.data;
+        setActaId(acta.id);
+        setStatus(acta.status || "draft");
+        setCompany(d.company);
+        setConsecutivo(d.consecutivo || "");
+        setFecha(d.fecha || new Date().toISOString().split('T')[0]);
+        setPeriodo(d.periodo);
+        setObservaciones(d.observaciones || "");
+        
+        if (d.items) {
+            setItems(prev => prev.map(baseItem => {
+                const savedItem = d.items.find((si: any) => si.sku === baseItem.sku);
+                if (savedItem) {
+                    return {
+                        ...baseItem,
+                        physical: savedItem.physical ?? '',
+                        physicalFree: savedItem.physicalFree ?? '',
+                        bPrincipal: savedItem.bPrincipal ?? '',
+                        bAverias: savedItem.bAverias ?? '',
+                        bComercExt: savedItem.bComercExt ?? '',
+                        bLibre: savedItem.bLibre ?? '',
+                        bTransito: savedItem.bTransito ?? '',
+                        bPerdida: savedItem.bPerdida ?? '',
+                        bDos: savedItem.bDos ?? '',
+                        justificacion: savedItem.justificacion ?? '',
+                        unitPrice: savedItem.unitPrice ?? '',
+                        systemFree: savedItem.systemFree ?? ''
+                    };
+                }
+                return baseItem;
+            }));
+        }
+        toast.info(`Acta cargada: ${acta.status === 'draft' ? 'Borrador' : 'Cerrada'}`);
+    };
+
     // Document Print logic
     const handlePrint = () => {
         window.print();
@@ -205,6 +265,7 @@ export default function CierreActasPage() {
                 setActaId(res.data.acta_id);
                 setStatus(newStatus);
                 toast.success(newStatus === "final" ? "Acta CERRADA Y FIRMADA correctamente" : "Borrador guardado correctamente");
+                fetchActas(); // Refrescar lista
             }
         } catch (error: any) {
             console.error("Error al guardar", error);
@@ -514,6 +575,45 @@ export default function CierreActasPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Historial de Borradores */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                            <h3 className="font-bold text-gray-800 border-b pb-2 mb-4 flex items-center gap-2">
+                                <Save className="h-4 w-4 text-amber-500" />
+                                Borradores y Actas Recientes
+                            </h3>
+                            
+                            <div className="flex-1 overflow-y-auto max-h-[180px] space-y-2 pr-2">
+                                {isLoadingHistory ? (
+                                    <div className="text-center py-4 text-gray-400 text-sm italic">Cargando historial...</div>
+                                ) : savedActas.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-400 text-xs italic">No hay actas guardadas recientemente</div>
+                                ) : (
+                                    savedActas.slice().reverse().map((acta) => (
+                                        <button
+                                            key={acta.id}
+                                            onClick={() => handleLoadActa(acta)}
+                                            className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50 transition-all group flex justify-between items-center"
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`w-2 h-2 rounded-full ${acta.status === 'draft' ? 'bg-amber-400' : 'bg-green-500'}`} title={acta.status === 'draft' ? 'Borrador' : 'Cerrada'}></span>
+                                                    <p className="text-xs font-bold text-gray-800 truncate">{acta.data?.company}</p>
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 mt-0.5">{acta.data?.periodo} - {new Date(acta.date).toLocaleDateString()}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-[10px] font-bold text-amber-600 uppercase">Cargar</span>
+                                                <CheckCircle2 className="h-4 w-4 text-amber-500" />
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                            {savedActas.length > 0 && (
+                                <p className="text-[10px] text-gray-400 mt-3 text-center italic">Haz clic en un acta para cargar sus datos y continuar.</p>
+                            )}
                         </div>
                     </div>
 
