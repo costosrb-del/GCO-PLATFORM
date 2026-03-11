@@ -417,9 +417,10 @@ export default function CierreActasPage() {
                                 <tbody className="divide-y divide-gray-100">
                                     {items.map((item, idx) => {
                                         const p = Number(item.physical) || 0;
-                                        const s = Number(item.system) || 0;
+                                        const s = (Number(item.bPrincipal) || 0) + (Number(item.bAverias) || 0) + (Number(item.bComercExt) || 0);
                                         const diff = p - s;
-                                        const hasDiff = item.physical !== '' && item.system !== '' && diff !== 0;
+                                        const hasSystemValue = item.bPrincipal !== '' || item.bAverias !== '' || item.bComercExt !== '';
+                                        const hasDiff = item.physical !== '' && hasSystemValue && diff !== 0;
                                         const isFaltante = diff < 0;
 
                                         return (
