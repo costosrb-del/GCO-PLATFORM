@@ -24,7 +24,8 @@
 - **v2.0.2 (Saldos):** Tabla de saldos con filtros avanzados y KPIs.
 - **v2.0.3 (Mejoras):** Filtros colapsables, cambio de nombre "Bodega Libre" -> "Sin Ingresar", auto-selección de bodegas en filtro de venta.
 - **v2.0.4 (Fix):** Corrección en Juego de Inventario para sumar stock duplicado por SKUs normalizados (7701, 7702, 7703) en todas las empresas.
+- **v2.0.5 (Deploy):** Despliegue exitoso a Google Cloud Run (Backend) y Firebase Hosting (Frontend).
 
 ## 4. Próximos Pasos
 - Módulo de Movimientos (Auditoría).
-- Despliegue en Google Cloud Run.
+- Monitoreo de logs en producción.
