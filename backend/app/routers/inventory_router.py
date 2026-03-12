@@ -394,12 +394,15 @@ async def save_acta(data: dict, user: dict = Depends(verify_token)):
         acta_id = str(uuid.uuid4())
         is_new = True
         
+    # Extract the inner data to avoid double nesting
+    inner_data = data.get("data", data)
+    
     acta = {
         "id": acta_id,
-        "date": datetime.datetime.now().isoformat(),
+        "date": data.get("date") or datetime.datetime.now().isoformat(),
         "user": user.get("username", "Unknown"),
         "status": data.get("status", "draft"), # 'draft' or 'final'
-        "data": data
+        "data": inner_data
     }
     
     # Save to cache history
@@ -435,7 +438,7 @@ async def get_actas(user: dict = Depends(verify_token)):
     """Consultar historial de actas guardadas"""
     try:
         history = cache.load("actas_history.json") or []
-        return {"status": "success", "data": history}
+        return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
