@@ -226,7 +226,8 @@ export default function CierreActasPage() {
             setStatus(newStatus);
             setActaId(payload.id);
             toast.success(newStatus === 'final' ? "Cerrada" : "Borrador guardado");
-            fetchActas();
+            // Important: refresh actas list immediately
+            setTimeout(fetchActas, 500); 
         } catch (error) { toast.error("Error al guardar"); } finally { setIsSaving(false); }
     };
 
@@ -307,7 +308,24 @@ export default function CierreActasPage() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] pb-20 pt-10">
             <style jsx global>{`
-                @media print { .no-print { display: none !important; } .print-section { padding: 0 !important; margin: 0 !important; width: 100% !important; } }
+                @media print { 
+                    /* Hide everything except print-section */
+                    body * { visibility: hidden !important; }
+                    .print-section, .print-section * { visibility: visible !important; }
+                    .print-section { 
+                        position: absolute !important; 
+                        left: 0 !important; 
+                        top: 0 !important; 
+                        width: 100% !important; 
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                    }
+                    /* Ensure Sidebar and other UI stay hidden */
+                    .no-print, nav, aside { display: none !important; }
+                    main { margin-left: 0 !important; padding: 0 !important; }
+                }
                 .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 15rem; font-weight: 900; color: rgba(0,0,0,0.03); pointer-events: none; z-index: 0; white-space: nowrap; text-transform: uppercase; }
                 .status-badge { position: absolute; top: 2rem; right: 2rem; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 900; z-index: 10; border: 2px solid; }
                 .status-draft { background: #FFFBEB; color: #92400E; border-color: #FCD34D; }

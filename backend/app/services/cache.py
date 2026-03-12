@@ -68,14 +68,14 @@ class CacheService:
             logging.error(f"Cache Save Error: {e}")
             return False
 
-    def load(self, key: str):
+    def load(self, key: str, ttl: int = 3600):
         try:
             # 1. Try local cache first (Short-term memory)
             filepath = os.path.join(self.local_dir, key)
             if os.path.exists(filepath):
                 import time
-                # TTL 1 hour for local cache
-                if (time.time() - os.path.getmtime(filepath)) < 3600:
+                # TTL check - if ttl is None, it never expires
+                if ttl is None or (time.time() - os.path.getmtime(filepath)) < ttl:
                     with open(filepath, "r", encoding="utf-8") as f:
                         return json.load(f)
 

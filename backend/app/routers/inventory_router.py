@@ -407,7 +407,7 @@ async def save_acta(data: dict, user: dict = Depends(verify_token)):
     
     # Save to cache history
     try:
-        history = cache.load("actas_history.json") or []
+        history = cache.load("actas_history.json", ttl=None) or []
         
         if not is_new:
             # Update existing if found
@@ -437,7 +437,7 @@ async def save_acta(data: dict, user: dict = Depends(verify_token)):
 async def get_actas(user: dict = Depends(verify_token)):
     """Consultar historial de actas guardadas"""
     try:
-        history = cache.load("actas_history.json") or []
+        history = cache.load("actas_history.json", ttl=None) or []
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

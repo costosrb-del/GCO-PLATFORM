@@ -61,7 +61,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   return (
     <div
-      className={`${isCollapsed ? "w-20" : "w-64"} h-screen bg-[#183C30] text-white flex flex-col shadow-xl fixed left-0 top-0 transition-all duration-300 z-50`}
+      className={`${isCollapsed ? "w-20" : "w-64"} h-screen bg-[#183C30] text-white flex flex-col shadow-xl fixed left-0 top-0 transition-all duration-300 z-50 no-print`}
     >
       {/* Header / Brand */}
       <div className="p-4 border-b border-[#2A5E4D] flex items-center justify-between">
