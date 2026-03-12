@@ -234,45 +234,66 @@ export default function CierreActasPage() {
     const printRef = useRef<HTMLDivElement>(null);
     const handleDownloadPDF = async () => {
         if (!printRef.current) return;
-        const toastId = toast.loading("Capturando previsualización para PDF...");
+        const toastId = toast.loading("Preparando exportación de alta calidad...");
         
         try {
             const element = printRef.current;
             const filename = `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`;
 
-            // Wait a moment for layout to stabilize
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // Wait for animations and fonts to stabilize
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
-            const canvas = await html2canvas(element, {
-                scale: 2, // High resolution
-                useCORS: true,
-                backgroundColor: "#ffffff",
-                logging: false,
-                windowWidth: 1000 // Force the document width
-            });
+            // Use scale 1.4: Higher than 1.0 for quality, but lower than 2.0 to avoid memory crashes
+            let canvas: HTMLCanvasElement;
+            try {
+                canvas = await html2canvas(element, {
+                    scale: 1.4,
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    logging: false,
+                    windowWidth: 1000,
+                    imageTimeout: 0, // No limit for image loading
+                    onclone: (doc) => {
+                        // Ensure everything is visible in the clone
+                        const el = doc.querySelector('.print-section') as HTMLElement;
+                        if (el) el.style.boxShadow = 'none';
+                    }
+                });
+            } catch (innerErr) {
+                console.warn("Retrying with Safe Mode (Scale 1.0)");
+                canvas = await html2canvas(element, {
+                    scale: 1.0,
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    windowWidth: 1000
+                });
+            }
 
             const pdf = new jsPDF("p", "mm", "a4");
-            const imgWidth = 210; // A4 width in mm
-            const pageHeight = 297; // A4 height in mm
+            const imgWidth = 210; 
+            const pageHeight = 297; 
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             let heightLeft = imgHeight;
             let position = 0;
 
-            pdf.addImage(canvas.toDataURL("image/jpeg", 1.0), "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
+            // Use JPEG 0.9 for balance between quality and file size
+            const imgData = canvas.toDataURL("image/jpeg", 0.9);
+            
+            pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pageHeight;
 
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(canvas.toDataURL("image/jpeg", 1.0), "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
                 heightLeft -= pageHeight;
             }
 
             pdf.save(filename);
-            toast.success("PDF exportado con éxito ✓", { id: toastId });
+            toast.success("PDF generado correctamente ✓", { id: toastId });
         } catch (e: any) {
             console.error("PDF Export Error:", e);
-            toast.error("Error al exportar PDF. Reintentando...", { id: toastId });
+            toast.error("El documento es muy grande. Intenta usar la opción 'IMPRIMIR' y 'Guardar como PDF'.", { id: toastId });
         }
     };
 
