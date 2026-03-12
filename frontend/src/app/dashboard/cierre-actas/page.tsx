@@ -233,67 +233,45 @@ export default function CierreActasPage() {
 
     const printRef = useRef<HTMLDivElement>(null);
     const handleDownloadPDF = async () => {
-        if (!printRef.current) return;
-        const toastId = toast.loading("Preparando exportación de alta calidad...");
-        
+        const toastId = toast.loading("Generando PDF profesional en el servidor...");
         try {
-            const element = printRef.current;
-            const filename = `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`;
-
-            // Wait for animations and fonts to stabilize
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Use scale 1.4: Higher than 1.0 for quality, but lower than 2.0 to avoid memory crashes
-            let canvas: HTMLCanvasElement;
-            try {
-                canvas = await html2canvas(element, {
-                    scale: 1.4,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    logging: false,
-                    windowWidth: 1000,
-                    imageTimeout: 0, // No limit for image loading
-                    onclone: (doc) => {
-                        // Ensure everything is visible in the clone
-                        const el = doc.querySelector('.print-section') as HTMLElement;
-                        if (el) el.style.boxShadow = 'none';
-                    }
-                });
-            } catch (innerErr) {
-                console.warn("Retrying with Safe Mode (Scale 1.0)");
-                canvas = await html2canvas(element, {
-                    scale: 1.0,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    windowWidth: 1000
-                });
-            }
-
-            const pdf = new jsPDF("p", "mm", "a4");
-            const imgWidth = 210; 
-            const pageHeight = 297; 
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            // Use JPEG 0.9 for balance between quality and file size
-            const imgData = canvas.toDataURL("image/jpeg", 0.9);
+            const payload = {
+                date: new Date().toISOString(),
+                status: status,
+                data: { company, consecutivo, fecha, periodo, observaciones, items }
+            };
             
-            pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pageHeight;
+            const response = await axios.post(`${API_URL}/inventory/actas/export-pdf`, payload, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("gco_token")}` },
+                responseType: 'blob'
+            });
 
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pageHeight;
-            }
-
-            pdf.save(filename);
-            toast.success("PDF generado correctamente ✓", { id: toastId });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            toast.success("PDF profesional generado ✓", { id: toastId });
         } catch (e: any) {
-            console.error("PDF Export Error:", e);
-            toast.error("El documento es muy grande. Intenta usar la opción 'IMPRIMIR' y 'Guardar como PDF'.", { id: toastId });
+            console.error("Server PDF Export Error:", e);
+            toast.error("Error en servidor. Usando generador local (puede tardar)...", { id: toastId });
+            
+            // FALLBACK TO CLIENT SIDE (SCALE 1.0 FOR STABILITY)
+            if (printRef.current) {
+                try {
+                    const canvas = await html2canvas(printRef.current, { scale: 1.0, useCORS: true, backgroundColor: "#ffffff" });
+                    const pdf = new jsPDF("p", "mm", "a4");
+                    const imgW = 210;
+                    const imgH = (canvas.height * imgW) / canvas.width;
+                    pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, imgW, imgH);
+                    pdf.save(`Acta_Cierre_LOCAL.pdf`);
+                } catch (fallbackErr) {
+                    toast.error("Error crítico. Por favor usa Imprimir > Guardar como PDF.");
+                }
+            }
         }
     };
 

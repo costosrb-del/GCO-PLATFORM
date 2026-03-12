@@ -256,6 +256,75 @@ class ActaPDF(FPDF):
         self.set_text_color(150, 150, 150)
         self.cell(0, 10, 'GCO Platform - Agentes de Inteligencia | Auditoria de Inventarios', 0, 0, 'C')
 
+    def generate_acta_info(self, data):
+        # 1. INFO GENERAL (Stylyzed)
+        self.set_fill_color(248, 250, 252) # Slate 50
+        self.set_font('Arial', 'B', 9)
+        
+        # Grid layout for info
+        w_label = 45
+        w_val = 50
+        
+        self.set_draw_color(230, 230, 230)
+        
+        # Line 1
+        self.cell(w_label, 10, '  Empresa:', 1, 0, 'L', 1)
+        self.set_font('Arial', '', 9)
+        self.cell(w_val, 10, f'  {sanitize_str(data.get("company", "N/A"))}', 1, 0, 'L')
+        self.set_font('Arial', 'B', 9)
+        self.cell(w_label, 10, '  Consecutivo:', 1, 0, 'L', 1)
+        self.set_font('Arial', '', 9)
+        self.cell(w_val, 10, f'  {sanitize_str(data.get("consecutivo", "N/A"))}', 1, 1, 'L')
+        
+        # Line 2
+        self.set_font('Arial', 'B', 9)
+        self.cell(w_label, 10, '  Fecha:', 1, 0, 'L', 1)
+        self.set_font('Arial', '', 9)
+        self.cell(w_val, 10, f'  {sanitize_str(data.get("fecha", "N/A"))}', 1, 0, 'L')
+        self.set_font('Arial', 'B', 9)
+        self.cell(w_label, 10, '  Periodo:', 1, 0, 'L', 1)
+        self.set_font('Arial', '', 9)
+        self.cell(w_val, 10, f'  {sanitize_str(data.get("periodo", "N/A"))}', 1, 1, 'L')
+        self.ln(5)
+
+    def draw_kpi_boxes(self, exactitud, total_refs, total_deuda):
+        # Draw 3 boxes like in the UI
+        start_y = self.get_y()
+        self.set_draw_color(200, 200, 200)
+        
+        # Box 1: Exactitud (Emerald)
+        self.set_fill_color(236, 253, 245)
+        self.rect(10, start_y, 60, 25, 'F')
+        self.set_xy(10, start_y + 5)
+        self.set_text_color(5, 150, 105) # Emerald 600
+        self.set_font('Arial', 'B', 7)
+        self.cell(60, 5, 'EXACTITUD DE STOCK', 0, 1, 'C')
+        self.set_font('Arial', 'B', 14)
+        self.cell(60, 10, f'{exactitud:.2f}%', 0, 1, 'C')
+        
+        # Box 2: Referencias (Blue)
+        self.set_fill_color(239, 246, 255)
+        self.rect(75, start_y, 60, 25, 'F')
+        self.set_xy(75, start_y + 5)
+        self.set_text_color(37, 99, 235) # Blue 600
+        self.set_font('Arial', 'B', 7)
+        self.cell(60, 5, 'REFERENCIAS AUDITADAS', 0, 1, 'C')
+        self.set_font('Arial', 'B', 14)
+        self.cell(60, 10, f'{total_refs}', 0, 1, 'C')
+        
+        # Box 3: Deuda (Red)
+        self.set_fill_color(254, 242, 242)
+        self.rect(140, start_y, 60, 25, 'F')
+        self.set_xy(140, start_y + 5)
+        self.set_text_color(220, 38, 38) # Red 600
+        self.set_font('Arial', 'B', 7)
+        self.cell(60, 5, 'TOTAL FALTANTES (VALOR)', 0, 1, 'C')
+        self.set_font('Arial', 'B', 12)
+        self.cell(60, 10, f'${total_deuda:,.0f}', 0, 1, 'C')
+        
+        self.set_text_color(0)
+        self.set_y(start_y + 30)
+
 def create_acta_pdf_bytes(acta_data: dict):
     pdf = ActaPDF()
     pdf.alias_nb_pages()
@@ -264,46 +333,58 @@ def create_acta_pdf_bytes(acta_data: dict):
     data = acta_data.get("data", {})
     items = data.get("items", [])
     
-    # 1. INFO GENERAL
-    pdf.set_fill_color(240, 240, 240)
-    pdf.set_font('Arial', 'B', 9)
-    # Row 1
-    pdf.cell(60, 10, 'Empresa Auditada:', 1, 0, 'L', 1)
-    pdf.set_font('Arial', '', 9)
-    pdf.cell(130, 10, sanitize_str(data.get("company", "N/A")), 1, 1, 'L')
+    # Pre-calculate KPIs to match UI logic
+    processed = []
+    total_system = 0
+    total_diff_abs = 0
+    refs_with_stock = 0
+    deuda = 0
     
-    # Row 2
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(60, 10, 'Consecutivo / Periodo:', 1, 0, 'L', 1)
-    pdf.set_font('Arial', '', 9)
-    pdf.cell(130, 10, f'{data.get("consecutivo", "N/A")} | {data.get("periodo", "N/A")}', 1, 1, 'L')
+    for i in items:
+        # Match UI logic for s_total and p_total
+        s = (float(i.get("bPrincipal") or 0) + float(i.get("bAverias") or 0) + 
+             float(i.get("bComercExt") or 0) + float(i.get("bLibre") or 0) + 
+             float(i.get("systemFree") or 0))
+        p = (float(i.get("physical") or 0) + float(i.get("physicalFree") or 0))
+        diff = p - s
+        
+        if s > 0 or p > 0:
+            total_system += s
+            total_diff_abs += abs(diff)
+            refs_with_stock += 1
+            if diff < 0:
+                deuda += abs(diff) * (float(i.get("unitPrice") or 0))
+        
+        processed.append({**i, "s_total": s, "p_total": p, "diff": diff})
+        
+    exactitud = (1 - (total_diff_abs / (total_system + total_diff_abs))) * 100 if (total_system + total_diff_abs) > 0 else 100
+
+    # 1. Info Header
+    pdf.generate_acta_info(data)
     
-    # Row 3
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(60, 10, 'Fecha de Cierre:', 1, 0, 'L', 1)
-    pdf.set_font('Arial', '', 9)
-    pdf.cell(130, 10, sanitize_str(data.get("fecha", "N/A")), 1, 1, 'L')
-    
+    # 2. KPIs
+    pdf.draw_kpi_boxes(exactitud, refs_with_stock, deuda)
     pdf.ln(5)
     
-    # 2. DESARROLLO (Simplified text)
+    # 3. Metodología
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 8, '1. Desarrollo y Metodologia', 0, 1, 'L')
+    pdf.set_text_color(24, 60, 48)
+    pdf.cell(0, 8, '1. DESARROLLO Y METODOLOGIA', 0, 1, 'L')
+    pdf.set_text_color(0)
     pdf.set_font('Arial', '', 9)
-    metodologia = "Se realizo el levantamiento fisico de inventario aplicando el Principio de Verificacion Dual. El equipo de auditoria valido el 100% de las unidades en estanteria y zona de packing."
-    pdf.multi_cell(0, 5, sanitize_str(metodologia))
+    pdf.multi_cell(0, 5, sanitize_str("Se realizo el levantamiento fisico aplicando el Principio de Verificacion Dual. El equipo de auditoria valido el 100% de las unidades en estanteria y zona de packing. Se utilizo rotulado por colores (Verde/Azul) para garantizar el doble ciego."))
     pdf.ln(5)
     
-    # 3. HALLAZGOS TABLE
+    # 4. Table Matrix
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 8, '2. Hallazgos y Diferencias', 0, 1, 'L')
+    pdf.set_text_color(24, 60, 48)
+    pdf.cell(0, 8, '2. HALLAZGOS Y MATRIZ DE VARIACIONES', 0, 1, 'L')
     
-    # Table Header
     pdf.set_fill_color(24, 60, 48)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font('Arial', 'B', 8)
     
-    cols = [30, 70, 30, 30, 30]
+    cols = [25, 75, 30, 30, 30]
     headers = ['SKU', 'Producto', 'Sistema', 'Fisico', 'Diferencia']
     for i, h in enumerate(headers):
         pdf.cell(cols[i], 8, h, 1, 0, 'C', 1)
@@ -311,59 +392,84 @@ def create_acta_pdf_bytes(acta_data: dict):
     
     pdf.set_text_color(0)
     pdf.set_font('Arial', '', 8)
-    
-    for item in items:
-        sku = sanitize_str(item.get("sku", ""))
-        name = sanitize_str(item.get("name", ""))[:45]
+    fill = False
+    for item in processed:
+        if item['s_total'] == 0 and item['p_total'] == 0: continue
         
-        # Calculate based on system values
-        s_total = (float(item.get("bPrincipal") or 0) + 
-                   float(item.get("bAverias") or 0) + 
-                   float(item.get("bComercExt") or 0) + 
-                   float(item.get("bLibre") or 0) +
-                   float(item.get("systemFree") or 0))
+        self_y = pdf.get_y()
+        if self_y > 250: pdf.add_page() # Manual Break
         
-        p_total = (float(item.get("physical") or 0) + 
-                   float(item.get("physicalFree") or 0))
+        # Zebra flavoring
+        pdf.set_fill_color(250, 250, 250) if fill else pdf.set_fill_color(255, 255, 255)
         
-        diff = p_total - s_total
+        pdf.cell(cols[0], 7, sanitize_str(item.get("sku", "")), 1, 0, 'L', 1)
+        pdf.cell(cols[1], 7, sanitize_str(item.get("name", ""))[:45], 1, 0, 'L', 1)
+        pdf.cell(cols[2], 7, f"{item['s_total']:.0f}", 1, 0, 'C', 1)
+        pdf.cell(cols[3], 7, f"{item['p_total']:.0f}", 1, 0, 'C', 1)
         
-        # Only show items with stock or physical
-        if s_total == 0 and p_total == 0:
-            continue
-            
-        pdf.cell(cols[0], 7, sku, 1, 0, 'L')
-        pdf.cell(cols[1], 7, name, 1, 0, 'L')
-        pdf.cell(cols[2], 7, f"{s_total:,.0f}", 1, 0, 'C')
-        pdf.cell(cols[3], 7, f"{p_total:,.0f}", 1, 0, 'C')
+        # Color for diff
+        diff = item['diff']
+        if diff < 0: pdf.set_text_color(180, 0, 0)
+        elif diff > 0: pdf.set_text_color(0, 0, 180)
+        else: pdf.set_text_color(0, 120, 0)
         
-        # Color difference
-        if diff < 0: pdf.set_text_color(200, 0, 0)
-        elif diff > 0: pdf.set_text_color(0, 0, 200)
-        else: pdf.set_text_color(0, 150, 0)
-        
-        pdf.cell(cols[4], 7, f"{diff:,.0f}", 1, 1, 'C')
+        pdf.cell(cols[4], 7, f"{diff:+.0f}", 1, 1, 'C', 1)
         pdf.set_text_color(0)
+        fill = not fill
         
     pdf.ln(10)
     
-    # 4. OBSERVACIONES
-    pdf.add_page()
+    # 5. Cobros Table (Pink Style)
+    if deuda > 0:
+        pdf.set_font('Arial', 'B', 10)
+        pdf.set_text_color(180, 0, 0)
+        pdf.cell(0, 8, '3. GESTION DE COBROS (FALTANTES)', 0, 1, 'L')
+        
+        pdf.set_fill_color(220, 38, 38)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 8)
+        c_cob = [30, 100, 30, 30]
+        h_cob = ['SKU', 'Producto', 'Cant.', 'Subtotal']
+        for i, h in enumerate(h_cob):
+            pdf.cell(c_cob[i], 8, h, 1, 0, 'C', 1)
+        pdf.ln()
+        
+        pdf.set_text_color(0)
+        pdf.set_font('Arial', '', 8)
+        for item in processed:
+            if item['diff'] < 0:
+                val = abs(item['diff']) * (float(item.get("unitPrice") or 0))
+                pdf.cell(c_cob[0], 7, sanitize_str(item.get("sku", "")), 1, 0, 'L')
+                pdf.cell(c_cob[1], 7, sanitize_str(item.get("name", ""))[:60], 1, 0, 'L')
+                pdf.cell(c_cob[2], 7, f"{abs(item['diff']):.0f}", 1, 0, 'C')
+                pdf.cell(c_cob[3], 7, f"${val:,.0f}", 1, 1, 'R')
+        
+        pdf.set_fill_color(220, 38, 38)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 9)
+        pdf.cell(sum(c_cob[:3]), 8, 'TOTAL A RECOMPENSAR: ', 1, 0, 'R', 1)
+        pdf.cell(c_cob[3], 8, f'${deuda:,.0f}', 1, 1, 'R', 1)
+        pdf.ln(10)
+
+    # 6. Observaciones
+    pdf.set_text_color(24, 60, 48)
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 8, '3. Observaciones y Dictamen', 0, 1, 'L')
+    pdf.cell(0, 8, '4. DICTAMEN Y OBSERVACIONES', 0, 1, 'L')
+    pdf.set_text_color(0)
     pdf.set_font('Arial', '', 9)
-    obs = data.get("observaciones", "Sin observaciones registradas.")
+    obs = data.get("observaciones", "Se certifica que el proceso cumplio con los estandares de control. No se detectan anomalias mayores.")
     pdf.multi_cell(0, 5, sanitize_str(obs))
     
-    pdf.ln(20)
+    pdf.ln(25)
     
-    # 5. FIRMAS
+    # 7. Firmas
     pdf.set_font('Arial', 'B', 9)
-    pdf.line(20, pdf.get_y(), 80, pdf.get_y())
-    pdf.line(120, pdf.get_y(), 180, pdf.get_y())
-    pdf.set_y(pdf.get_y() + 2)
+    y_firmas = pdf.get_y()
+    pdf.line(20, y_firmas, 80, y_firmas)
+    pdf.line(120, y_firmas, 180, y_firmas)
+    pdf.set_y(y_firmas + 2)
     pdf.cell(100, 5, 'Firma Auditor Responsable', 0, 0, 'C')
-    pdf.cell(60, 5, 'Firma Logistica / Bodega', 0, 1, 'C')
+    pdf.cell(60, 5, 'Firma Gerencia / Operaciones', 0, 1, 'C')
     
     try:
         return pdf.output(dest='S').encode('latin-1')
