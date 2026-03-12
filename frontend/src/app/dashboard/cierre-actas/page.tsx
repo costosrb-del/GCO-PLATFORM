@@ -233,30 +233,46 @@ export default function CierreActasPage() {
 
     const printRef = useRef<HTMLDivElement>(null);
     const handleDownloadPDF = async () => {
-        const toastId = toast.loading("Generando PDF profesional en el servidor...");
+        if (!printRef.current) return;
+        const toastId = toast.loading("Capturando previsualización para PDF...");
+        
         try {
-            const payload = {
-                date: new Date().toISOString(),
-                data: { company, consecutivo, fecha, periodo, observaciones, items }
-            };
-            
-            const response = await axios.post(`${API_URL}/inventory/actas/export-pdf`, payload, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("gco_token")}` },
-                responseType: 'blob'
+            const element = printRef.current;
+            const filename = `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`;
+
+            // Wait a moment for layout to stabilize
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            const canvas = await html2canvas(element, {
+                scale: 2, // High resolution
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                windowWidth: 1000 // Force the document width
             });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            
-            toast.success("PDF descargado correctamente ✓", { id: toastId });
+            const pdf = new jsPDF("p", "mm", "a4");
+            const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(canvas.toDataURL("image/jpeg", 1.0), "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(canvas.toDataURL("image/jpeg", 1.0), "JPEG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(filename);
+            toast.success("PDF exportado con éxito ✓", { id: toastId });
         } catch (e: any) {
             console.error("PDF Export Error:", e);
-            toast.error("Error al generar PDF en el servidor. Intenta usar la opción Imprimir.", { id: toastId });
+            toast.error("Error al exportar PDF. Reintentando...", { id: toastId });
         }
     };
 
