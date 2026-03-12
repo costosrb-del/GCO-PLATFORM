@@ -233,75 +233,30 @@ export default function CierreActasPage() {
 
     const printRef = useRef<HTMLDivElement>(null);
     const handleDownloadPDF = async () => {
-        if (!printRef.current) return;
-        const toastId = toast.loading("Preparando documento para exportación...");
-        
+        const toastId = toast.loading("Generando PDF profesional en el servidor...");
         try {
-            const element = printRef.current;
-            const filename = `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`;
-
-            // A small delay to ensure fonts and styles are fully applied
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Scale 1.5 for good balance between quality and memory
-            let canvas: HTMLCanvasElement;
-            try {
-                canvas = await html2canvas(element, {
-                    scale: 1.5,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    logging: false,
-                    imageTimeout: 0,
-                    onclone: (clonedDoc) => {
-                        const el = clonedDoc.querySelector('.print-section') as HTMLElement;
-                        if (el) {
-                            el.style.width = '1000px';
-                            el.style.padding = '40px';
-                        }
-                    }
-                });
-            } catch (canvasErr) {
-                console.warn("Retrying html2canvas at scale 1.0");
-                canvas = await html2canvas(element, {
-                    scale: 1.0,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    logging: false,
-                    imageTimeout: 0
-                });
-            }
-
-            const pdf = new jsPDF("p", "mm", "a4");
-            const pgW = pdf.internal.pageSize.getWidth();
-            const pgH = pdf.internal.pageSize.getHeight();
+            const payload = {
+                date: new Date().toISOString(),
+                data: { company, consecutivo, fecha, periodo, observaciones, items }
+            };
             
-            const pxPerMm = canvas.width / pgW;
-            const pgHpx = pgH * pxPerMm;
-            const nPages = Math.ceil(canvas.height / pgHpx);
+            const response = await axios.post(`${API_URL}/inventory/actas/export-pdf`, payload, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("gco_token")}` },
+                responseType: 'blob'
+            });
 
-            for (let i = 0; i < nPages; i++) {
-                toast.loading(`Generando página ${i + 1} de ${nPages}...`, { id: toastId });
-                
-                const srcY = i * pgHpx;
-                const srcH = Math.min(pgHpx, canvas.height - srcY);
-
-                const slice = document.createElement("canvas");
-                slice.width = canvas.width;
-                slice.height = pgHpx; 
-                const ctx = slice.getContext("2d")!;
-                ctx.fillStyle = "#ffffff";
-                ctx.fillRect(0, 0, slice.width, slice.height);
-                ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-
-                if (i > 0) pdf.addPage();
-                pdf.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pgW, pgH, undefined, "FAST");
-            }
-
-            pdf.save(filename);
-            toast.success("PDF generado y descargado ✓", { id: toastId });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo.replace(/ /g, '_')}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            toast.success("PDF descargado correctamente ✓", { id: toastId });
         } catch (e: any) {
             console.error("PDF Export Error:", e);
-            toast.error(`Error al generar el PDF. Intenta de nuevo o usa la opción de imprimir.`, { id: toastId });
+            toast.error("Error al generar PDF en el servidor. Intenta usar la opción Imprimir.", { id: toastId });
         }
     };
 
@@ -309,22 +264,23 @@ export default function CierreActasPage() {
         <div className="min-h-screen bg-[#F8FAFC] pb-20 pt-10">
             <style jsx global>{`
                 @media print { 
-                    /* Hide everything except print-section */
-                    body * { visibility: hidden !important; }
-                    .print-section, .print-section * { visibility: visible !important; }
+                    /* ROOT FIX: Hide everything except the target section */
+                    body > * { display: none !important; }
+                    body > .print-container, .print-container { display: block !important; }
+                    
+                    /* If using a layout with main/sidebar, ensure they are hidden */
+                    nav, aside, header, footer, .no-print { display: none !important; }
+                    main { margin: 0 !important; padding: 0 !important; width: 100% !important; display: block !important; }
+                    
                     .print-section { 
-                        position: absolute !important; 
-                        left: 0 !important; 
-                        top: 0 !important; 
-                        width: 100% !important; 
-                        padding: 0 !important;
+                        display: block !important;
+                        position: relative !important;
+                        width: 100% !important;
                         margin: 0 !important;
-                        box-shadow: none !important;
+                        padding: 0 !important;
                         border: none !important;
+                        box-shadow: none !important;
                     }
-                    /* Ensure Sidebar and other UI stay hidden */
-                    .no-print, nav, aside { display: none !important; }
-                    main { margin-left: 0 !important; padding: 0 !important; }
                 }
                 .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 15rem; font-weight: 900; color: rgba(0,0,0,0.03); pointer-events: none; z-index: 0; white-space: nowrap; text-transform: uppercase; }
                 .status-badge { position: absolute; top: 2rem; right: 2rem; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 900; z-index: 10; border: 2px solid; }
@@ -512,7 +468,7 @@ export default function CierreActasPage() {
                         </div>
                     </div>
 
-                    <div ref={printRef} className="print-section bg-white shadow-2xl relative overflow-hidden p-12 text-[#1f2937]" style={{ minHeight: '1120px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <div ref={printRef} className="print-section print-container bg-white shadow-2xl relative overflow-hidden p-12 text-[#1f2937]" style={{ minHeight: '1120px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {status === 'draft' && <div className="watermark">BORRADOR</div>}
                         
                         {/* Header Official */}

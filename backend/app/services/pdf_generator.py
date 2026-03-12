@@ -211,3 +211,161 @@ def create_inventory_pdf_bytes(data: list):
         return pdf.output(dest='S').encode('latin-1')
     except:
         return pdf.output(dest='S').encode('latin-1', errors='ignore') 
+
+class ActaPDF(FPDF):
+    def header(self):
+        # Official Heading FI-004 V2 style
+        self.set_draw_color(0)
+        self.set_line_width(0.4)
+        
+        # 3-column header box
+        self.rect(10, 10, 190, 20)
+        self.line(60, 10, 60, 30)
+        self.line(160, 10, 160, 30)
+        
+        # Left: Company Name (Placeholder Origen Botánico)
+        self.set_font('Arial', 'B', 12)
+        self.set_xy(10, 15)
+        self.cell(50, 5, 'ORIGEN', 0, 1, 'C')
+        self.set_font('Arial', '', 8)
+        self.set_x(10)
+        self.cell(50, 5, 'BOTANICO', 0, 1, 'C')
+        
+        # Middle: Title
+        self.set_xy(60, 15)
+        self.set_font('Arial', 'B', 10)
+        self.cell(100, 5, 'ACTA DE INVENTARIO DE PRODUCTO TERMINADO', 0, 1, 'C')
+        self.set_font('Arial', '', 8)
+        self.set_x(60)
+        self.cell(100, 5, 'Control de Existencias y Auditoria de Stock', 0, 1, 'C')
+        
+        # Right: Codes
+        self.set_font('Arial', 'B', 7)
+        self.set_xy(160, 12)
+        self.cell(30, 4, 'CODIGO: FI-004 V2', 0, 1, 'L')
+        self.set_xy(160, 17)
+        self.cell(30, 4, 'FECHA: 07/2024', 0, 1, 'L')
+        self.set_xy(160, 22)
+        self.cell(30, 4, f'PAGINA: {self.page_no()}', 0, 1, 'L')
+        
+        self.set_xy(10, 35)
+
+    def footer(self):
+        self.set_y(-25)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(150, 150, 150)
+        self.cell(0, 10, 'GCO Platform - Agentes de Inteligencia | Auditoria de Inventarios', 0, 0, 'C')
+
+def create_acta_pdf_bytes(acta_data: dict):
+    pdf = ActaPDF()
+    pdf.alias_nb_pages()
+    pdf.add_page()
+    
+    data = acta_data.get("data", {})
+    items = data.get("items", [])
+    
+    # 1. INFO GENERAL
+    pdf.set_fill_color(240, 240, 240)
+    pdf.set_font('Arial', 'B', 9)
+    # Row 1
+    pdf.cell(60, 10, 'Empresa Auditada:', 1, 0, 'L', 1)
+    pdf.set_font('Arial', '', 9)
+    pdf.cell(130, 10, sanitize_str(data.get("company", "N/A")), 1, 1, 'L')
+    
+    # Row 2
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(60, 10, 'Consecutivo / Periodo:', 1, 0, 'L', 1)
+    pdf.set_font('Arial', '', 9)
+    pdf.cell(130, 10, f'{data.get("consecutivo", "N/A")} | {data.get("periodo", "N/A")}', 1, 1, 'L')
+    
+    # Row 3
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(60, 10, 'Fecha de Cierre:', 1, 0, 'L', 1)
+    pdf.set_font('Arial', '', 9)
+    pdf.cell(130, 10, sanitize_str(data.get("fecha", "N/A")), 1, 1, 'L')
+    
+    pdf.ln(5)
+    
+    # 2. DESARROLLO (Simplified text)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 8, '1. Desarrollo y Metodologia', 0, 1, 'L')
+    pdf.set_font('Arial', '', 9)
+    metodologia = "Se realizo el levantamiento fisico de inventario aplicando el Principio de Verificacion Dual. El equipo de auditoria valido el 100% de las unidades en estanteria y zona de packing."
+    pdf.multi_cell(0, 5, sanitize_str(metodologia))
+    pdf.ln(5)
+    
+    # 3. HALLAZGOS TABLE
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 8, '2. Hallazgos y Diferencias', 0, 1, 'L')
+    
+    # Table Header
+    pdf.set_fill_color(24, 60, 48)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 8)
+    
+    cols = [30, 70, 30, 30, 30]
+    headers = ['SKU', 'Producto', 'Sistema', 'Fisico', 'Diferencia']
+    for i, h in enumerate(headers):
+        pdf.cell(cols[i], 8, h, 1, 0, 'C', 1)
+    pdf.ln()
+    
+    pdf.set_text_color(0)
+    pdf.set_font('Arial', '', 8)
+    
+    for item in items:
+        sku = sanitize_str(item.get("sku", ""))
+        name = sanitize_str(item.get("name", ""))[:45]
+        
+        # Calculate based on system values
+        s_total = (float(item.get("bPrincipal") or 0) + 
+                   float(item.get("bAverias") or 0) + 
+                   float(item.get("bComercExt") or 0) + 
+                   float(item.get("bLibre") or 0) +
+                   float(item.get("systemFree") or 0))
+        
+        p_total = (float(item.get("physical") or 0) + 
+                   float(item.get("physicalFree") or 0))
+        
+        diff = p_total - s_total
+        
+        # Only show items with stock or physical
+        if s_total == 0 and p_total == 0:
+            continue
+            
+        pdf.cell(cols[0], 7, sku, 1, 0, 'L')
+        pdf.cell(cols[1], 7, name, 1, 0, 'L')
+        pdf.cell(cols[2], 7, f"{s_total:,.0f}", 1, 0, 'C')
+        pdf.cell(cols[3], 7, f"{p_total:,.0f}", 1, 0, 'C')
+        
+        # Color difference
+        if diff < 0: pdf.set_text_color(200, 0, 0)
+        elif diff > 0: pdf.set_text_color(0, 0, 200)
+        else: pdf.set_text_color(0, 150, 0)
+        
+        pdf.cell(cols[4], 7, f"{diff:,.0f}", 1, 1, 'C')
+        pdf.set_text_color(0)
+        
+    pdf.ln(10)
+    
+    # 4. OBSERVACIONES
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 8, '3. Observaciones y Dictamen', 0, 1, 'L')
+    pdf.set_font('Arial', '', 9)
+    obs = data.get("observaciones", "Sin observaciones registradas.")
+    pdf.multi_cell(0, 5, sanitize_str(obs))
+    
+    pdf.ln(20)
+    
+    # 5. FIRMAS
+    pdf.set_font('Arial', 'B', 9)
+    pdf.line(20, pdf.get_y(), 80, pdf.get_y())
+    pdf.line(120, pdf.get_y(), 180, pdf.get_y())
+    pdf.set_y(pdf.get_y() + 2)
+    pdf.cell(100, 5, 'Firma Auditor Responsable', 0, 0, 'C')
+    pdf.cell(60, 5, 'Firma Logistica / Bodega', 0, 1, 'C')
+    
+    try:
+        return pdf.output(dest='S').encode('latin-1')
+    except:
+        return pdf.output(dest='S').encode('latin-1', errors='ignore')

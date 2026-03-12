@@ -12,9 +12,11 @@ class CacheService:
     def __init__(self):
         # Default to 'cloud' for persistence. Fallback to 'local' happens in _connect if auth fails.
         self.mode = os.getenv("CACHE_MODE", "cloud") 
-        self.bucket_name = os.getenv("CACHE_BUCKET", "gco-platform-cache-v2")
-        # Use /tmp for local cache in production/cloud environments (ephemeral)
-        self.local_dir = os.getenv("LOCAL_CACHE_DIR", "/tmp/gco_local_cache")
+        # Use a persistent 'storage' directory in the backend root by default
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        default_storage = os.path.join(base_dir, "storage")
+        
+        self.local_dir = os.getenv("PERSISTENT_STORAGE_DIR", default_storage)
         self.client = None
         self.bucket = None
         
@@ -24,10 +26,16 @@ class CacheService:
         else:
             self.mode = "local"
 
-        if self.mode == "local":
-            if not os.path.exists(self.local_dir):
+        # Always ensure local_dir exists
+        if not os.path.exists(self.local_dir):
+            try:
                 os.makedirs(self.local_dir, exist_ok=True)
-            logging.info(f"CacheService initialized in LOCAL mode ({self.local_dir})")
+            except Exception as e:
+                # Fallback to current directory if permission denied
+                self.local_dir = "storage"
+                os.makedirs(self.local_dir, exist_ok=True)
+                
+        logging.info(f"CacheService initialized in {self.mode.upper()} mode. Storage: {self.local_dir}")
 
     def _connect(self):
         if self.mode == "cloud" and not self.client:

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from typing import List, Optional
 import concurrent.futures
 import json
@@ -289,9 +289,6 @@ def get_sales_averages(
         print(f"Error in sales averages endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-from app.services.pdf_generator import create_inventory_pdf_bytes
-from fastapi.responses import Response
-
 @router.post("/export/pdf")
 def export_inventory_pdf(
     items: List[dict],
@@ -301,20 +298,30 @@ def export_inventory_pdf(
     Generates a PDF report from the provided list of inventory items.
     """
     try:
+        from app.services.pdf_generator import create_inventory_pdf_bytes
         pdf_bytes = create_inventory_pdf_bytes(items)
-        
         filename = f"Reporte_Inventario_{time.strftime('%Y%m%d_%H%M%S')}.pdf"
-        
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}"
-            }
-        )
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={filename}"})
     except Exception as e:
         print(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+
+@router.post("/actas/export-pdf")
+def export_acta_pdf(
+    data: dict,
+    user: dict = Depends(verify_token)
+):
+    """
+    Generates a professional Acta PDF (FI-004 V2) from the provided data.
+    """
+    try:
+        from app.services.pdf_generator import create_acta_pdf_bytes
+        pdf_bytes = create_acta_pdf_bytes(data)
+        filename = f"Acta_Cierre_{data.get('data', {}).get('company', 'GCO').replace(' ', '_')}.pdf"
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={filename}"})
+    except Exception as e:
+        print(f"Error generating Acta PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando PDF del Acta: {str(e)}")
 
 # --- HISTORY ANALYSIS ---
 from datetime import datetime, timedelta
