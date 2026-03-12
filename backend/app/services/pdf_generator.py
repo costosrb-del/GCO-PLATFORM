@@ -175,16 +175,37 @@ class InventoryPDF(FPDF):
             
         self.cell(sum(w), 0, '', 'T')
 
+def sanitize_str(text):
+    """Encodes string to latin-1 and ignores characters that can't be represented."""
+    if not text:
+        return ""
+    try:
+        # Standard fpdf 1.7.x expects latin-1 (iso-8859-1) strings
+        return str(text).encode('latin-1', 'replace').decode('latin-1')
+    except:
+        return str(text)
+
 def create_inventory_pdf_bytes(data: list):
     pdf = InventoryPDF()
     pdf.alias_nb_pages()
     pdf.add_page()
     
+    # Pre-sanitize data to avoid internal FPDF errors
+    sanitized_data = []
+    for row in data:
+        s_row = {}
+        for k, v in row.items():
+            if isinstance(v, str):
+                s_row[k] = sanitize_str(v)
+            else:
+                s_row[k] = v
+        sanitized_data.append(s_row)
+
     # Draw Chart First (Visual Impact)
-    pdf.draw_chart(data)
+    pdf.draw_chart(sanitized_data)
     
     # Then Table
-    pdf.generate_table(data)
+    pdf.generate_table(sanitized_data)
     
     try:
         return pdf.output(dest='S').encode('latin-1')

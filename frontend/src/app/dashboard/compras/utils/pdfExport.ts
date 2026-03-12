@@ -559,9 +559,12 @@ interface InsumoExplotado {
     sku: string;
     unidad: string;
     cantidadTotal: number;
+    rendimientoFactor?: number;
     ruta?: string;
     precioUnitarioBase?: number;
     costoTotal?: number;
+    isSubProduct?: boolean; // Flag to identify sub-product header rows
+    isNested?: boolean;     // Flag to identify components inside a sub-product
 }
 
 function explotarBOM(
@@ -633,9 +636,11 @@ function explotarBOM(
                     sku: ins.sku,
                     unidad: ins.unidad,
                     cantidadTotal: qTotal,
+                    rendimientoFactor: factor,
                     ruta: rutaActual,
                     precioUnitarioBase: unitPriceAjustado,
-                    costoTotal: subCosto
+                    costoTotal: subCosto,
+                    isNested: !!rutaPadre // If we have a parent route, it's a nested component
                 });
             }
         }
@@ -647,21 +652,27 @@ function explotarBOM(
         for (const pa of producto.productosAsociados) {
             const subProd = productos.find(p => p.id === pa.productoId);
             if (subProd) {
-                const tempBOM = explotarBOM(subProd, productos, insumos, terceros, 1, "", esKit || ignorarEmpaque);
-                const subCostUnit = tempBOM.reduce((acc, cv) => acc + (cv.costoTotal || 0), 0);
+                const subExplosion = explotarBOM(subProd, productos, insumos, terceros, pa.cantidadRequerida * cantidadPadre, rutaActual, esKit || ignorarEmpaque);
                 
+                // Calculate unit cost accurately from subExplosion (ignoring header rows)
+                const subCostUnit = subExplosion.reduce((acc, cv) => {
+                    if (cv.isSubProduct) return acc;
+                    return acc + (cv.costoTotal || 0);
+                }, 0) / (pa.cantidadRequerida * Math.max(1, cantidadPadre));
+
                 // ADDING A DUMMY INSUMO TO REPRESENT THE SUB-PRODUCT ITSELF IN LIST
                 result.push({
-                     id: subProd.id,
+                     id: "SUB_" + subProd.id + "_" + Math.random(), 
                      nombre: `[SUB-PRODUCTO] ${subProd.nombre}`,
                      sku: subProd.sku || "N/A",
-                     unidad: "Unidad",
+                     unidad: "Unid.",
                      cantidadTotal: pa.cantidadRequerida * cantidadPadre,
                      ruta: rutaActual,
                      precioUnitarioBase: subCostUnit,
-                     costoTotal: subCostUnit * pa.cantidadRequerida * cantidadPadre
+                     costoTotal: subCostUnit * pa.cantidadRequerida * cantidadPadre,
+                     isSubProduct: true
                 });
-                const subExplosion = explotarBOM(subProd, productos, insumos, terceros, pa.cantidadRequerida * cantidadPadre, rutaActual, esKit || ignorarEmpaque);
+                
                 result = [...result, ...subExplosion];
             }
         }
@@ -676,12 +687,16 @@ function explotarBOM(
 function consolidarInsumos(lista: InsumoExplotado[]): InsumoExplotado[] {
     const map = new Map<string, InsumoExplotado>();
     for (const item of lista) {
-        if (map.has(item.id)) {
-            const ex = map.get(item.id)!;
+        // Use a composite key: ID + Ruta to keep items grouped by their sub-product context
+        // This ensures the PDF matches the UI hierarchy
+        const key = item.isSubProduct ? item.id : `${item.id}_${item.ruta || "root"}`;
+
+        if (map.has(key)) {
+            const ex = map.get(key)!;
             ex.cantidadTotal += item.cantidadTotal;
             ex.costoTotal = (ex.costoTotal || 0) + (item.costoTotal || 0);
         } else {
-            map.set(item.id, { ...item });
+            map.set(key, { ...item });
         }
     }
     return Array.from(map.values());
@@ -715,21 +730,35 @@ export const exportarBOMPDF = async (
 
     const explosion = explotarBOM(producto, productos, insumos, terceros);
     const consolidado = consolidarInsumos(explosion);
-    const productTotalCost = consolidado.reduce((acc, curr) => acc + (curr.costoTotal || 0), 0);
+    
+    // CALCULATE TOTAL: Only sum real items, ignore the sub-product header rows to avoid double counting
+    const productTotalCost = consolidado.reduce((acc, curr) => {
+        if (curr.isSubProduct) return acc;
+        return acc + (curr.costoTotal || 0);
+    }, 0);
 
     doc.setFontSize(10);
     doc.setTextColor(20, 100, 50);
     doc.text(`Costo Total Estimado: $${productTotalCost.toLocaleString("es-CO", { minimumFractionDigits: 0 })}`, 14, 66);
 
-    const tableBody = consolidado.map((ins, idx) => [
-        (idx + 1).toString(),
-        ins.nombre,
-        ins.sku,
-        ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
-        ins.unidad,
-        `$${(ins.precioUnitarioBase||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
-        `$${(ins.costoTotal||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-    ]);
+    const tableBody = consolidado.map((ins, idx) => {
+        let nombreDisplay = ins.nombre;
+        if (ins.isNested) {
+            nombreDisplay = "    └ " + ins.nombre;
+        }
+
+        return [
+            (idx + 1).toString(),
+            nombreDisplay,
+            ins.sku,
+            (ins.rendimientoFactor ?? 1) > 1 && !ins.isSubProduct
+                ? `1 ${ins.unidad} / ${ins.rendimientoFactor} unds`
+                : ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 }),
+            ins.unidad,
+            `$${(ins.precioUnitarioBase||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+            `$${(ins.costoTotal||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+        ];
+    });
 
     autoTable(doc, {
         startY: 72,
@@ -740,10 +769,26 @@ export const exportarBOMPDF = async (
         styles: { fontSize: 8 },
         columnStyles: {
             0: { cellWidth: 8 },
+            1: { cellWidth: 70 },
             3: { halign: "right", fontStyle: "bold" },
             4: { halign: "center" },
             5: { halign: "right" },
             6: { halign: "right", fontStyle: "bold" }
+        },
+        didParseCell: (data) => {
+            // Highlight sub-product header rows
+            const rowIndex = data.row.index;
+            const item = consolidado[rowIndex];
+            if (item && item.isSubProduct) {
+                if (data.section === "body") {
+                    data.cell.styles.fillColor = [240, 240, 255]; // Light violet background
+                    data.cell.styles.fontStyle = "bold";
+                    data.cell.styles.textColor = [90, 60, 150];  // Violet text
+                }
+            }
+            if (item && item.isNested && data.column.index === 1) {
+                data.cell.styles.textColor = [100, 100, 100]; // Dimmer text for nested components
+            }
         }
     });
 
@@ -789,7 +834,9 @@ export const descargarZIPBOMs = async (
         const consolidado = consolidarInsumos(explosion);
         const tableBody = consolidado.map((ins, idx) => [
             (idx + 1).toString(), ins.nombre, ins.sku,
-            ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+            (ins.rendimientoFactor ?? 1) > 1
+                ? `1 ${ins.unidad} / ${ins.rendimientoFactor} unds`
+                : ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 }),
             ins.unidad
         ]);
 
@@ -830,7 +877,12 @@ export const exportarConsolidadoBOMExcel = (
     for (const p of seleccionados) {
          const explosion = explotarBOM(p, productos, insumos, terceros);
          const cons = consolidarInsumos(explosion);
-         const totalProductCost = cons.reduce((acc, curr) => acc + (curr.costoTotal||0), 0);
+         
+         // CALCULATE TOTAL: Only sum real items, ignore the sub-product header rows to avoid double counting
+         const totalProductCost = cons.reduce((acc, curr) => {
+             if (curr.isSubProduct) return acc;
+             return acc + (curr.costoTotal || 0);
+         }, 0);
          
          for (const ins of cons) {
              rows.push({
@@ -894,21 +946,35 @@ export const exportarConsolidadoBOMPDF = async (
 
         const explosion = explotarBOM(producto, productos, insumos, terceros);
         const consolidado = consolidarInsumos(explosion);
-        const productTotalCost = consolidado.reduce((acc, curr) => acc + (curr.costoTotal || 0), 0);
+        
+        // CALCULATE TOTAL: Only sum real items, ignore the sub-product header rows to avoid double counting
+        const productTotalCost = consolidado.reduce((acc, curr) => {
+            if (curr.isSubProduct) return acc;
+            return acc + (curr.costoTotal || 0);
+        }, 0);
 
         doc.setFontSize(10);
         doc.setTextColor(20, 100, 50);
         doc.text(`Costo Total Estimado: $${productTotalCost.toLocaleString("es-CO", { minimumFractionDigits: 0 })}`, 14, 66);
 
-        const tableBody = consolidado.map((ins, idx) => [
-            (idx + 1).toString(),
-            ins.nombre,
-            ins.sku,
-            ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
-            ins.unidad,
-            `$${(ins.precioUnitarioBase||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
-            `$${(ins.costoTotal||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-        ]);
+        const tableBody = consolidado.map((ins, idx) => {
+            let nombreDisplay = ins.nombre;
+            if (ins.isNested) {
+                nombreDisplay = "    └ " + ins.nombre;
+            }
+
+            return [
+                (idx + 1).toString(),
+                nombreDisplay,
+                ins.sku,
+                (ins.rendimientoFactor ?? 1) > 1 && !ins.isSubProduct
+                    ? `1 ${ins.unidad} / ${ins.rendimientoFactor} unds`
+                    : ins.cantidadTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 }),
+                ins.unidad,
+                `$${(ins.precioUnitarioBase||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+                `$${(ins.costoTotal||0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+            ];
+        });
 
         autoTable(doc, {
             startY: 72,
@@ -919,10 +985,25 @@ export const exportarConsolidadoBOMPDF = async (
             styles: { fontSize: 8 },
             columnStyles: {
                 0: { cellWidth: 8 },
+                1: { cellWidth: 70 },
                 3: { halign: "right", fontStyle: "bold" },
                 4: { halign: "center" },
                 5: { halign: "right" },
                 6: { halign: "right", fontStyle: "bold" }
+            },
+            didParseCell: (data: any) => {
+                const rowIndex = data.row.index;
+                const item = consolidado[rowIndex];
+                if (item && item.isSubProduct) {
+                    if (data.section === "body") {
+                        data.cell.styles.fillColor = [240, 240, 255];
+                        data.cell.styles.fontStyle = "bold";
+                        data.cell.styles.textColor = [90, 60, 150];
+                    }
+                }
+                if (item && item.isNested && data.column.index === 1) {
+                    data.cell.styles.textColor = [100, 100, 100];
+                }
             }
         });
     }

@@ -230,44 +230,77 @@ export default function CierreActasPage() {
     const printRef = useRef<HTMLDivElement>(null);
     const handleDownloadPDF = async () => {
         if (!printRef.current) return;
-        const toastId = toast.loading("Generando PDF Profesional...");
+        const toastId = toast.loading("Renderizando documento...");
         try {
             const element = printRef.current;
-            const canvas = await html2canvas(element, { 
-                scale: 2, 
-                useCORS: true, 
-                backgroundColor: "#ffffff",
-                logging: false,
-                windowWidth: element.scrollWidth
-            });
-            const imgData = canvas.toDataURL("image/png");
-            const pdf = new jsPDF("p", "mm", "a4");
-            const pw = pdf.internal.pageSize.getWidth();
-            const ph = pdf.internal.pageSize.getHeight();
-            const iw = canvas.width;
-            const ih = canvas.height;
-            const ratio = pw / iw;
-            const rh = ih * ratio;
-            
-            let heightLeft = rh;
-            let position = 0;
+            const filename = `Acta_Cierre_${company.replace(/ /g, '_')}_${periodo}.pdf`;
 
-            pdf.addImage(imgData, 'PNG', 0, position, pw, rh);
-            heightLeft -= ph;
-
-            while (heightLeft >= 0) {
-                position = heightLeft - rh;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pw, rh);
-                heightLeft -= ph;
+            // Scale 1.2 = good quality while keeping canvas memory manageable
+            let canvas: HTMLCanvasElement;
+            try {
+                canvas = await html2canvas(element, {
+                    scale: 1.2,
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    logging: false,
+                    windowWidth: element.scrollWidth,
+                    imageTimeout: 0,
+                });
+            } catch (canvasErr) {
+                // If canvas fails (OOM), retry at scale 1.0
+                console.warn("html2canvas at 1.2 failed, retrying at 1.0:", canvasErr);
+                toast.loading("Reintentando a menor resolución...", { id: toastId });
+                canvas = await html2canvas(element, {
+                    scale: 1.0,
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    logging: false,
+                    windowWidth: element.scrollWidth,
+                    imageTimeout: 0,
+                });
             }
 
-            pdf.save(`Acta_Cierre_${company.replace(/ /g, '_')}_${periodo}.pdf`);
-            toast.success("Descarga completada", { id: toastId });
-        } catch (e) { 
-            console.error(e);
-            toast.error("Fallo al generar PDF", { id: toastId }); 
+            const pdf   = new jsPDF("p", "mm", "a4");
+            const pgW   = pdf.internal.pageSize.getWidth();   // 210 mm
+            const pgH   = pdf.internal.pageSize.getHeight();  // 297 mm
+
+            // Canvas pixels per mm (horizontal — dictates scale)
+            const pxPerMm  = canvas.width / pgW;
+            // How tall is one A4 page in canvas pixels?
+            const pgHpx    = pgH * pxPerMm;
+            const nPages   = Math.ceil(canvas.height / pgHpx);
+
+            for (let i = 0; i < nPages; i++) {
+                toast.loading(`Construyendo página ${i + 1} de ${nPages}...`, { id: toastId });
+
+                const srcY = i * pgHpx;
+                const srcH = Math.min(pgHpx, canvas.height - srcY);
+
+                // Slice this page out of the full canvas
+                const slice = document.createElement("canvas");
+                slice.width  = canvas.width;
+                slice.height = Math.ceil(pgHpx); // full A4 height; last page white-padded
+                const ctx = slice.getContext("2d")!;
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, slice.width, slice.height);
+                ctx.drawImage(
+                    canvas,
+                    0, srcY,          canvas.width, srcH,  // source
+                    0, 0,             canvas.width, srcH   // dest
+                );
+
+                if (i > 0) pdf.addPage();
+                pdf.addImage(slice.toDataURL("image/jpeg", 0.85), "JPEG", 0, 0, pgW, pgH, undefined, "FAST");
+            }
+
+            pdf.save(filename);
+            toast.success("PDF descargado correctamente ✓", { id: toastId });
+        } catch (e: any) {
+            console.error("PDF Export Error:", e);
+            const msg = e?.message ? `${e.message}` : "Error desconocido";
+            toast.error(`Error generando PDF: ${msg.slice(0, 80)}`, { id: toastId });
         }
+
     };
 
     return (
