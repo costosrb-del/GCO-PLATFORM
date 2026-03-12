@@ -618,17 +618,35 @@ function explotarBOM(
                      qTotal = (ia.cantidadRequerida * cantidadPadre) / (factor || 1);
                 }
 
-                let basePrice = Number(ins.precio) || 0;
+                // Robust price parsing (handles Colombian format strings or numbers)
+                const parseRobustPrice = (val: any): number => {
+                    if (val === undefined || val === null) return 0;
+                    if (typeof val === "number") return val;
+                    const s = String(val).trim().replace("$", "").replace(/\s/g, "");
+                    if (!s) return 0;
+                    // Attempt to detect Colombian format (1.500,00) vs International (1,500.00)
+                    // If there's a comma and it's near the end, it's likely decimal
+                    if (s.includes(",") && s.indexOf(",") > s.indexOf(".")) {
+                        return parseFloat(s.replace(/\./g, "").replace(",", "."));
+                    }
+                    return parseFloat(s.replace(/,/g, ""));
+                };
+
+                let basePrice = parseRobustPrice(ins.precio);
+                
                 if (basePrice <= 0 && terceros && terceros.length > 0) {
                     let minPrice = Infinity;
+                    const targetId = String(ia.insumoId).trim();
                     for (const t of terceros) {
-                        const p = t.insumosPrecios?.find(x => x.insumoId === ia.insumoId)?.precio;
-                        if (p && p > 0 && p < minPrice) minPrice = p;
+                        const p = t.insumosPrecios?.find(x => String(x.insumoId).trim() === targetId)?.precio;
+                        const pVal = parseRobustPrice(p);
+                        if (pVal > 0 && pVal < minPrice) minPrice = pVal;
                     }
                     if (minPrice < Infinity) basePrice = minPrice;
                 }
-                const unitPriceAjustado = basePrice / factor;
-                const subCosto = unitPriceAjustado * ia.cantidadRequerida * cantidadPadre;
+                
+                const unitPriceAjustado = basePrice / (factor || 1);
+                const subCosto = unitPriceAjustado * (ia.cantidadRequerida || 0) * (cantidadPadre || 1);
 
                 result.push({
                     id: ins.id,
@@ -695,6 +713,10 @@ function consolidarInsumos(lista: InsumoExplotado[]): InsumoExplotado[] {
             const ex = map.get(key)!;
             ex.cantidadTotal += item.cantidadTotal;
             ex.costoTotal = (ex.costoTotal || 0) + (item.costoTotal || 0);
+            // Ensure if we have a valid price now we keep it
+            if ((!ex.precioUnitarioBase || ex.precioUnitarioBase <= 0) && item.precioUnitarioBase && item.precioUnitarioBase > 0) {
+                ex.precioUnitarioBase = item.precioUnitarioBase;
+            }
         } else {
             map.set(key, { ...item });
         }
