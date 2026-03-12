@@ -567,8 +567,18 @@ export default function CierreActasPage() {
                                 <thead className="bg-[#183C30] text-white">
                                     <tr>
                                         <th className="p-3 text-left">Referencia / SKU</th>
-                                        <th className="p-3">Sistema (Und)</th>
-                                        <th className="p-3">Físico (Und)</th>
+                                        <th className="p-3">
+                                            <div className="flex flex-col">
+                                                <span>Sistema (Und)</span>
+                                                <span className="text-[7px] font-normal opacity-60 uppercase tracking-tighter">Principal + Avería + Com. Ext + Libre + Sist. Libre</span>
+                                            </div>
+                                        </th>
+                                        <th className="p-3">
+                                            <div className="flex flex-col">
+                                                <span>Físico (Und)</span>
+                                                <span className="text-[7px] font-normal opacity-60 uppercase tracking-tighter">Conteo Bodegas + Físico Libre</span>
+                                            </div>
+                                        </th>
                                         <th className="p-3">Diferencia</th>
                                         <th className="p-3">Estado Operativo</th>
                                     </tr>
